@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "holoviews-tools"
+readme = "README.md"
+description = "Annotate your data"
+requires-python = ">=3.8"
+keywords = ["annotation", "holoviews", "tools"]
+dynamic = ["version"]
+classifiers = [
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Operating System :: OS Independent",
+]
+dependencies = ["holoviews", "pandas<2", "sqlalchemy<2"]
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.envs.test]
+dependencies = ["pytest"]
+scripts.run = "python -m pytest holonote/tests"
+matrix = [{ python = ["3.8", "3.9", "3.10"] }]
+
+[tool.pytest.ini_options]
+addopts = "-vv"
