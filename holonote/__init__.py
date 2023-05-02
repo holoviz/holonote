@@ -1,2 +1,2 @@
 from . import annotate
-from . import region
+from . import editor
