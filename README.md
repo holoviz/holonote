@@ -3,6 +3,8 @@
 The `holonote` library offers tools to create, edit and persist
 annotated regions for [HoloViews](https://holoviews.org/).
 
+![Annotation demo](https://github.com/holoviz/holonote/blob/main/examples/assets/demo.gif)
+
 An annotated region marks a region-of-interest that is overlaid on top
 of the visual representation of a HoloViews element. Such a region has a
 unique identifier as well as additional domain-specific information
@@ -19,10 +21,10 @@ this information to a database. You can interactively add, delete and
 update these annotation regions as well as their associated
 domain-specific data.
 
-2. `RegionEditors`: These tools are designed to let you interactively
+2. `Editors`: These tools are designed to let you interactively
 manipulate and edit the visual regions themselves. These regions are in
-fact HoloViews elements which means you can use region editors as
-generic editors of the corresponding HoloViews elements.
+fact HoloViews elements which means you can use these editors as
+generic edit tools for the corresponding HoloViews elements.
 
 By default, annotators automatically persist any annotations you create
 to a local SQLite database file. This is a very convenient way to get
