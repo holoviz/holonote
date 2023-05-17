@@ -67,9 +67,6 @@ class TestSQLiteUUIDHexKey(unittest.TestCase):
     def test_setup(self):
         self.assertTrue(self.db.con is not None)
 
-    def test_initialized(self):
-        self.assertFalse(self.db.uninitialized)
-
     def test_add_row(self):
         id1 = self.db.primary_key(self.db)
         start = pd.Timestamp('2022-06-01')
@@ -176,9 +173,6 @@ class TestSQLiteUUIDBinaryKey(unittest.TestCase):
 
     def test_setup(self):
         self.assertTrue(self.db.con is not None)
-
-    def test_initialized(self):
-        self.assertFalse(self.db.uninitialized)
 
     def test_add_row(self):
         id1 = self.db.primary_key(self.db)

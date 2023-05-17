@@ -62,6 +62,10 @@ class AnnotationTable(param.Parameterized):
         self._update_index()
 
     def register_annotator(self, annotator):
+
+        if len(self._annotators) >= 1 and list(self._annotators.values())[0].connector.table_name is None:
+            raise Exception("A table_name must be set in the connector when shared across multiple annotators")
+
         self._annotators[id(annotator)] = annotator
 
 

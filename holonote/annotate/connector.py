@@ -296,7 +296,6 @@ class Connector(param.Parameterized):
                         annotation_table.define_points([kdim1, kdim2], df[f'point_{kdim1}'], df[f'point_{kdim2}'])
         annotation_table.clear_edits()
 
-
     def add_annotation(self, **fields):
         "Primary key specification is optional. Used to works across Annotation instances."
         if self.primary_key.field_name not in fields:
@@ -308,6 +307,8 @@ class Connector(param.Parameterized):
         for annotator in self.annotation_table._annotators.values():
             annotator.refresh(clear=True)
 
+
+
 class SQLiteDB(Connector):
     """
     Simple example of a Connector without dependencies, using sqlite3.
@@ -317,7 +318,11 @@ class SQLiteDB(Connector):
 
     filename = param.String(default='annotations.db')
 
-    table_name = param.String(default='annotations')
+    table_name = param.String(default=None, allow_None=True, doc='''
+       The SQL table name to connect to in the database. If None, an
+       automatically generated table name will be used. Note that
+       auto-generated names may only be used by connectors generated
+       automatically by a single annotator instance.''')
 
     column_schema = param.Dict(default={})
 
@@ -326,6 +331,7 @@ class SQLiteDB(Connector):
                          'save':'add_rows',
                          'update':'update_row'}
 
+    _auto_table_prefix = 'annotations_'
 
     def __init__(self, column_schema={}, connect=True, **params):
         """
@@ -384,7 +390,7 @@ class SQLiteDB(Connector):
 
     def get_tables(self):
         res = self.cursor.execute("SELECT name FROM sqlite_master")
-        return [el[0] for el in res.fetchmany()]
+        return [el[0] for el in res.fetchall() if el[0].startswith(self._auto_table_prefix)]
 
     def create_table(self, column_schema=None):
         column_schema = column_schema if column_schema else self.column_schema
@@ -408,6 +414,7 @@ class SQLiteDB(Connector):
     def add_rows(self, field_list): # Used execute_many
         for field in field_list:
             self.add_row(**field)
+
     def add_row(self, **fields):
         # Note, missing fields will be set as NULL
         columns = self.columns

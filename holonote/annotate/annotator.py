@@ -1,4 +1,5 @@
 import sys
+import hashlib
 import weakref
 import holoviews as hv
 import numpy as np
@@ -113,6 +114,13 @@ class AnnotatorInterface(param.Parameterized):
         self.annotation_table.register_annotator(self)
 
         self.annotation_table.load(self.connector, fields=self.connector.fields)
+
+    @classmethod
+    def generate_table_name(cls, kdim_dtypes, fields):
+        "Given the key dimension data types and field specifications, suggest a deterministic table name"
+        auto_name = str(kdim_dtypes)+str(fields)
+        auto_table_name = hashlib.md5(auto_name.encode("utf")).hexdigest()
+        return cls.connector_class._auto_table_prefix + auto_table_name
 
     @property
     def annotation_table(self):
@@ -326,11 +334,14 @@ class Annotator(AnnotatorInterface):
         if not isinstance(spec, dict):
             self.element = spec.clone() # Clone so we can add a tap tool and trust our copy.
 
+        kdim_dtypes = spec if self.element is None else self._infer_kdim_dtypes(spec)
         connector_kws = {'fields':params.pop('fields')} if 'fields' in params else {}
+
+        if 'connector' not in params and 'table_name' not in params:
+            connector_kws.update({'table_name':self.generate_table_name(kdim_dtypes, params.get('fields',[]))})
         connector = params.pop('connector') if 'connector' in params else self.connector_class(**connector_kws)
-        super().__init__(connector = connector,
-                         **dict(kdim_dtypes=(spec if self.element is None
-                                             else self._infer_kdim_dtypes(spec)), **params))
+
+        super().__init__(connector = connector, **dict(kdim_dtypes=kdim_dtypes, **params))
 
         self._selection_info = {}
 
