@@ -115,6 +115,13 @@ class AnnotatorInterface(param.Parameterized):
 
         self.annotation_table.load(self.connector, fields=self.connector.fields)
 
+    @classmethod
+    def generate_table_name(cls, kdim_dtypes, fields):
+        "Given the key dimension data types and field specifications, suggest a deterministic table name"
+        auto_name = str(kdim_dtypes)+str(fields)
+        auto_table_name = hashlib.md5(auto_name.encode("utf")).hexdigest()
+        return cls.connector_class._auto_table_prefix + auto_table_name
+
     @property
     def annotation_table(self):
         return self.connector.annotation_table
@@ -331,9 +338,7 @@ class Annotator(AnnotatorInterface):
         connector_kws = {'fields':params.pop('fields')} if 'fields' in params else {}
 
         if 'connector' not in params and 'table_name' not in params:
-            auto_name = str(kdim_dtypes)+str(params.get('fields',[]))
-            auto_table_name = hashlib.md5(auto_name.encode("utf")).hexdigest()
-            connector_kws.update({'table_name':self.connector_class._auto_table_prefix+auto_table_name})
+            connector_kws.update({'table_name':self.generate_table_name(kdim_dtypes, params.get('fields',[]))})
         connector = params.pop('connector') if 'connector' in params else self.connector_class(**connector_kws)
 
         super().__init__(connector = connector, **dict(kdim_dtypes=kdim_dtypes, **params))
