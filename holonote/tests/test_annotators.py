@@ -567,8 +567,7 @@ class TestMultiplePlotAnnotator(unittest.TestCase):
         assert Annotator.connector_class is SQLiteDB, 'Expecting default SQLite connector'
         Annotator.connector_class.filename = ':memory:'
         Annotator.connector_class.primary_key = UUIDHexStringKey()
-
-        self.connector = SQLiteDB()
+        self.connector = SQLiteDB(table_name='annotations')
         xvals, yvals  = np.linspace(-4, 0, 202), np.linspace(4, 0, 202)
         xs, ys = np.meshgrid(xvals, yvals)
         image = hv.Image(np.sin(ys*xs), kdims=['A', 'B'])
@@ -578,6 +577,7 @@ class TestMultiplePlotAnnotator(unittest.TestCase):
         curve = hv.Curve((np.arange('2005-02', '2005-03', dtype='datetime64[D]'), range(28)), kdims=['TIME'])
         self.curve_annotator = Annotator(curve, connector=self.connector,
                                          fields=['description'], region_types=['Range'])
+
 
     def test_element_kdim_dtypes(self):
         self.assertEqual(self.image_annotator.kdim_dtypes, {'A':np.float64 , 'B':np.float64})
@@ -589,6 +589,27 @@ class TestMultiplePlotAnnotator(unittest.TestCase):
         self.connector.add_annotation(description='Multi-plot annotation')
 
 
+    def test_table_name_required(self):
+        assert Annotator.connector_class is SQLiteDB, 'Expecting default SQLite connector'
+        Annotator.connector_class.filename = ':memory:'
+        Annotator.connector_class.primary_key = UUIDHexStringKey()
+        connector = SQLiteDB()
+        xvals, yvals  = np.linspace(-4, 0, 202), np.linspace(4, 0, 202)
+        xs, ys = np.meshgrid(xvals, yvals)
+        image = hv.Image(np.sin(ys*xs), kdims=['A', 'B'])
+        image_annotator = Annotator(image, connector=connector,
+                                    fields=['description'], region_types=['Range'])
+
+        curve = hv.Curve((np.arange('2005-02', '2005-03', dtype='datetime64[D]'), range(28)), kdims=['TIME'])
+
+
+        with self.assertRaisesRegex(Exception,
+                            "A table_name must be set in the connector when shared across multiple annotators"):
+            curve_annotator = Annotator(curve, connector=connector,
+                                        fields=['description'], region_types=['Range'])
+
+        connector.cursor.close()
+        connector.con.close()
 
     def tearDown(self):
         self.connector.cursor.close()
