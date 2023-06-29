@@ -21,7 +21,23 @@ from holonote.annotate import SQLiteDB, UUIDHexStringKey
 
 @pytest.fixture
 def annotator_range1d(conn_sqlite_uuid):
-    anno = Annotator({'TIME': np.datetime64}, fields=['description'], region_types=['Range'], connector=conn_sqlite_uuid)
+    anno = Annotator(
+        {'TIME': np.datetime64},
+        fields=['description'],
+        region_types=['Range'],
+        connector=conn_sqlite_uuid,
+    )
+    yield anno
+
+
+@pytest.fixture
+def annotator_range2d(conn_sqlite_uuid):
+    anno = Annotator(
+        {'x': float, 'y':float},
+        fields=['description'],
+        region_types=['Range'],
+        connector=conn_sqlite_uuid,
+    )
     yield anno
 
 
@@ -134,58 +150,43 @@ class TestBasicRange1DAnnotator:
             annotator_range1d.define_ranges(data2['start'], data2['end'])
 
 
-class TestBasicRange2DAnnotator(unittest.TestCase):
+class TestBasicRange2DAnnotator:
 
-    def setUp(self):
-        assert Annotator.connector_class is SQLiteDB, 'Expecting default SQLite connector'
-        Annotator.connector_class.filename = ':memory:'
-        Annotator.connector_class.primary_key = UUIDHexStringKey()
-        self.annotator = Annotator({'x': float, 'y':float},
-                                   fields=['description'], region_types=['Range'])
-
-    def tearDown(self):
-        self.annotator.connector.cursor.close()
-        self.annotator.connector.con.close()
-        del self.annotator
-
-    def test_point_insertion_exception(self):
+    def test_point_insertion_exception(self, annotator_range2d):
         x,y = 0.5,0.5
-        with self.assertRaises(ValueError) as cm:
-            self.annotator.set_point(x,y)
+        expected_msg = r"Point region types not enabled as region_types=\['Range'\]"
+        with pytest.raises(ValueError, match=expected_msg):
+            annotator_range2d.set_point(x,y)
 
-        expected_msg = "Point region types not enabled as region_types=['Range']"
-        self.assertEqual(str(cm.exception), expected_msg)
-
-    def test_insertion_edit_table_columns(self):
-        self.annotator.set_range(-0.25, 0.25, -0.1, 0.1)
-        self.annotator.add_annotation(description='A test annotation!')
-        commits = self.annotator.annotation_table.commits()
+    def test_insertion_edit_table_columns(self, annotator_range2d):
+        annotator_range2d.set_range(-0.25, 0.25, -0.1, 0.1)
+        annotator_range2d.add_annotation(description='A test annotation!')
+        commits = annotator_range2d.annotation_table.commits()
         assert len(commits)==1, 'Only one insertion commit made '
-        self.annotator.commit()
-        self.assertEqual(commits[0]['operation'],'insert')
-        self.assertEqual(set(commits[0]['kwargs'].keys()),
-                         set(self.annotator.connector.columns))
+        annotator_range2d.commit()
+        assert commits[0]['operation'] == 'insert'
+        assert set(commits[0]['kwargs'].keys()) == set(annotator_range2d.connector.columns)
 
-    def test_range_insertion_values(self):
+    def test_range_insertion_values(self, annotator_range2d):
         startx, endx, starty, endy = -0.25, 0.25, -0.1, 0.1
-        self.annotator.set_range(startx, endx, starty, endy)
-        self.annotator.add_annotation(description='A test annotation!')
-        commits = self.annotator.annotation_table.commits()
+        annotator_range2d.set_range(startx, endx, starty, endy)
+        annotator_range2d.add_annotation(description='A test annotation!')
+        commits = annotator_range2d.annotation_table.commits()
         assert len(commits)==1, 'Only one insertion commit made'
         kwargs = commits[0]['kwargs']
         assert 'uuid' in kwargs.keys(), 'Expected uuid primary key in kwargs'
         kwargs.pop('uuid')
-        self.assertEqual(kwargs, dict(description='A test annotation!',
-                                      start_x=startx, end_x=endx, start_y=starty, end_y=endy))
+        assert kwargs ==  dict(description='A test annotation!',
+                                      start_x=startx, end_x=endx, start_y=starty, end_y=endy)
 
-    def test_range_commit_insertion(self):
+    def test_range_commit_insertion(self, annotator_range2d):
         startx, endx, starty, endy = -0.25, 0.25, -0.1, 0.1
         description = 'A test annotation!'
-        self.annotator.set_range(startx, endx, starty, endy)
-        self.annotator.add_annotation(description=description)
-        self.annotator.commit()
+        annotator_range2d.set_range(startx, endx, starty, endy)
+        annotator_range2d.add_annotation(description=description)
+        annotator_range2d.commit()
 
-        df = pd.DataFrame({'uuid': pd.Series(self.annotator.df.index[0], dtype=object),
+        df = pd.DataFrame({'uuid': pd.Series(annotator_range2d.df.index[0], dtype=object),
                            'start_x':[startx],
                            'start_y':[starty],
                            'end_x':[endx],
@@ -193,31 +194,31 @@ class TestBasicRange2DAnnotator(unittest.TestCase):
                            'description':[description]}
                            ).set_index('uuid')
 
-        sql_df = self.annotator.connector.load_dataframe()
+        sql_df = annotator_range2d.connector.load_dataframe()
         pd.testing.assert_frame_equal(sql_df, df)
 
 
-    def test_range_addition_deletion_by_uuid(self):
+    def test_range_addition_deletion_by_uuid(self, annotator_range2d):
         startx1, endx1, starty1, endy1 = -0.251, 0.251, -0.11, 0.11
         startx2, endx2, starty2, endy2 = -0.252, 0.252, -0.12, 0.12
         startx3, endx3, starty3, endy3 = -0.253, 0.253, -0.13, 0.13
-        self.annotator.set_range(startx1, endx1, starty1, endy1)
-        self.annotator.add_annotation(description='Annotation 1')
-        self.annotator.set_range(startx2, endx2, starty2, endy2)
-        self.annotator.add_annotation(description='Annotation 2', uuid='08286429')
-        self.annotator.set_range(startx3, endx3, starty3, endy3)
-        self.annotator.add_annotation(description='Annotation 3')
-        self.annotator.commit()
-        sql_df = self.annotator.connector.load_dataframe()
-        self.assertEqual(set(sql_df['description']), set(['Annotation 1', 'Annotation 2', 'Annotation 3']))
+        annotator_range2d.set_range(startx1, endx1, starty1, endy1)
+        annotator_range2d.add_annotation(description='Annotation 1')
+        annotator_range2d.set_range(startx2, endx2, starty2, endy2)
+        annotator_range2d.add_annotation(description='Annotation 2', uuid='08286429')
+        annotator_range2d.set_range(startx3, endx3, starty3, endy3)
+        annotator_range2d.add_annotation(description='Annotation 3')
+        annotator_range2d.commit()
+        sql_df = annotator_range2d.connector.load_dataframe()
+        assert set(sql_df['description']) == set(['Annotation 1', 'Annotation 2', 'Annotation 3'])
         deletion_index = sql_df.index[1]
-        self.annotator.delete_annotation(deletion_index)
-        self.annotator.commit()
-        sql_df = self.annotator.connector.load_dataframe()
-        self.assertEqual(set(sql_df['description']), set(['Annotation 1', 'Annotation 3']))
+        annotator_range2d.delete_annotation(deletion_index)
+        annotator_range2d.commit()
+        sql_df = annotator_range2d.connector.load_dataframe()
+        assert set(sql_df['description']) == set(['Annotation 1', 'Annotation 3'])
 
 
-    def test_range_define_preserved_index_mismatch(self):
+    def test_range_define_preserved_index_mismatch(self, annotator_range2d):
         xstarts, xends = [-0.3, -0.2, -0.1], [0.3, 0.2, 0.1]
         ystarts, yends = [-0.35, -0.25, -0.15], [0.35, 0.25, 0.15]
         descriptions = ['Annotation %d' % d for d in [1,2,3]]
@@ -226,14 +227,15 @@ class TestBasicRange2DAnnotator(unittest.TestCase):
         data = pd.DataFrame({'uuid':annotation_id, 'xstart':xstarts, 'xend':xends,
                              'ystart':ystarts, 'yend':yends,
                              'description':descriptions}).set_index('uuid')
-        self.annotator.define_fields(data[['description']], preserve_index=True)
-        self.annotator.define_ranges(data['xstart'].iloc[:2], data['xend'].iloc[:2],
+        annotator_range2d.define_fields(data[['description']], preserve_index=True)
+        annotator_range2d.define_ranges(data['xstart'].iloc[:2], data['xend'].iloc[:2],
                                      data['ystart'].iloc[:2], data['yend'].iloc[:2])
-        with self.assertRaisesRegex(ValueError,
-                           f"Following annotations have no associated region: {{{repr(annotation_id[2])}}}"):
-            self.annotator.commit()
 
-    def test_range_define_auto_index_mismatch(self):
+        msg = f"Following annotations have no associated region: {{{annotation_id[2]!r}}}"
+        with pytest.raises(ValueError, match=msg):
+            annotator_range2d.commit()
+
+    def test_range_define_auto_index_mismatch(self, annotator_range2d):
         xstarts, xends = [-0.3, -0.2, -0.1], [0.3, 0.2, 0.1]
         ystarts, yends = [-0.35, -0.25, -0.15], [0.35, 0.25, 0.15]
         descriptions = ['Annotation %d' % d for d in [1,2,3]]
@@ -241,14 +243,14 @@ class TestBasicRange2DAnnotator(unittest.TestCase):
         data = pd.DataFrame({'uuid':annotation_id, 'xstart':xstarts, 'xend':xends,
                              'ystart':ystarts, 'yend':yends,
                              'description':descriptions}).set_index('uuid')
-        self.annotator.define_fields(data[['description']], preserve_index=False)
-        self.annotator.define_ranges(data['xstart'].iloc[:2], data['xend'].iloc[:2],
+        annotator_range2d.define_fields(data[['description']], preserve_index=False)
+        annotator_range2d.define_ranges(data['xstart'].iloc[:2], data['xend'].iloc[:2],
                                      data['ystart'].iloc[:2], data['yend'].iloc[:2])
-        with self.assertRaisesRegex(ValueError,
-                           "Following annotations have no associated region:"):
-            self.annotator.commit()
+        msg = "Following annotations have no associated region:"
+        with pytest.raises(ValueError, match=msg):
+            annotator_range2d.commit()
 
-    def test_range_define_unassigned_indices(self):
+    def test_range_define_unassigned_indices(self, annotator_range2d):
         xstarts, xends = [-0.3, -0.2, -0.1], [0.3, 0.2, 0.1]
         ystarts, yends = [-0.35, -0.25, -0.15], [0.35, 0.25, 0.15]
         descriptions = ['Annotation %d' % d for d in [1,2,3]]
@@ -263,12 +265,10 @@ class TestBasicRange2DAnnotator(unittest.TestCase):
                              'ystart':ystarts, 'yend':yends,
                              'description':descriptions}).set_index('uuid')
 
-        self.annotator.define_fields(data1[['description']])
-        with self.assertRaises(KeyError) as cm:
-            self.annotator.define_ranges(data2['xstart'], data2['xend'],
+        annotator_range2d.define_fields(data1[['description']])
+        with pytest.raises(KeyError, match=str(mismatched)):
+            annotator_range2d.define_ranges(data2['xstart'], data2['xend'],
                                          data2['ystart'], data2['yend'])
-        assert f'{mismatched}' in str(cm.exception)
-
 
 
 class TestBasicPoint1DAnnotator(unittest.TestCase):
