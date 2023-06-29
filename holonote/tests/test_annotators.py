@@ -1,4 +1,3 @@
-from holonote.annotate import AnnotationTable
 # TODO:
 
 # * (after refactor) annotators -> annotator, connectors -> connector [ ]
@@ -10,107 +9,100 @@ from holonote.annotate import AnnotationTable
 
 import uuid
 import unittest
+import pytest
 import numpy as np
 import pandas as pd
 
 import holoviews as hv
+from holonote.annotate import AnnotationTable
 from holonote.annotate import Annotator
 from holonote.annotate import SQLiteDB, UUIDHexStringKey
 
-class TestBasicRange1DAnnotator(unittest.TestCase):
 
-    def setUp(self):
-        assert Annotator.connector_class is SQLiteDB, 'Expecting default SQLite connector'
-        Annotator.connector_class.filename = ':memory:'
-        Annotator.connector_class.primary_key = UUIDHexStringKey()
-        self.annotator = Annotator({'TIME': np.datetime64}, fields=['description'], region_types=['Range'])
+@pytest.fixture
+def annotator_range1d(conn_sqlite_uuid):
+    anno = Annotator({'TIME': np.datetime64}, fields=['description'], region_types=['Range'], connector=conn_sqlite_uuid)
+    yield anno
 
-    def tearDown(self):
-        self.annotator.connector.cursor.close()
-        self.annotator.connector.con.close()
-        del self.annotator
 
-    def test_point_insertion_exception(self):
+class TestBasicRange1DAnnotator:
+    def test_point_insertion_exception(self, annotator_range1d):
         timestamp = np.datetime64('2022-06-06')
-        with self.assertRaises(ValueError) as cm:
-            self.annotator.set_point(timestamp)
+        expected_msg = r"Point region types not enabled as region_types=\['Range'\]"
+        with pytest.raises(ValueError, match=expected_msg):
+            annotator_range1d.set_point(timestamp)
 
-        expected_msg = "Point region types not enabled as region_types=['Range']"
-        self.assertEqual(str(cm.exception), expected_msg)
-
-    def test_insertion_edit_table_columns(self):
-        self.annotator.set_range(np.datetime64('2022-06-06'), np.datetime64('2022-06-08'))
-        self.annotator.add_annotation(description='A test annotation!')
-        commits = self.annotator.annotation_table.commits()
+    def test_insertion_edit_table_columns(self, annotator_range1d):
+        annotator_range1d.set_range(np.datetime64('2022-06-06'), np.datetime64('2022-06-08'))
+        annotator_range1d.add_annotation(description='A test annotation!')
+        commits = annotator_range1d.annotation_table.commits()
         assert len(commits)==1, 'Only one insertion commit made '
-        self.annotator.commit()
-        self.assertEqual(commits[0]['operation'],'insert')
-        self.assertEqual(set(commits[0]['kwargs'].keys()),
-                         set(self.annotator.connector.columns))
+        annotator_range1d.commit()
+        assert commits[0]['operation'] == 'insert'
+        assert set(commits[0]['kwargs'].keys()) == set(annotator_range1d.connector.columns)
 
-    def test_range_insertion_values(self):
+    def test_range_insertion_values(self, annotator_range1d) -> None:
         start, end = np.datetime64('2022-06-06'), np.datetime64('2022-06-08')
-        self.annotator.set_range(start, end)
-        self.annotator.add_annotation(description='A test annotation!')
-        commits = self.annotator.annotation_table.commits()
+        annotator_range1d.set_range(start, end)
+        annotator_range1d.add_annotation(description='A test annotation!')
+        commits = annotator_range1d.annotation_table.commits()
         assert len(commits)==1, 'Only one insertion commit made'
         kwargs = commits[0]['kwargs']
         assert 'uuid' in kwargs.keys(), 'Expected uuid primary key in kwargs'
         kwargs.pop('uuid')
-        self.assertEqual(kwargs, dict(description='A test annotation!',
-                                      start_TIME=start, end_TIME=end))
+        assert kwargs, dict(description='A test annotation!', start_TIME=start, end_TIME=end)
 
-    def test_range_commit_insertion(self):
+    def test_range_commit_insertion(self, annotator_range1d):
         start, end  = np.datetime64('2022-06-06'), np.datetime64('2022-06-08')
         description = 'A test annotation!'
-        self.annotator.set_range(start, end)
-        self.annotator.add_annotation(description=description)
-        self.annotator.commit()
+        annotator_range1d.set_range(start, end)
+        annotator_range1d.add_annotation(description=description)
+        annotator_range1d.commit()
 
-        df = pd.DataFrame({'uuid': pd.Series(self.annotator.df.index[0], dtype=object),
+        df = pd.DataFrame({'uuid': pd.Series(annotator_range1d.df.index[0], dtype=object),
                            'start_TIME':[start],
                            'end_TIME':[end],
                            'description':[description]}
                            ).set_index('uuid')
 
-        sql_df = self.annotator.connector.load_dataframe()
+        sql_df = annotator_range1d.connector.load_dataframe()
         pd.testing.assert_frame_equal(sql_df, df)
 
 
-    def test_range_addition_deletion_by_uuid(self):
+    def test_range_addition_deletion_by_uuid(self, annotator_range1d):
         start1, end1  = np.datetime64('2022-06-06'), np.datetime64('2022-06-08')
         start2, end2  = np.datetime64('2023-06-06'), np.datetime64('2023-06-08')
         start3, end3  = np.datetime64('2024-06-06'), np.datetime64('2024-06-08')
-        self.annotator.set_range(start1, end1)
-        self.annotator.add_annotation(description='Annotation 1')
-        self.annotator.set_range(start2, end2)
-        self.annotator.add_annotation(description='Annotation 2', uuid='08286429')
-        self.annotator.set_range(start3, end3)
-        self.annotator.add_annotation(description='Annotation 3')
-        self.annotator.commit()
-        sql_df = self.annotator.connector.load_dataframe()
-        self.assertEqual(set(sql_df['description']), set(['Annotation 1', 'Annotation 2', 'Annotation 3']))
+        annotator_range1d.set_range(start1, end1)
+        annotator_range1d.add_annotation(description='Annotation 1')
+        annotator_range1d.set_range(start2, end2)
+        annotator_range1d.add_annotation(description='Annotation 2', uuid='08286429')
+        annotator_range1d.set_range(start3, end3)
+        annotator_range1d.add_annotation(description='Annotation 3')
+        annotator_range1d.commit()
+        sql_df = annotator_range1d.connector.load_dataframe()
+        assert set(sql_df['description']) ==set(['Annotation 1', 'Annotation 2', 'Annotation 3'])
         deletion_index = sql_df.index[1]
-        self.annotator.delete_annotation(deletion_index)
-        self.annotator.commit()
-        sql_df = self.annotator.connector.load_dataframe()
-        self.assertEqual(set(sql_df['description']), set(['Annotation 1', 'Annotation 3']))
+        annotator_range1d.delete_annotation(deletion_index)
+        annotator_range1d.commit()
+        sql_df = annotator_range1d.connector.load_dataframe()
+        assert set(sql_df['description']) == set(['Annotation 1', 'Annotation 3'])
 
 
-    def test_range_define_preserved_index_mismatch(self):
+    def test_range_define_preserved_index_mismatch(self, annotator_range1d):
         starts = [np.datetime64('2022-06-%.2d' % d) for d in  range(6,15, 4)]
         ends = [np.datetime64('2022-06-%.2d' % (d+2)) for d in  range(6,15, 4)]
         descriptions = ['Annotation %d' % d for d in [1,2,3]]
         annotation_id = [uuid.uuid4().hex[:8] for d in [1,2,3]]
 
         data = pd.DataFrame({'uuid':annotation_id, 'start':starts, 'end':ends, 'description':descriptions}).set_index('uuid')
-        self.annotator.define_fields(data[['description']], preserve_index=True)
-        self.annotator.define_ranges(data['start'].iloc[:2], data['end'].iloc[:2])
-        with self.assertRaisesRegex(ValueError,
-                           f"Following annotations have no associated region: {{{repr(annotation_id[2])}}}"):
-            self.annotator.commit()
+        annotator_range1d.define_fields(data[['description']], preserve_index=True)
+        annotator_range1d.define_ranges(data['start'].iloc[:2], data['end'].iloc[:2])
+        msg = f"Following annotations have no associated region: {{{annotation_id[2]!r}}}"
+        with pytest.raises(ValueError, match=msg):
+            annotator_range1d.commit()
 
-    def test_range_define_auto_index_mismatch(self):
+    def test_range_define_auto_index_mismatch(self, annotator_range1d):
         starts = [np.datetime64('2022-06-%.2d' % d) for d in  range(6,15, 4)]
         ends = [np.datetime64('2022-06-%.2d' % (d+2)) for d in  range(6,15, 4)]
         descriptions = ['Annotation %d' % d for d in [1,2,3]]
@@ -118,13 +110,13 @@ class TestBasicRange1DAnnotator(unittest.TestCase):
 
         data = pd.DataFrame({'uuid':annotation_id, 'start':starts,
                              'end':ends, 'description':descriptions}).set_index('uuid')
-        self.annotator.define_fields(data[['description']], preserve_index=False)
-        self.annotator.define_ranges(data['start'].iloc[:2], data['end'].iloc[:2])
-        with self.assertRaisesRegex(ValueError,
-                           "Following annotations have no associated region:"):
-            self.annotator.commit()
+        annotator_range1d.define_fields(data[['description']], preserve_index=False)
+        annotator_range1d.define_ranges(data['start'].iloc[:2], data['end'].iloc[:2])
+        with pytest.raises(ValueError,
+                           match="Following annotations have no associated region:"):
+            annotator_range1d.commit()
 
-    def test_range_define_unassigned_indices(self):
+    def test_range_define_unassigned_indices(self, annotator_range1d):
         starts = [np.datetime64('2022-06-%.2d' % d) for d in  range(6,15, 4)]
         ends = [np.datetime64('2022-06-%.2d' % (d+2)) for d in  range(6,15, 4)]
         descriptions = ['Annotation %d' % d for d in [1,2,3]]
@@ -137,10 +129,9 @@ class TestBasicRange1DAnnotator(unittest.TestCase):
         data2 = pd.DataFrame({'uuid':annotation_id2, 'start':starts,
                               'end':ends, 'description':descriptions}).set_index('uuid')
 
-        self.annotator.define_fields(data1[['description']])
-        with self.assertRaises(KeyError) as cm:
-            self.annotator.define_ranges(data2['start'], data2['end'])
-        assert f'{mismatched}' in str(cm.exception)
+        annotator_range1d.define_fields(data1[['description']])
+        with pytest.raises(KeyError, match=str(mismatched)):
+            annotator_range1d.define_ranges(data2['start'], data2['end'])
 
 
 class TestBasicRange2DAnnotator(unittest.TestCase):
