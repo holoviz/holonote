@@ -55,8 +55,8 @@ class AnnotationTable(param.Parameterized):
             self._field_df = fields_df
 
         # FIXME: Proper solution is to only load relevant columns
-        self._field_df = self._field_df.drop_duplicates()
-        self._region_df = self._region_df.drop_duplicates()
+        self._field_df = self._field_df #.drop_duplicates(axis=1)
+        self._region_df = self._region_df #.drop_duplicates(axis=1)
 
         self.clear_edits()
         self._update_index()

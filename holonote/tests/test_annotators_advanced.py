@@ -1,8 +1,9 @@
 import holoviews as hv
 import numpy as np
 import pandas as pd
+import pytest
 
-from holonote.annotate import Annotator
+from holonote.annotate import Annotator, SQLiteDB
 
 
 def test_multipoint_range_commit_insertion(multiple_region_annotator):
@@ -92,3 +93,81 @@ class TestAnnotatorMultipleStringFields:
         multiple_fields_annotator.commit()
         sql_df = multiple_fields_annotator.connector.load_dataframe()
         assert set(sql_df['field1']) == {'NEW Field 1.1', 'Field 2.1'}
+
+
+def test_reconnect_new_conn(tmp_path):
+    db_path = str(tmp_path / "test.db")
+    conn1 = SQLiteDB(filename=db_path)
+    conn2 = SQLiteDB(filename=db_path)
+
+    # Create annotator with data and commit
+    a1 = Annotator(
+        spec={"TIME": np.datetime64},
+        fields=["description"],
+        region_types=["Range"],
+        connector=conn1,
+    )
+    times = pd.date_range("2022-06-09", "2022-06-13")
+    for t1, t2 in zip(times[:-1], times[1:]):
+        a1.set_range(t1, t2)
+        a1.add_annotation(description='A programmatically defined annotation')
+    a1.commit()
+
+    # Save internal dataframes
+    a1_df = a1.df.copy()
+    a1_region = a1.annotation_table._region_df.copy()
+    a1_field = a1.annotation_table._field_df.copy()
+
+    # Add new connector
+    a2 = Annotator(
+        spec={"TIME": np.datetime64},
+        fields=["description"],
+        region_types=["Range"],
+        connector=conn2,
+    )
+    a2_df = a2.df.copy()
+    a2_region = a2.annotation_table._region_df.copy()
+    a2_field = a2.annotation_table._field_df.copy()
+
+    pd.testing.assert_frame_equal(a1_df, a2_df)
+    pd.testing.assert_frame_equal(a1_region, a2_region)
+    pd.testing.assert_frame_equal(a1_field, a2_field)
+
+
+@pytest.mark.xfail(reason="Can't reuse connector without duplicates")
+def test_reconnect_same_conn(tmp_path):
+    db_path = str(tmp_path / "test.db")
+    conn1 = conn2 = SQLiteDB(filename=db_path)
+
+    # Create annotator with data and commit
+    a1 = Annotator(
+        spec={"TIME": np.datetime64},
+        fields=["description"],
+        region_types=["Range"],
+        connector=conn1,
+    )
+    times = pd.date_range("2022-06-09", "2022-06-13")
+    for t1, t2 in zip(times[:-1], times[1:]):
+        a1.set_range(t1, t2)
+        a1.add_annotation(description='A programmatically defined annotation')
+    a1.commit()
+
+    # Save internal dataframes
+    a1_df = a1.df.copy()
+    a1_region = a1.annotation_table._region_df.copy()
+    a1_field = a1.annotation_table._field_df.copy()
+
+    # Add new connector
+    a2 = Annotator(
+        spec={"TIME": np.datetime64},
+        fields=["description"],
+        region_types=["Range"],
+        connector=conn2,
+    )
+    a2_df = a2.df.copy()
+    a2_region = a2.annotation_table._region_df.copy()
+    a2_field = a2.annotation_table._field_df.copy()
+
+    pd.testing.assert_frame_equal(a1_df, a2_df)
+    pd.testing.assert_frame_equal(a1_region, a2_region)
+    pd.testing.assert_frame_equal(a1_field, a2_field)
