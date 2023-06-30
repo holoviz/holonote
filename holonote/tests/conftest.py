@@ -1,6 +1,7 @@
+import numpy as np
 import pytest
 
-from holonote.annotate import SQLiteDB, UUIDHexStringKey
+from holonote.annotate import Annotator, SQLiteDB, UUIDHexStringKey
 
 
 @pytest.fixture()

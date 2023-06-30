@@ -43,6 +43,7 @@ def multiple_annotators(conn_sqlite_uuid):
 
 @pytest.fixture()
 def multiple_fields_annotator(conn_sqlite_uuid):
+    conn_sqlite_uuid.fields = ['field1', 'field2']
     anno = Annotator(
         {'TIME': np.datetime64},
         fields=['field1', 'field2'],
