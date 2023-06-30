@@ -1,55 +1,8 @@
-
+import holoviews as hv
 import numpy as np
 import pandas as pd
-import pytest
 
-import holoviews as hv
 from holonote.annotate import Annotator
-
-
-@pytest.fixture()
-def multiple_region_annotator(conn_sqlite_uuid):
-    anno = Annotator(
-        {'TIME': np.datetime64},
-        fields=['description'],
-        region_types=['Point', 'Range'],
-        connector=conn_sqlite_uuid,
-    )
-    return anno
-
-
-@pytest.fixture()
-def multiple_annotators(conn_sqlite_uuid):
-    range1d_anno = Annotator(
-        {'TIME': np.datetime64},
-        fields=['description'],
-        region_types=['Range'],
-        connector=conn_sqlite_uuid,
-    )
-    range2d_anno = Annotator(
-        {'A': np.float64, 'B': np.float64},
-        fields=['description'],
-        region_types=['Range'],
-        connector=conn_sqlite_uuid,
-    )
-
-    output = {
-        'annotation1d': range1d_anno,
-        'annotation2d': range2d_anno,
-        'conn': conn_sqlite_uuid,
-    }
-    return output
-
-
-@pytest.fixture()
-def multiple_fields_annotator(conn_sqlite_uuid):
-    conn_sqlite_uuid.fields = ['field1', 'field2']
-    anno = Annotator(
-        {'TIME': np.datetime64},
-        fields=['field1', 'field2'],
-        connector=conn_sqlite_uuid,
-    )
-    return anno
 
 
 def test_multipoint_range_commit_insertion(multiple_region_annotator):

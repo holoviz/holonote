@@ -13,51 +13,6 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from holonote.annotate import Annotator
-
-
-@pytest.fixture()
-def annotator_range1d(conn_sqlite_uuid):
-    anno = Annotator(
-        {'TIME': np.datetime64},
-        fields=['description'],
-        region_types=['Range'],
-        connector=conn_sqlite_uuid,
-    )
-    return anno
-
-
-@pytest.fixture()
-def annotator_point1d(conn_sqlite_uuid):
-    anno = Annotator(
-        {'TIME': np.datetime64},
-        fields=['description'],
-        region_types=['Point'],
-        connector=conn_sqlite_uuid,
-    )
-    return anno
-
-
-@pytest.fixture()
-def annotator_range2d(conn_sqlite_uuid):
-    anno = Annotator(
-        {'x': float, 'y':float},
-        fields=['description'],
-        region_types=['Range'],
-        connector=conn_sqlite_uuid,
-    )
-    return anno
-
-@pytest.fixture()
-def annotator_point2d(conn_sqlite_uuid):
-    anno = Annotator(
-        {'x': float, 'y':float},
-        fields=['description'],
-        region_types=['Point'],
-        connector=conn_sqlite_uuid,
-    )
-    return anno
-
 
 class TestBasicRange1DAnnotator:
     def test_point_insertion_exception(self, annotator_range1d):
