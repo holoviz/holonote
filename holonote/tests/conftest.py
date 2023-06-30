@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import Iterator
+
 import numpy as np
 import pytest
 
@@ -5,7 +9,7 @@ from holonote.annotate import Annotator, SQLiteDB, UUIDHexStringKey
 
 
 @pytest.fixture()
-def conn_sqlite_uuid(tmp_path):
+def conn_sqlite_uuid(tmp_path) -> Iterator[SQLiteDB]:
     conn = SQLiteDB(filename=str(tmp_path / "test.db"), primary_key=UUIDHexStringKey())
     yield conn
     try:
@@ -19,7 +23,7 @@ def conn_sqlite_uuid(tmp_path):
 
 
 @pytest.fixture()
-def annotator_range1d(conn_sqlite_uuid):
+def annotator_range1d(conn_sqlite_uuid) -> Annotator:
     anno = Annotator(
         {"TIME": np.datetime64},
         fields=["description"],
@@ -30,7 +34,7 @@ def annotator_range1d(conn_sqlite_uuid):
 
 
 @pytest.fixture()
-def annotator_point1d(conn_sqlite_uuid):
+def annotator_point1d(conn_sqlite_uuid) -> Annotator:
     anno = Annotator(
         {"TIME": np.datetime64},
         fields=["description"],
@@ -41,7 +45,7 @@ def annotator_point1d(conn_sqlite_uuid):
 
 
 @pytest.fixture()
-def annotator_range2d(conn_sqlite_uuid):
+def annotator_range2d(conn_sqlite_uuid) -> Annotator:
     anno = Annotator(
         {"x": float, "y": float},
         fields=["description"],
@@ -52,7 +56,7 @@ def annotator_range2d(conn_sqlite_uuid):
 
 
 @pytest.fixture()
-def annotator_point2d(conn_sqlite_uuid):
+def annotator_point2d(conn_sqlite_uuid) -> Annotator:
     anno = Annotator(
         {"x": float, "y": float},
         fields=["description"],
@@ -63,41 +67,27 @@ def annotator_point2d(conn_sqlite_uuid):
 
 
 @pytest.fixture()
-def multiple_region_annotator(conn_sqlite_uuid):
-    anno = Annotator(
-        {"TIME": np.datetime64},
-        fields=["description"],
-        region_types=["Point", "Range"],
-        connector=conn_sqlite_uuid,
-    )
-    return anno
+def multiple_region_annotator(annotator_range1d) -> Annotator:
+    annotator_range1d.region_types = ["Point", "Range"]
+    return annotator_range1d
 
 
 @pytest.fixture()
-def multiple_annotators(conn_sqlite_uuid):
-    range1d_anno = Annotator(
-        {"TIME": np.datetime64},
-        fields=["description"],
-        region_types=["Range"],
-        connector=conn_sqlite_uuid,
-    )
-    range2d_anno = Annotator(
-        {"A": np.float64, "B": np.float64},
-        fields=["description"],
-        region_types=["Range"],
-        connector=conn_sqlite_uuid,
-    )
-
+def multiple_annotators(
+    conn_sqlite_uuid, annotator_range1d, annotator_range2d
+) -> dict[str, Annotator | SQLiteDB]:
+    annotator_range1d.connector = conn_sqlite_uuid
+    annotator_range2d.connector = conn_sqlite_uuid
     output = {
-        "annotation1d": range1d_anno,
-        "annotation2d": range2d_anno,
+        "annotation1d": annotator_range1d,
+        "annotation2d": annotator_range2d,
         "conn": conn_sqlite_uuid,
     }
     return output
 
 
 @pytest.fixture()
-def multiple_fields_annotator(conn_sqlite_uuid):
+def multiple_fields_annotator(conn_sqlite_uuid) -> Annotator:
     conn_sqlite_uuid.fields = ["field1", "field2"]
     anno = Annotator(
         {"TIME": np.datetime64},
