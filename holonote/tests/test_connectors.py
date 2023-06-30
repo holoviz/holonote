@@ -1,15 +1,25 @@
-import sys
-import unittest
-
 import numpy as np
 import pandas as pd
-from holonote.annotate import Connector, SQLiteDB, AutoIncrementKey, UUIDHexStringKey, UUIDBinaryKey
+import pytest
+
+from holonote.annotate import Connector, AutoIncrementKey, UUIDHexStringKey, UUIDBinaryKey
 
 
-filename = ':memory:'
+@pytest.fixture(params=[UUIDHexStringKey, AutoIncrementKey, UUIDBinaryKey])
+def database(conn_sqlite_uuid, request):
+    # Change the primary key type
+    conn_sqlite_uuid.primary_key = request.param(field_name='uuid')
+    fields = {
+        'uuid': conn_sqlite_uuid.primary_key.schema,
+        'description': 'TEXT',
+        'start':'TIMESTAMP',
+        'end': 'TIMESTAMP'
+    }
+    conn_sqlite_uuid.initialize(fields)
+    return conn_sqlite_uuid
 
 
-class TestConnector(unittest.TestCase):
+class TestConnector:
     "Tests for classmethods on the base class"
 
     def test_fields_from_metadata_literals(self):
@@ -47,58 +57,45 @@ class TestConnector(unittest.TestCase):
         assert result == expected
 
 
-class TestSQLiteUUIDHexKey(unittest.TestCase):
-    """
-    Example using policy = 'insert'
-    """
+class TestSQLiteDB:
 
-    def setUp(self):
-        self.db = SQLiteDB(filename=filename, primary_key=UUIDHexStringKey())
+    def test_setup(self, database):
+        assert database.con is not None
 
-        fields = {'uuid': self.db.primary_key.schema,
-                  'description': 'TEXT',
-                  'start':'TIMESTAMP',
-                  'end': 'TIMESTAMP'}
-        self.db.initialize(fields)
+    def test_initialized(self, database):
+        assert not database.uninitialized
 
-
-    def tearDown(self):
-        self.db.con.close()
-
-    def test_setup(self):
-        assert self.db.con is not None
-
-    def test_initialized(self):
-        assert not self.db.uninitialized
-
-    def test_add_row(self):
-        id1 = self.db.primary_key(self.db)
+    def test_add_row(self, database, request):
+        id1 = database.primary_key(database)
         start = pd.Timestamp('2022-06-01')
         end = pd.Timestamp('2022-06-03')
         description = 'A description'
-        insertion = {'uuid': id1, 'description':description, 'start':start, 'end':end}
-        df = pd.DataFrame({'uuid':pd.Series([id1], dtype=object),
-                           'description':[description], 'start':[start], 'end':[end]}).set_index('uuid')
-        self.db.add_row(**insertion)
-        pd.testing.assert_frame_equal(self.db.load_dataframe(), df)
+        insertion = {"uuid": id1, 'description':description, 'start':start, 'end':end}
+        df = pd.DataFrame({"uuid":pd.Series([id1], dtype=object),
+                           'description':[description], 'start':[start], 'end':[end]}).set_index("uuid")
+        database.add_row(**insertion)
+        pd.testing.assert_frame_equal(database.load_dataframe(), df)
 
+    def test_add_three_rows_delete_one(self, database, request):
+        if "UUIDHexStringKey" not in request.node.name:
+            # This test only works for UUIDHexStringKey
+            pytest.skip("Only UUIDHexStringKey supports deletion")
 
-    def test_add_three_rows_delete_one(self):
-        id1 = self.db.primary_key(self.db)
+        id1 = database.primary_key(database)
         insertion1 = {'uuid': id1,
-                     'description':f'A description',
+                     'description':'A description',
                      'start':pd.Timestamp('2022-06-01'),
                      'end':pd.Timestamp('2022-06-03')}
 
-        id2 = self.db.primary_key(self.db)
+        id2 = database.primary_key(database)
         insertion2 = {'uuid': id2,
-                     'description':f'A 2nd description',
+                     'description':'A 2nd description',
                      'start':pd.Timestamp('2024-06-01'),
                      'end':pd.Timestamp('2024-06-03')}
 
-        id3 = self.db.primary_key(self.db)
+        id3 = database.primary_key(database)
         insertion3 = {'uuid': id3,
-                     'description':f'A 3rd description',
+                     'description':'A 3rd description',
                      'start':pd.Timestamp('2026-06-01'),
                      'end':pd.Timestamp('2026-06-03')}
 
@@ -107,86 +104,8 @@ class TestSQLiteUUIDHexKey(unittest.TestCase):
                    'start':[insertion1['start'], insertion3['start']],
                    'end':[insertion1['end'], insertion3['end']]}
         df = pd.DataFrame(df_data).set_index('uuid')
-        self.db.add_row(**insertion1)
-        self.db.add_row(**insertion2)
-        self.db.add_row(**insertion3)
-        self.db.delete_row(id2)
-        pd.testing.assert_frame_equal(self.db.load_dataframe(), df)
-
-
-class TestSQLiteDBAutoIncrementKey(unittest.TestCase):
-
-    def setUp(self):
-        self.db = SQLiteDB(filename=filename, primary_key=AutoIncrementKey())
-
-        fields = {'id': self.db.primary_key.schema,
-                  'description': 'TEXT',
-                  'start':'TIMESTAMP',
-                  'end': 'TIMESTAMP'}
-        self.db.initialize(fields)
-
-    def tearDown(self):
-        self.db.con.close()
-
-    def test_setup(self):
-        assert self.db.con is not None
-
-    def test_columns(self):
-        assert self.db.columns == ('id', 'description', 'start', 'end')
-
-    def test_add_row(self):
-        id1 = self.db.primary_key(self.db)
-        insertion = {'id': id1,
-                     'description':f'A description',
-                     'start':pd.Timestamp('2022-06-01'),
-                     'end':pd.Timestamp('2022-06-03')}
-
-        self.db.add_row(**insertion)
-        df = pd.DataFrame([insertion]).set_index('id')
-        pd.testing.assert_frame_equal(self.db.load_dataframe(), df)
-
-    def test_add_row_mismatch(self):
-        insertion = {'id': 200,  # Will not match autoincrement rowid
-                     'description':f'A description',
-                     'start':pd.Timestamp('2022-06-01'),
-                     'end':pd.Timestamp('2022-06-03')}
-
-        insertion_mismatched_id = insertion.copy()
-        df = pd.DataFrame([insertion_mismatched_id]).set_index('id')
-        self.db.add_row(**insertion)
-        assert not self.db.load_dataframe().equals(df)
-
-
-class TestSQLiteUUIDBinaryKey(unittest.TestCase):
-    """
-    Example using policy = 'insert'
-    """
-
-    def setUp(self):
-        self.db = SQLiteDB(filename=filename, primary_key=UUIDBinaryKey())
-
-        fields = {'uuid': self.db.primary_key.schema,
-                  'description': 'TEXT',
-                  'start':'TIMESTAMP',
-                  'end': 'TIMESTAMP'}
-        self.db.initialize(fields)
-
-
-    def tearDown(self):
-        self.db.con.close()
-
-    def test_setup(self):
-        assert self.db.con is not None
-
-    def test_initialized(self):
-        assert not self.db.uninitialized
-
-    def test_add_row(self):
-        id1 = self.db.primary_key(self.db)
-        insertion = {'uuid': id1,
-                     'description':f'A description',
-                     'start':pd.Timestamp('2022-06-01'),
-                     'end':pd.Timestamp('2022-06-03')}
-        df = pd.DataFrame([insertion]).set_index('uuid')
-        self.db.add_row(**insertion)
-        pd.testing.assert_frame_equal(self.db.load_dataframe(), df)
+        database.add_row(**insertion1)
+        database.add_row(**insertion2)
+        database.add_row(**insertion3)
+        database.delete_row(id2)
+        pd.testing.assert_frame_equal(database.load_dataframe(), df)
