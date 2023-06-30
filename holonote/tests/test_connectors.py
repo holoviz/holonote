@@ -14,36 +14,37 @@ class TestConnector(unittest.TestCase):
 
     def test_fields_from_metadata_literals(self):
         fields = Connector.schema_from_field_values({'A':3, 'B':'string', 'C':False})
-        self.assertEqual(fields,{'A': 'INTEGER', 'B': 'TEXT', 'C': 'BOOLEAN'})
+        assert fields == {'A': 'INTEGER', 'B': 'TEXT', 'C': 'BOOLEAN'}
 
     def test_schema_from_value_datetime(self):
         datetime_type = Connector.field_value_to_type(np.datetime64('NaT'))
-        self.assertEqual(Connector.type_mapping[datetime_type],'TIMESTAMP')
+        assert Connector.type_mapping[datetime_type] == 'TIMESTAMP'
 
     def test_expand_range_region_column_schema_datetime(self):
         result = Connector.expand_region_column_schema(['Range'], {'xdim':np.datetime64})
-        self.assertEqual(result, {'start_xdim':'TIMESTAMP', 'end_xdim':'TIMESTAMP'})
+        assert result == {'start_xdim': 'TIMESTAMP', 'end_xdim': 'TIMESTAMP'}
 
     def test_expand_range_region_column_schema_datetimes(self):
         result = Connector.expand_region_column_schema(['Range'],
                                                        {'xdim':np.datetime64,
                                                         'ydim':int})
-        self.assertEqual(result,{'start_xdim':'TIMESTAMP',
-                                 'end_xdim':'TIMESTAMP',
-                                 'start_ydim':'INTEGER',
-                                 'end_ydim':'INTEGER'})
+        expected = {
+            'start_xdim': 'TIMESTAMP', 'end_xdim': 'TIMESTAMP',
+            'start_ydim': 'INTEGER', 'end_ydim': 'INTEGER'
+        }
+        assert result == expected
 
     def test_generate_schema(self):
         region_types = [['Range']]
         kdim_dtypes = [{'xdim':np.datetime64, 'ydim':int}]
         result = Connector.generate_schema(AutoIncrementKey(), region_types, kdim_dtypes,
                                            {'description':str})
-        self.assertEqual(result, {'id': 'INTEGER PRIMARY KEY AUTOINCREMENT',
-                                  'start_xdim': 'TIMESTAMP',
-                                  'start_ydim': 'INTEGER',
-                                  'end_xdim': 'TIMESTAMP',
-                                  'end_ydim': 'INTEGER',
-                                  'description': 'TEXT'})
+        expected = {
+            'id': 'INTEGER PRIMARY KEY AUTOINCREMENT', 'start_xdim': 'TIMESTAMP',
+            'start_ydim': 'INTEGER', 'end_xdim': 'TIMESTAMP',
+            'end_ydim': 'INTEGER', 'description': 'TEXT'
+        }
+        assert result == expected
 
 
 class TestSQLiteUUIDHexKey(unittest.TestCase):
@@ -65,10 +66,10 @@ class TestSQLiteUUIDHexKey(unittest.TestCase):
         self.db.con.close()
 
     def test_setup(self):
-        self.assertTrue(self.db.con is not None)
+        assert self.db.con is not None
 
     def test_initialized(self):
-        self.assertFalse(self.db.uninitialized)
+        assert not self.db.uninitialized
 
     def test_add_row(self):
         id1 = self.db.primary_key(self.db)
@@ -128,10 +129,10 @@ class TestSQLiteDBAutoIncrementKey(unittest.TestCase):
         self.db.con.close()
 
     def test_setup(self):
-        self.assertTrue(self.db.con is not None)
+        assert self.db.con is not None
 
     def test_columns(self):
-        self.assertEqual(self.db.columns,('id', 'description', 'start', 'end'))
+        assert self.db.columns == ('id', 'description', 'start', 'end')
 
     def test_add_row(self):
         id1 = self.db.primary_key(self.db)
@@ -153,7 +154,7 @@ class TestSQLiteDBAutoIncrementKey(unittest.TestCase):
         insertion_mismatched_id = insertion.copy()
         df = pd.DataFrame([insertion_mismatched_id]).set_index('id')
         self.db.add_row(**insertion)
-        self.assertFalse(self.db.load_dataframe().equals(df))
+        assert not self.db.load_dataframe().equals(df)
 
 
 class TestSQLiteUUIDBinaryKey(unittest.TestCase):
@@ -175,10 +176,10 @@ class TestSQLiteUUIDBinaryKey(unittest.TestCase):
         self.db.con.close()
 
     def test_setup(self):
-        self.assertTrue(self.db.con is not None)
+        assert self.db.con is not None
 
     def test_initialized(self):
-        self.assertFalse(self.db.uninitialized)
+        assert not self.db.uninitialized
 
     def test_add_row(self):
         id1 = self.db.primary_key(self.db)

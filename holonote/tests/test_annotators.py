@@ -19,7 +19,7 @@ from holonote.annotate import Annotator
 from holonote.annotate import SQLiteDB, UUIDHexStringKey
 
 
-@pytest.fixture
+@pytest.fixture()
 def annotator_range1d(conn_sqlite_uuid):
     anno = Annotator(
         {'TIME': np.datetime64},
@@ -27,10 +27,10 @@ def annotator_range1d(conn_sqlite_uuid):
         region_types=['Range'],
         connector=conn_sqlite_uuid,
     )
-    yield anno
+    return anno
 
 
-@pytest.fixture
+@pytest.fixture()
 def annotator_range2d(conn_sqlite_uuid):
     anno = Annotator(
         {'x': float, 'y':float},
@@ -38,7 +38,7 @@ def annotator_range2d(conn_sqlite_uuid):
         region_types=['Range'],
         connector=conn_sqlite_uuid,
     )
-    yield anno
+    return anno
 
 
 class TestBasicRange1DAnnotator:
@@ -290,16 +290,15 @@ class TestBasicPoint1DAnnotator(unittest.TestCase):
         commits = self.annotator.annotation_table.commits()
         assert len(commits)==1, 'Only one insertion commit made '
         self.annotator.commit()
-        self.assertEqual(commits[0]['operation'],'insert')
-        self.assertEqual(set(commits[0]['kwargs'].keys()),
-                         set(self.annotator.connector.columns))
+        assert commits[0]['operation'] == 'insert'
+        assert set(commits[0]['kwargs'].keys()) == set(self.annotator.connector.columns)
 
     def test_range_insertion_exception(self):
         start, end = np.datetime64('2022-06-06'), np.datetime64('2022-06-08')
         with self.assertRaises(ValueError) as cm:
             self.annotator.set_range(start, end)
         expected_msg = "Range region types not enabled as region_types=['Point']"
-        self.assertEqual(str(cm.exception), expected_msg)
+        assert str(cm.exception) == expected_msg
 
     def test_point_insertion_values(self):
         timestamp = np.datetime64('2022-06-06')
@@ -310,7 +309,7 @@ class TestBasicPoint1DAnnotator(unittest.TestCase):
         kwargs = commits[0]['kwargs']
         assert 'uuid' in kwargs.keys(), 'Expected uuid primary key in kwargs'
         kwargs.pop('uuid')
-        self.assertEqual(kwargs, dict(description='A test annotation!', point_TIME=timestamp))
+        assert kwargs == dict(description='A test annotation!', point_TIME=timestamp)
 
     def test_point_commit_insertion(self):
         timestamp = np.datetime64('2022-06-06')
@@ -340,12 +339,12 @@ class TestBasicPoint1DAnnotator(unittest.TestCase):
         self.annotator.add_annotation(description='Annotation 3')
         self.annotator.commit()
         sql_df = self.annotator.connector.load_dataframe()
-        self.assertEqual(set(sql_df['description']), set(['Annotation 1', 'Annotation 2', 'Annotation 3']))
+        assert set(sql_df['description']) == set(['Annotation 1', 'Annotation 2', 'Annotation 3'])
         deletion_index = sql_df.index[1]
         self.annotator.delete_annotation(deletion_index)
         self.annotator.commit()
         sql_df = self.annotator.connector.load_dataframe()
-        self.assertEqual(set(sql_df['description']), set(['Annotation 1', 'Annotation 3']))
+        assert set(sql_df['description']) == set(['Annotation 1', 'Annotation 3'])
 
     def test_point_define_preserved_index_mismatch(self):
         timestamps = [np.datetime64('2022-06-%.2d' % d) for d in  range(6,15, 4)]
@@ -411,16 +410,15 @@ class TestBasicPoint2DAnnotator(unittest.TestCase):
         commits = self.annotator.annotation_table.commits()
         assert len(commits)==1, 'Only one insertion commit made '
         self.annotator.commit()
-        self.assertEqual(commits[0]['operation'],'insert')
-        self.assertEqual(set(commits[0]['kwargs'].keys()),
-                         set(self.annotator.connector.columns))
+        assert commits[0]['operation'] == 'insert'
+        assert set(commits[0]['kwargs'].keys()) == set(self.annotator.connector.columns)
 
     def test_range_insertion_exception(self):
         x1,x2,y1,y2 = -0.25,0.25, -0.3, 0.3
         with self.assertRaises(ValueError) as cm:
             self.annotator.set_range(x1,x2,y1,y2)
         expected_msg = "Range region types not enabled as region_types=['Point']"
-        self.assertEqual(str(cm.exception), expected_msg)
+        assert str(cm.exception) == expected_msg
 
     def test_point_insertion_values(self):
         x,y = 0.5, 0.3
@@ -431,7 +429,7 @@ class TestBasicPoint2DAnnotator(unittest.TestCase):
         kwargs = commits[0]['kwargs']
         assert 'uuid' in kwargs.keys(), 'Expected uuid primary key in kwargs'
         kwargs.pop('uuid')
-        self.assertEqual(kwargs, dict(description='A test annotation!', point_x=x, point_y=y))
+        assert kwargs == dict(description='A test annotation!', point_x=x, point_y=y)
 
     def test_point_commit_insertion(self):
         x, y = 0.5, 0.3
@@ -462,12 +460,12 @@ class TestBasicPoint2DAnnotator(unittest.TestCase):
         self.annotator.add_annotation(description='Annotation 3')
         self.annotator.commit()
         sql_df = self.annotator.connector.load_dataframe()
-        self.assertEqual(set(sql_df['description']), set(['Annotation 1', 'Annotation 2', 'Annotation 3']))
+        assert set(sql_df['description']) == set(['Annotation 1', 'Annotation 2', 'Annotation 3'])
         deletion_index = sql_df.index[1]
         self.annotator.delete_annotation(deletion_index)
         self.annotator.commit()
         sql_df = self.annotator.connector.load_dataframe()
-        self.assertEqual(set(sql_df['description']), set(['Annotation 1', 'Annotation 3']))
+        assert set(sql_df['description']) == set(['Annotation 1', 'Annotation 3'])
 
     def test_point_define_preserved_index_mismatch(self):
         xs, ys  = [-0.1,-0.2,-0.3], [0.1,0.2,0.3]
@@ -571,8 +569,8 @@ class TestMultiplePlotAnnotator(unittest.TestCase):
                                          fields=['description'], region_types=['Range'])
 
     def test_element_kdim_dtypes(self):
-        self.assertEqual(self.image_annotator.kdim_dtypes, {'A':np.float64 , 'B':np.float64})
-        self.assertEqual(self.curve_annotator.kdim_dtypes, {'TIME': np.datetime64})
+        assert self.image_annotator.kdim_dtypes == {'A': np.float64, 'B': np.float64}
+        assert self.curve_annotator.kdim_dtypes == {'TIME': np.datetime64}
 
     def test_multiplot_add_annotation(self):
         self.image_annotator.set_range(-0.25, 0.25, -0.1, 0.1)
@@ -605,8 +603,7 @@ class TestAnnotatorMultipleStringFields(unittest.TestCase):
         assert len(commits)==1, 'Only one insertion commit made'
         assert 'uuid' in kwargs.keys(), 'Expected uuid primary key in kwargs'
         kwargs.pop('uuid')
-        self.assertEqual(kwargs, dict(field1='A test field', field2='Another test field',
-                                      start_TIME=start, end_TIME=end))
+        assert kwargs == dict(field1='A test field', field2='Another test field', start_TIME=start, end_TIME=end)
 
 
     def test_commit_insertion(self):
@@ -640,4 +637,4 @@ class TestAnnotatorMultipleStringFields(unittest.TestCase):
         self.annotator.update_annotation_fields(self.annotator.df.index[0], field1='NEW Field 1.1')
         self.annotator.commit()
         sql_df = self.annotator.connector.load_dataframe()
-        self.assertEqual(set(sql_df['field1']), set(['NEW Field 1.1', 'Field 2.1']))
+        assert set(sql_df['field1']) == set(['NEW Field 1.1', 'Field 2.1'])
