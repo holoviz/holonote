@@ -1,5 +1,4 @@
 
-import unittest
 import numpy as np
 import pandas as pd
 import pytest
@@ -47,7 +46,7 @@ def multiple_fields_annotator(conn_sqlite_uuid):
     anno = Annotator(
         {'TIME': np.datetime64},
         fields=['field1', 'field2'],
-        connctor=conn_sqlite_uuid,
+        connector=conn_sqlite_uuid,
     )
     return anno
 
@@ -138,4 +137,4 @@ class TestAnnotatorMultipleStringFields:
         multiple_fields_annotator.update_annotation_fields(multiple_fields_annotator.df.index[0], field1='NEW Field 1.1')
         multiple_fields_annotator.commit()
         sql_df = multiple_fields_annotator.connector.load_dataframe()
-        assert set(sql_df['field1']) == set(['NEW Field 1.1', 'Field 2.1'])
+        assert set(sql_df['field1']) == {'NEW Field 1.1', 'Field 2.1'}
