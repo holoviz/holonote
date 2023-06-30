@@ -51,6 +51,16 @@ def annotator_range2d(conn_sqlite_uuid):
     )
     return anno
 
+@pytest.fixture()
+def annotator_point2d(conn_sqlite_uuid):
+    anno = Annotator(
+        {'x': float, 'y':float},
+        fields=['description'],
+        region_types=['Point'],
+        connector=conn_sqlite_uuid,
+    )
+    return anno
+
 
 class TestBasicRange1DAnnotator:
     def test_point_insertion_exception(self, annotator_range1d):
@@ -388,109 +398,97 @@ class TestBasicPoint1DAnnotator:
 
 
 
-class TestBasicPoint2DAnnotator(unittest.TestCase):
+class TestBasicPoint2DAnnotator:
 
-    def setUp(self):
-        assert Annotator.connector_class is SQLiteDB, 'Expecting default SQLite connector'
-        Annotator.connector_class.filename = ':memory:'
-        Annotator.connector_class.primary_key = UUIDHexStringKey()
-        self.annotator = Annotator({'x': float, 'y':float}, fields=['description'], region_types=['Point'])
-
-    def tearDown(self):
-        self.annotator.connector.cursor.close()
-        self.annotator.connector.con.close()
-        del self.annotator
-
-    def test_insertion_edit_table_columns(self):
-        self.annotator.set_point(-0.25, 0.1)
-        self.annotator.add_annotation(description='A test annotation!')
-        commits = self.annotator.annotation_table.commits()
+    def test_insertion_edit_table_columns(self, annotator_point2d):
+        annotator_point2d.set_point(-0.25, 0.1)
+        annotator_point2d.add_annotation(description='A test annotation!')
+        commits = annotator_point2d.annotation_table.commits()
         assert len(commits)==1, 'Only one insertion commit made '
-        self.annotator.commit()
+        annotator_point2d.commit()
         assert commits[0]['operation'] == 'insert'
-        assert set(commits[0]['kwargs'].keys()) == set(self.annotator.connector.columns)
+        assert set(commits[0]['kwargs'].keys()) == set(annotator_point2d.connector.columns)
 
-    def test_range_insertion_exception(self):
+    def test_range_insertion_exception(self, annotator_point2d):
         x1,x2,y1,y2 = -0.25,0.25, -0.3, 0.3
-        with self.assertRaises(ValueError) as cm:
-            self.annotator.set_range(x1,x2,y1,y2)
-        expected_msg = "Range region types not enabled as region_types=['Point']"
-        assert str(cm.exception) == expected_msg
+        expected_msg = r"Range region types not enabled as region_types=\['Point'\]"
+        with pytest.raises(ValueError, match=expected_msg):
+            annotator_point2d.set_range(x1,x2,y1,y2)
 
-    def test_point_insertion_values(self):
+    def test_point_insertion_values(self, annotator_point2d):
         x,y = 0.5, 0.3
-        self.annotator.set_point(x,y)
-        self.annotator.add_annotation(description='A test annotation!')
-        commits = self.annotator.annotation_table.commits()
+        annotator_point2d.set_point(x,y)
+        annotator_point2d.add_annotation(description='A test annotation!')
+        commits = annotator_point2d.annotation_table.commits()
         assert len(commits)==1, 'Only one insertion commit made'
         kwargs = commits[0]['kwargs']
         assert 'uuid' in kwargs.keys(), 'Expected uuid primary key in kwargs'
         kwargs.pop('uuid')
         assert kwargs == dict(description='A test annotation!', point_x=x, point_y=y)
 
-    def test_point_commit_insertion(self):
+    def test_point_commit_insertion(self, annotator_point2d):
         x, y = 0.5, 0.3
         description = 'A test annotation!'
-        self.annotator.set_point(x,y)
-        self.annotator.add_annotation(description=description)
-        self.annotator.commit()
+        annotator_point2d.set_point(x,y)
+        annotator_point2d.add_annotation(description=description)
+        annotator_point2d.commit()
 
-        df = pd.DataFrame({'uuid': pd.Series(self.annotator.df.index[0], dtype=object),
+        df = pd.DataFrame({'uuid': pd.Series(annotator_point2d.df.index[0], dtype=object),
                            'point_x':[x],
                            'point_y':[y],
                            'description':[description]}
                            ).set_index('uuid')
 
-        sql_df = self.annotator.connector.load_dataframe()
+        sql_df = annotator_point2d.connector.load_dataframe()
         pd.testing.assert_frame_equal(sql_df, df)
 
 
-    def test_point_addition_deletion_by_uuid(self):
+    def test_point_addition_deletion_by_uuid(self, annotator_point2d):
         x1, y1  = 0.2,0.2
         x2, y2  = 0.3,0.3
         x3, y3  = 0.4,0.4
-        self.annotator.set_point(x1, y1)
-        self.annotator.add_annotation(description='Annotation 1')
-        self.annotator.set_point(x2, y2)
-        self.annotator.add_annotation(description='Annotation 2', uuid='08286429')
-        self.annotator.set_point(x3, y3)
-        self.annotator.add_annotation(description='Annotation 3')
-        self.annotator.commit()
-        sql_df = self.annotator.connector.load_dataframe()
+        annotator_point2d.set_point(x1, y1)
+        annotator_point2d.add_annotation(description='Annotation 1')
+        annotator_point2d.set_point(x2, y2)
+        annotator_point2d.add_annotation(description='Annotation 2', uuid='08286429')
+        annotator_point2d.set_point(x3, y3)
+        annotator_point2d.add_annotation(description='Annotation 3')
+        annotator_point2d.commit()
+        sql_df = annotator_point2d.connector.load_dataframe()
         assert set(sql_df['description']) == set(['Annotation 1', 'Annotation 2', 'Annotation 3'])
         deletion_index = sql_df.index[1]
-        self.annotator.delete_annotation(deletion_index)
-        self.annotator.commit()
-        sql_df = self.annotator.connector.load_dataframe()
+        annotator_point2d.delete_annotation(deletion_index)
+        annotator_point2d.commit()
+        sql_df = annotator_point2d.connector.load_dataframe()
         assert set(sql_df['description']) == set(['Annotation 1', 'Annotation 3'])
 
-    def test_point_define_preserved_index_mismatch(self):
+    def test_point_define_preserved_index_mismatch(self, annotator_point2d):
         xs, ys  = [-0.1,-0.2,-0.3], [0.1,0.2,0.3]
         descriptions = ['Annotation %d' % d for d in [1,2,3]]
         annotation_id = [uuid.uuid4().hex[:8] for d in [1,2,3]]
 
         data = pd.DataFrame({'uuid':annotation_id, 'xs':xs, 'ys':ys,
                              'description':descriptions}).set_index('uuid')
-        self.annotator.define_fields(data[['description']], preserve_index=True)
-        self.annotator.define_points(data['xs'].iloc[:2], data['ys'].iloc[:2])
-        with self.assertRaisesRegex(ValueError,
-                           f"Following annotations have no associated region: {{{repr(annotation_id[2])}}}"):
-            self.annotator.commit()
+        annotator_point2d.define_fields(data[['description']], preserve_index=True)
+        annotator_point2d.define_points(data['xs'].iloc[:2], data['ys'].iloc[:2])
+        msg = f"Following annotations have no associated region: {{{annotation_id[2]!r}}}"
+        with pytest.raises(ValueError, match=msg):
+            annotator_point2d.commit()
 
-    def test_point_define_auto_index_mismatch(self):
+    def test_point_define_auto_index_mismatch(self, annotator_point2d):
         xs, ys  = [-0.1,-0.2,-0.3], [0.1,0.2,0.3]
         descriptions = ['Annotation %d' % d for d in [1,2,3]]
         annotation_id = [uuid.uuid4().hex[:8] for d in [1,2,3]]
 
         data = pd.DataFrame({'uuid':annotation_id, 'xs':xs, 'ys':ys,
                              'description':descriptions}).set_index('uuid')
-        self.annotator.define_fields(data[['description']], preserve_index=False)
-        self.annotator.define_points(data['xs'].iloc[:2], data['ys'].iloc[:2])
-        with self.assertRaisesRegex(ValueError,
-                           "Following annotations have no associated region:"):
-            self.annotator.commit()
+        annotator_point2d.define_fields(data[['description']], preserve_index=False)
+        annotator_point2d.define_points(data['xs'].iloc[:2], data['ys'].iloc[:2])
+        msg = "Following annotations have no associated region:"
+        with pytest.raises(ValueError, match=msg):
+            annotator_point2d.commit()
 
-    def test_point_define_unassigned_indices(self):
+    def test_point_define_unassigned_indices(self, annotator_point2d):
         xs, ys  = [-0.1,-0.2,-0.3], [0.1,0.2,0.3]
         descriptions = ['Annotation %d' % d for d in [1,2,3]]
         annotation_id1 = [uuid.uuid4().hex[:8] for d in [1,2,3]]
@@ -502,10 +500,9 @@ class TestBasicPoint2DAnnotator(unittest.TestCase):
         data2 = pd.DataFrame({'uuid':annotation_id2, 'xs':xs, 'ys':ys,
                               'description':descriptions}).set_index('uuid')
 
-        self.annotator.define_fields(data1[['description']])
-        with self.assertRaises(KeyError) as cm:
-            self.annotator.define_points(data2['xs'], data2['ys'])
-        assert f'{mismatched}' in str(cm.exception)
+        annotator_point2d.define_fields(data1[['description']])
+        with pytest.raises(KeyError, match=str(mismatched)):
+            annotator_point2d.define_points(data2['xs'], data2['ys'])
 
 
 
