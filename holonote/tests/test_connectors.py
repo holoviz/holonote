@@ -2,7 +2,12 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from holonote.annotate import Connector, AutoIncrementKey, UUIDHexStringKey, UUIDBinaryKey
+from holonote.annotate import (
+    AutoIncrementKey,
+    Connector,
+    UUIDBinaryKey,
+    UUIDHexStringKey,
+)
 
 
 @pytest.fixture(params=[UUIDHexStringKey, AutoIncrementKey, UUIDBinaryKey])
@@ -78,8 +83,7 @@ class TestSQLiteDB:
 
     def test_add_three_rows_delete_one(self, database, request):
         if "UUIDHexStringKey" not in request.node.name:
-            # This test only works for UUIDHexStringKey
-            pytest.skip("Only UUIDHexStringKey supports deletion")
+            pytest.skip("Test only works for UUIDHexStringKey")
 
         id1 = database.primary_key(database)
         insertion1 = {'uuid': id1,
