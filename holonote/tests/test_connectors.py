@@ -81,23 +81,20 @@ class TestSQLiteDB:
         database.add_row(**insertion)
         pd.testing.assert_frame_equal(database.load_dataframe(), df)
 
-    def test_add_three_rows_delete_one(self, database, request):
-        if "UUIDHexStringKey" not in request.node.name:
-            pytest.skip("Test only works for UUIDHexStringKey")
-
+    def test_add_three_rows_delete_one(self, database):
         id1 = database.primary_key(database)
         insertion1 = {'uuid': id1,
                      'description':'A description',
                      'start':pd.Timestamp('2022-06-01'),
                      'end':pd.Timestamp('2022-06-03')}
 
-        id2 = database.primary_key(database)
+        id2 = database.primary_key(database, [id1])
         insertion2 = {'uuid': id2,
                      'description':'A 2nd description',
                      'start':pd.Timestamp('2024-06-01'),
                      'end':pd.Timestamp('2024-06-03')}
 
-        id3 = database.primary_key(database)
+        id3 = database.primary_key(database, [id2])
         insertion3 = {'uuid': id3,
                      'description':'A 3rd description',
                      'start':pd.Timestamp('2026-06-01'),

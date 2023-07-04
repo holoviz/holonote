@@ -41,7 +41,7 @@ class PrimaryKey(param.Parameterized):
 
     connector_class = param.String(default='SQLiteDB')
 
-    def __call__(self, connector, key_list=[]):
+    def __call__(self, connector, key_list=None):
         """
         The key list is the current list of index values that are
         outstanding (i.e. have not been comitted).
@@ -74,7 +74,7 @@ class AutoIncrementKey(PrimaryKey):
     schema = param.String(default='INTEGER PRIMARY KEY AUTOINCREMENT',
                           constant=True, allow_None=False)
 
-    def __call__(self, connector, key_list=[]):
+    def __call__(self, connector, key_list=None):
         key_list_max = max(key_list) if key_list else 0
         connector_max = connector.max_rowid()
         connector_max = 0 if connector_max is None else connector_max
@@ -101,9 +101,7 @@ class UUIDHexStringKey(PrimaryKey): # Probably the better default
 
     length = param.Integer(default=32, bounds=(4,32))
 
-
-
-    def __call__(self, connector, key_list=[]):
+    def __call__(self, connector, key_list=None):
         return uuid.uuid4().hex[:self.length]
 
     def cast(self, value):
@@ -124,9 +122,11 @@ class UUIDBinaryKey(PrimaryKey):
 
     schema = param.String('BINARY PRIMARY KEY', constant=True, allow_None=False)
 
-    def __call__(self, connector, key_list=[]):
+    def __call__(self, connector, key_list=None):
         return uuid.uuid4().bytes
 
+    def cast(self, value):
+        return bytes(value)
 
 class WidgetKey(PrimaryKey):
     """
