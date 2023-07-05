@@ -98,7 +98,16 @@ class TestAnnotatorMultipleStringFields:
         assert set(sql_df['field1']) == {'NEW Field 1.1', 'Field 2.1'}
 
 
-def _reconnect_code(conn1, conn2):
+@pytest.mark.parametrize("method", ["new", "same"])
+def test_reconnect(method, tmp_path):
+    db_path = str(tmp_path / "test.db")
+
+    if method == "new":
+        conn1 = SQLiteDB(filename=db_path)
+        conn2 = SQLiteDB(filename=db_path)
+    elif method == "same":
+        conn1 = conn2 = SQLiteDB(filename=db_path)
+
     # Create annotator with data and commit
     a1 = Annotator(
         spec={"TIME": np.datetime64},
@@ -131,17 +140,3 @@ def _reconnect_code(conn1, conn2):
     pd.testing.assert_frame_equal(a1_df, a2_df)
     pd.testing.assert_frame_equal(a1_region, a2_region)
     pd.testing.assert_frame_equal(a1_field, a2_field)
-
-
-def test_reconnect_new_conn(tmp_path):
-    db_path = str(tmp_path / "test.db")
-    conn1 = SQLiteDB(filename=db_path)
-    conn2 = SQLiteDB(filename=db_path)
-    _reconnect_code(conn1, conn2)
-
-
-@pytest.mark.xfail(reason="Can't reuse connector without duplicates")
-def test_reconnect_same_conn(tmp_path):
-    db_path = str(tmp_path / "test.db")
-    conn1 = conn2 = SQLiteDB(filename=db_path)
-    _reconnect_code(conn1, conn2)
