@@ -58,8 +58,8 @@ class AnnotationTable(param.Parameterized):
             self._field_df = fields_df
 
         # FIXME: Proper solution is to only load relevant columns
-        self._field_df = self._field_df #.drop_duplicates(axis=1)
-        self._region_df = self._region_df #.drop_duplicates(axis=1)
+        self._field_df = self._field_df
+        self._region_df = self._region_df
 
         self.clear_edits()
         self._update_index()
@@ -311,8 +311,7 @@ class AnnotationTable(param.Parameterized):
                                   "dim2":dim2,
                                   "value":value,
                                   "_id":[self._index_mapping[ind] for ind in posx.index]})
-        self._region_df = pd.concat((self._region_df, additions), ignore_index=True)# .drop_duplicates()
-
+        self._region_df = pd.concat((self._region_df, additions), ignore_index=True)
 
     def define_ranges(self, dims, startx, endx, starty=None, endy=None):
         if isinstance(dims, str):
@@ -340,7 +339,7 @@ class AnnotationTable(param.Parameterized):
                                   "dim2":dim2,
                                   "value":value,
                                   "_id":[self._index_mapping[ind] for ind in startx.index]})
-        self._region_df = pd.concat((self._region_df, additions), ignore_index=True)# .drop_duplicates()
+        self._region_df = pd.concat((self._region_df, additions), ignore_index=True)
         self._update_index()
 
 
