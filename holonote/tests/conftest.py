@@ -67,9 +67,13 @@ def annotator_point2d(conn_sqlite_uuid) -> Annotator:
 
 
 @pytest.fixture()
-def multiple_region_annotator(annotator_range1d) -> Annotator:
-    annotator_range1d.region_types = ["Point", "Range"]
-    return annotator_range1d
+def multiple_region_annotator(conn_sqlite_uuid) -> Annotator:
+    return Annotator(
+        {"TIME": np.datetime64},
+        fields=["description"],
+        region_types=["Point", "Range"],
+        connector=conn_sqlite_uuid,
+    )
 
 
 @pytest.fixture()
