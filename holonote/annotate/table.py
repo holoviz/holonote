@@ -50,8 +50,8 @@ class AnnotationTable(param.Parameterized):
         if fields_df:
             fields_df = fields_df[fields].copy() # Primary key/index for annotations
             self._field_df = fields_df
-        elif connector and not connector.uninitialized:
-            connector.load_annotation_table(self, fields)
+        elif connector:
+            self.load_annotation_table(connector, fields)
         elif fields_df is None:
             fields_df = pd.DataFrame(columns=[primary_key_name] + fields)
             fields_df = fields_df.set_index(primary_key_name)
