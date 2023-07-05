@@ -24,7 +24,7 @@ class TestBasicRange1DAnnotator:
     def test_insertion_edit_table_columns(self, annotator_range1d):
         annotator_range1d.set_range(np.datetime64('2022-06-06'), np.datetime64('2022-06-08'))
         annotator_range1d.add_annotation(description='A test annotation!')
-        commits = annotator_range1d.annotation_table.commits()
+        commits = annotator_range1d.commit()
         assert len(commits)==1, 'Only one insertion commit made '
         annotator_range1d.commit()
         assert commits[0]['operation'] == 'insert'
@@ -34,7 +34,7 @@ class TestBasicRange1DAnnotator:
         start, end = np.datetime64('2022-06-06'), np.datetime64('2022-06-08')
         annotator_range1d.set_range(start, end)
         annotator_range1d.add_annotation(description='A test annotation!')
-        commits = annotator_range1d.annotation_table.commits()
+        commits = annotator_range1d.commit()
         assert len(commits)==1, 'Only one insertion commit made'
         kwargs = commits[0]['kwargs']
         assert 'uuid' in kwargs.keys(), 'Expected uuid primary key in kwargs'
@@ -134,9 +134,8 @@ class TestBasicRange2DAnnotator:
     def test_insertion_edit_table_columns(self, annotator_range2d):
         annotator_range2d.set_range(-0.25, 0.25, -0.1, 0.1)
         annotator_range2d.add_annotation(description='A test annotation!')
-        commits = annotator_range2d.annotation_table.commits()
+        commits = annotator_range2d.commit()
         assert len(commits)==1, 'Only one insertion commit made '
-        annotator_range2d.commit()
         assert commits[0]['operation'] == 'insert'
         assert set(commits[0]['kwargs'].keys()) == set(annotator_range2d.connector.columns)
 
@@ -144,7 +143,7 @@ class TestBasicRange2DAnnotator:
         startx, endx, starty, endy = -0.25, 0.25, -0.1, 0.1
         annotator_range2d.set_range(startx, endx, starty, endy)
         annotator_range2d.add_annotation(description='A test annotation!')
-        commits = annotator_range2d.annotation_table.commits()
+        commits = annotator_range2d.commit()
         assert len(commits)==1, 'Only one insertion commit made'
         kwargs = commits[0]['kwargs']
         assert 'uuid' in kwargs.keys(), 'Expected uuid primary key in kwargs'
@@ -249,7 +248,7 @@ class TestBasicPoint1DAnnotator:
     def test_insertion_edit_table_columns(self, annotator_point1d):
         annotator_point1d.set_point(np.datetime64('2022-06-06'))
         annotator_point1d.add_annotation(description='A test annotation!')
-        commits = annotator_point1d.annotation_table.commits()
+        commits = annotator_point1d.commit()
         assert len(commits)==1, 'Only one insertion commit made '
         annotator_point1d.commit()
         assert commits[0]['operation'] == 'insert'
@@ -265,7 +264,7 @@ class TestBasicPoint1DAnnotator:
         timestamp = np.datetime64('2022-06-06')
         annotator_point1d.set_point(timestamp)
         annotator_point1d.add_annotation(description='A test annotation!')
-        commits = annotator_point1d.annotation_table.commits()
+        commits = annotator_point1d.commit()
         assert len(commits)==1, 'Only one insertion commit made'
         kwargs = commits[0]['kwargs']
         assert 'uuid' in kwargs.keys(), 'Expected uuid primary key in kwargs'
@@ -354,9 +353,8 @@ class TestBasicPoint2DAnnotator:
     def test_insertion_edit_table_columns(self, annotator_point2d):
         annotator_point2d.set_point(-0.25, 0.1)
         annotator_point2d.add_annotation(description='A test annotation!')
-        commits = annotator_point2d.annotation_table.commits()
+        commits = annotator_point2d.commit()
         assert len(commits)==1, 'Only one insertion commit made '
-        annotator_point2d.commit()
         assert commits[0]['operation'] == 'insert'
         assert set(commits[0]['kwargs'].keys()) == set(annotator_point2d.connector.columns)
 
@@ -370,7 +368,7 @@ class TestBasicPoint2DAnnotator:
         x,y = 0.5, 0.3
         annotator_point2d.set_point(x,y)
         annotator_point2d.add_annotation(description='A test annotation!')
-        commits = annotator_point2d.annotation_table.commits()
+        commits = annotator_point2d.commit()
         assert len(commits)==1, 'Only one insertion commit made'
         kwargs = commits[0]['kwargs']
         assert 'uuid' in kwargs.keys(), 'Expected uuid primary key in kwargs'

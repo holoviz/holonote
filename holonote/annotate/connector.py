@@ -174,10 +174,6 @@ class Connector(param.Parameterized):
         np.float64: 'REAL',
         }
 
-    def __init__(self, **params):
-        self.annotation_table = None
-        super().__init__(**params)
-
     @classmethod
     def field_value_to_type(cls, value):
         if isinstance(value, list):
@@ -222,31 +218,6 @@ class Connector(param.Parameterized):
         return dict(schemas, **cls.schema_from_field_types(field_types))
 
 
-    def _initialize_annotation_table(self):
-        if self.annotation_table is None:
-            self.annotation_table = AnnotationTable()
-
-    def commit(self):
-        "Applies the commit hook to the connector"
-
-        if self.uninitialized:
-            self.initialize_table()
-
-        if self.commit_hook is not None:
-            self.commit_hook()
-        else:
-            self.commit_default_schema()
-
-    def commit_default_schema(self):
-        for commit in self.annotation_table.commits():
-            operation = commit['operation']
-            kwargs = self.transforms[operation](commit['kwargs'])
-            getattr(self,self.operation_mapping[operation])(**kwargs)
-
-        for annotator in self.annotation_table._annotators.values():
-            annotator.annotation_table.clear_edits()
-
-
     def _incompatible_schema_check(self, expected_keys, columns, fields, region_type):
         msg_prefix = ("Unable to read annotations that were stored with a "
                       "schema inconsistent with the current settings: ")
@@ -262,39 +233,6 @@ class Connector(param.Parameterized):
             raise Exception(msg_prefix
                             + f'Missing {repr(region_type)} region columns {missing_region_columns}. '
                             + msg_suffix)
-
-    def load_annotation_table(self, annotation_table, fields):
-        df = self.transforms['load'](self.load_dataframe())
-        fields_df = df[fields].copy()
-        annotation_table.define_fields(fields_df, {ind:ind for ind in fields_df.index})
-        all_region_types = [an.region_types for an in annotation_table._annotators.values()]
-        all_kdim_dtypes = [an.kdim_dtypes for an in annotation_table._annotators.values()]
-        for region_types, kdim_dtypes in zip(all_region_types, all_kdim_dtypes):
-            assert all(el in ['Range', 'Point'] for el in region_types)
-            for region_type in region_types:
-                if len(kdim_dtypes)==1:
-                    kdim = list(kdim_dtypes.keys())[0]
-                    if region_type == 'Range':
-                        expected_keys = [f'start_{kdim}', f'end_{kdim}']
-                        self._incompatible_schema_check(expected_keys, list(df.columns), fields, region_type)
-                        annotation_table.define_ranges(kdim, df[f'start_{kdim}'], df[f'end_{kdim}'])
-                    elif region_type == 'Point':
-                        self._incompatible_schema_check([f'point_{kdim}'], list(df.columns), fields, region_type)
-                        annotation_table.define_points(kdim, df[f'point_{kdim}'])
-                elif len(kdim_dtypes)==2:
-                    kdim1, kdim2 = list(kdim_dtypes.keys())
-                    if region_type == 'Range':
-                        self._incompatible_schema_check([f'start_{kdim1}', f'end_{kdim1}',
-                                                         f'start_{kdim2}', f'end_{kdim2}'],
-                                                        list(df.columns), fields, region_type)
-                        annotation_table.define_ranges([kdim1, kdim2],
-                                                       df[f'start_{kdim1}'], df[f'end_{kdim1}'],
-                                                       df[f'start_{kdim2}'], df[f'end_{kdim2}'])
-                    elif region_type == 'Point':
-                        self._incompatible_schema_check([f'point_{kdim1}', f'point_{kdim2}'],
-                                                        list(df.columns), fields, region_type)
-                        annotation_table.define_points([kdim1, kdim2], df[f'point_{kdim1}'], df[f'point_{kdim2}'])
-        annotation_table.clear_edits()
 
 
     def add_annotation(self, **fields):
@@ -344,11 +282,9 @@ class SQLiteDB(Connector):
         if self.con is None:
             self.con = sqlite3.connect(self.filename, detect_types=sqlite3.PARSE_DECLTYPES |
                                        sqlite3.PARSE_COLNAMES)
-            self.cursor = self.con.cursor()
+            self.cursor = self.con.cursor()  # should be context manager
         if create_table:
             self.create_table(column_schema=column_schema)
-
-        super()._initialize_annotation_table()
 
     @property
     def uninitialized(self):
@@ -394,13 +330,6 @@ class SQLiteDB(Connector):
         self.cursor.execute(create_table_sql)
         self.con.commit()
 
-    def initialize_table(self):
-        field_dtypes = {col:str for col in self.fields} # FIXME - generalize
-        all_region_types = [an.region_types for an in self.annotation_table._annotators.values()]
-        all_kdim_dtypes = [an.kdim_dtypes for an in self.annotation_table._annotators.values()]
-        schema = self.generate_schema(self.primary_key, all_region_types, all_kdim_dtypes, field_dtypes)
-        self.create_table(schema)
-
     def delete_table(self):
         self.cursor.execute(f"DROP TABLE IF EXISTS {self.table_name}")
         self.con.commit()
@@ -441,3 +370,8 @@ class SQLiteDB(Connector):
         query = f"UPDATE {self.table_name} SET " + set_updates + f" WHERE \"{self.primary_key.field_name}\" = ?;"
         self.cursor.execute(query, list(updates.values()) + [id_val])
         self.con.commit()
+
+    def add_schema(self, schema):
+        # self._schemas.append(schema)
+        self.column_schema |= schema
+

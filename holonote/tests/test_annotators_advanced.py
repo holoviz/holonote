@@ -54,7 +54,7 @@ class TestAnnotatorMultipleStringFields:
         start, end = np.datetime64('2022-06-06'), np.datetime64('2022-06-08')
         multiple_fields_annotator.set_range(start, end)
         multiple_fields_annotator.add_annotation(field1='A test field', field2='Another test field')
-        commits = multiple_fields_annotator.annotation_table.commits()
+        commits = multiple_fields_annotator.commit()
         kwargs = commits[0]['kwargs']
         assert len(commits)==1, 'Only one insertion commit made'
         assert 'uuid' in kwargs.keys(), 'Expected uuid primary key in kwargs'

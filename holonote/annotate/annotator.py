@@ -6,7 +6,7 @@ import pandas as pd
 import param
 from bokeh.models.tools import BoxSelectTool, HoverTool
 from holoviews.element.selection import Selection1DExpr
-from .connector import Connector, SQLiteDB
+from .connector import Connector, SQLiteDB, AnnotationTable
 
 
 
@@ -101,23 +101,24 @@ class AnnotatorInterface(param.Parameterized):
 
     connector = param.ClassSelector(class_=Connector, allow_None=False)
 
+    annotation_table = param.ClassSelector(class_=AnnotationTable, allow_None=False)
+
     region_types = param.ListSelector(default=['Range'], objects=['Range', 'Point'], doc="""
        Enabled region types for the current Annotator.""")
 
     connector_class = SQLiteDB
 
     def __init__(self, **params):
+        if "annotation_table" not in params:
+            params["annotation_table"] = AnnotationTable() #connector=params.get("connector"))
+
         super().__init__(**params)
         self._region = {}
         self._last_region = None
+
         self.annotation_table.register_annotator(self)
-
+        self.annotation_table.add_schema_to_conn(self.connector)
         self.annotation_table.load(self.connector, fields=self.connector.fields)
-
-    @property
-    def annotation_table(self):
-        return self.connector.annotation_table
-
 
     @property
     def df(self):
@@ -168,12 +169,12 @@ class AnnotatorInterface(param.Parameterized):
         "Method to update display state of the annotator and optionally clear stale visual state"
         pass
 
-    def set_annotation_table(self, annotation_table): # FIXME! Won't work anymore, set_connector??
-        self._region = {}
-        self.annotation_table = annotation_table
-        self.annotation_table.register_annotator(self)
-        self.annotation_table._update_index()
-        self.snapshot()
+    # def set_annotation_table(self, annotation_table): # FIXME! Won't work anymore, set_connector??
+    #     self._region = {}
+    #     self.annotation_table = annotation_table
+    #     self.annotation_table.register_annotator(self)
+    #     self.annotation_table._update_index()
+    #     self.snapshot()
 
     # Selecting annotations
 
@@ -300,6 +301,9 @@ class AnnotatorInterface(param.Parameterized):
     def snapshot(self):
         self.annotation_table.snapshot()
 
+    def commit(self):
+        # self.annotation_table.initialize_table(self.connector)  # Only if not in params
+        return self.annotation_table.commits(self.connector)
 
 
 class Annotator(AnnotatorInterface):
@@ -708,9 +712,6 @@ class Annotator(AnnotatorInterface):
     def revert_to_snapshot(self):
         super().revert_to_snapshot()
         self.refresh()
-
-    def commit(self):
-        self.connector.commit()
 
     def set_range(self, startx, endx, starty=None, endy=None):
         super().set_range(startx, endx, starty, endy)
