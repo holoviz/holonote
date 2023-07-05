@@ -16,7 +16,7 @@ def test_multipoint_range_commit_insertion(multiple_region_annotator):
     multiple_region_annotator.set_range(start, end)
     multiple_region_annotator.add_annotation(description=descriptions[1])
 
-    multiple_region_annotator.commit()
+    multiple_region_annotator.commit(return_commits=True)
 
     # FIXME! Index order is inverted?
     df = pd.DataFrame({'uuid': pd.Series(multiple_region_annotator.df.index[::-1], dtype=object),
@@ -54,7 +54,7 @@ class TestAnnotatorMultipleStringFields:
         start, end = np.datetime64('2022-06-06'), np.datetime64('2022-06-08')
         multiple_fields_annotator.set_range(start, end)
         multiple_fields_annotator.add_annotation(field1='A test field', field2='Another test field')
-        commits = multiple_fields_annotator.commit()
+        commits = multiple_fields_annotator.commit(return_commits=True)
         kwargs = commits[0]['kwargs']
         assert len(commits)==1, 'Only one insertion commit made'
         assert 'uuid' in kwargs.keys(), 'Expected uuid primary key in kwargs'
@@ -68,7 +68,7 @@ class TestAnnotatorMultipleStringFields:
         field2 = 'Another test field'
         multiple_fields_annotator.set_range(start, end)
         multiple_fields_annotator.add_annotation(field1=field1, field2=field2)
-        multiple_fields_annotator.commit()
+        multiple_fields_annotator.commit(return_commits=True)
 
         df = pd.DataFrame({'uuid': pd.Series(multiple_fields_annotator.df.index[0], dtype=object),
                            'start_TIME':[start],
@@ -88,9 +88,9 @@ class TestAnnotatorMultipleStringFields:
         multiple_fields_annotator.add_annotation(field1='Field 1.1', field2='Field 1.2')
         multiple_fields_annotator.set_range(start2, end2)
         multiple_fields_annotator.add_annotation(field1='Field 2.1', field2='Field 2.2')
-        multiple_fields_annotator.commit()
+        multiple_fields_annotator.commit(return_commits=True)
         multiple_fields_annotator.update_annotation_fields(multiple_fields_annotator.df.index[0], field1='NEW Field 1.1')
-        multiple_fields_annotator.commit()
+        multiple_fields_annotator.commit(return_commits=True)
         sql_df = multiple_fields_annotator.connector.load_dataframe()
         assert set(sql_df['field1']) == {'NEW Field 1.1', 'Field 2.1'}
 
@@ -107,7 +107,7 @@ def _reconnect_code(conn1, conn2):
     for t1, t2 in zip(times[:-1], times[1:]):
         a1.set_range(t1, t2)
         a1.add_annotation(description='A programmatically defined annotation')
-    a1.commit()
+    a1.commit(return_commits=True)
 
     # Save internal dataframes
     a1_df = a1.df.copy()

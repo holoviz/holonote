@@ -306,9 +306,11 @@ class AnnotatorInterface(param.Parameterized):
     def snapshot(self):
         self.annotation_table.snapshot()
 
-    def commit(self):
+    def commit(self, return_commits=False):
         # self.annotation_table.initialize_table(self.connector)  # Only if not in params
-        return self.annotation_table.commits(self.connector)
+        commits = self.annotation_table.commits(self.connector)
+        if return_commits:
+            return commits
 
 
 class Annotator(AnnotatorInterface):
