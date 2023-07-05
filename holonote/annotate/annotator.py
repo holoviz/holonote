@@ -108,7 +108,7 @@ class AnnotatorInterface(param.Parameterized):
 
     connector_class = SQLiteDB
 
-    def __init__(self, **params):
+    def __init__(self, init=True, **params):
         if "annotation_table" not in params:
             params["annotation_table"] = AnnotationTable() #connector=params.get("connector"))
 
@@ -118,6 +118,12 @@ class AnnotatorInterface(param.Parameterized):
 
         self.annotation_table.register_annotator(self)
         self.annotation_table.add_schema_to_conn(self.connector)
+
+        if init:
+            self.load()
+
+    def load(self):
+        self.connector._initialize(self.connector.column_schema)
         self.annotation_table.load(self.connector, fields=self.connector.fields)
 
     @property
@@ -203,7 +209,6 @@ class AnnotatorInterface(param.Parameterized):
         range_matches = self._get_range_indices_by_position(dim1_pos, dim2_pos)
         event_matches = [] # TODO: Needs hit testing or similar for point events
         return range_matches + event_matches
-
 
     @property
     def region(self):
