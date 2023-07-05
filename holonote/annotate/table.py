@@ -34,10 +34,13 @@ class AnnotationTable(param.Parameterized):
 
         self._annotators = weakref.WeakValueDictionary()
 
-    def load(self, connector=None, fields_df=None, primary_key_name=None, fields=[]):
+    def load(self, connector=None, fields_df=None, primary_key_name=None, fields=None):
         """
         Load the AnnotationTable from a connector or a fields DataFrame.
         """
+        if fields is None:
+            fields = []
+
         if [connector, primary_key_name] == [None,None]:
             raise ValueError('Either a connector instance must be supplied or the primary key name supplied')
         if len(fields) < 1:
