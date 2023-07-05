@@ -265,14 +265,16 @@ class SQLiteDB(Connector):
                          'update':'update_row'}
 
 
-    def __init__(self, column_schema={}, connect=True, **params):
+    def __init__(self, column_schema=None, connect=True, **params):
         """
         First key in column_schema is assumed to the primary key field if not explicitly specified.
         """
+        if column_schema is None:
+            column_schema = {}
+
         params['column_schema'] = column_schema
         self.con, self.cursor = None, None
         super().__init__(**params)
-
 
         if connect:
             self._initialize(column_schema, create_table=False)
@@ -374,4 +376,3 @@ class SQLiteDB(Connector):
     def add_schema(self, schema):
         # self._schemas.append(schema)
         self.column_schema |= schema
-
