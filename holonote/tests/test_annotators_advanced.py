@@ -45,7 +45,10 @@ def test_infer_kdim_dtype_curve():
 def test_multiplot_add_annotation(multiple_annotators):
     multiple_annotators["annotation1d"].set_range(np.datetime64('2005-02-13'), np.datetime64('2005-02-16'))
     multiple_annotators["annotation2d"].set_range(-0.25, 0.25, -0.1, 0.1)
-    multiple_annotators["conn"].add_annotation(description='Multi-plot annotation')
+    multiple_annotators["annotation1d"].add_annotation(description='Multi-plot annotation')
+    multiple_annotators["annotation2d"].add_annotation(description='Multi-plot annotation')
+    multiple_annotators["annotation1d"].commit()
+    multiple_annotators["annotation2d"].commit()
 
 
 class TestAnnotatorMultipleStringFields:

@@ -235,17 +235,6 @@ class Connector(param.Parameterized):
                             + msg_suffix)
 
 
-    def add_annotation(self, **fields):
-        "Primary key specification is optional. Used to works across Annotation instances."
-        if self.primary_key.field_name not in fields:
-            index_val = self.primary_key(self, list(self.annotation_table._field_df.index))
-            fields[self.primary_key.field_name] = index_val
-        self.annotation_table.add_annotation('annotator-regions', **fields)
-
-
-        for annotator in self.annotation_table._annotators.values():
-            annotator.refresh(clear=True)
-
 class SQLiteDB(Connector):
     """
     Simple example of a Connector without dependencies, using sqlite3.
