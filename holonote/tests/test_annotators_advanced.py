@@ -1,8 +1,9 @@
 import holoviews as hv
 import numpy as np
 import pandas as pd
+import pytest
 
-from holonote.annotate import Annotator
+from holonote.annotate import Annotator, SQLiteDB
 
 
 def test_multipoint_range_commit_insertion(multiple_region_annotator):
@@ -15,7 +16,7 @@ def test_multipoint_range_commit_insertion(multiple_region_annotator):
     multiple_region_annotator.set_range(start, end)
     multiple_region_annotator.add_annotation(description=descriptions[1])
 
-    multiple_region_annotator.commit()
+    multiple_region_annotator.commit(return_commits=True)
 
     # FIXME! Index order is inverted?
     df = pd.DataFrame({'uuid': pd.Series(multiple_region_annotator.df.index[::-1], dtype=object),
@@ -44,7 +45,10 @@ def test_infer_kdim_dtype_curve():
 def test_multiplot_add_annotation(multiple_annotators):
     multiple_annotators["annotation1d"].set_range(np.datetime64('2005-02-13'), np.datetime64('2005-02-16'))
     multiple_annotators["annotation2d"].set_range(-0.25, 0.25, -0.1, 0.1)
-    multiple_annotators["conn"].add_annotation(description='Multi-plot annotation')
+    multiple_annotators["annotation1d"].add_annotation(description='Multi-plot annotation')
+    multiple_annotators["annotation2d"].add_annotation(description='Multi-plot annotation')
+    multiple_annotators["annotation1d"].commit()
+    multiple_annotators["annotation2d"].commit()
 
 
 class TestAnnotatorMultipleStringFields:
@@ -53,7 +57,7 @@ class TestAnnotatorMultipleStringFields:
         start, end = np.datetime64('2022-06-06'), np.datetime64('2022-06-08')
         multiple_fields_annotator.set_range(start, end)
         multiple_fields_annotator.add_annotation(field1='A test field', field2='Another test field')
-        commits = multiple_fields_annotator.annotation_table.commits()
+        commits = multiple_fields_annotator.commit(return_commits=True)
         kwargs = commits[0]['kwargs']
         assert len(commits)==1, 'Only one insertion commit made'
         assert 'uuid' in kwargs.keys(), 'Expected uuid primary key in kwargs'
@@ -67,7 +71,7 @@ class TestAnnotatorMultipleStringFields:
         field2 = 'Another test field'
         multiple_fields_annotator.set_range(start, end)
         multiple_fields_annotator.add_annotation(field1=field1, field2=field2)
-        multiple_fields_annotator.commit()
+        multiple_fields_annotator.commit(return_commits=True)
 
         df = pd.DataFrame({'uuid': pd.Series(multiple_fields_annotator.df.index[0], dtype=object),
                            'start_TIME':[start],
@@ -87,8 +91,52 @@ class TestAnnotatorMultipleStringFields:
         multiple_fields_annotator.add_annotation(field1='Field 1.1', field2='Field 1.2')
         multiple_fields_annotator.set_range(start2, end2)
         multiple_fields_annotator.add_annotation(field1='Field 2.1', field2='Field 2.2')
-        multiple_fields_annotator.commit()
+        multiple_fields_annotator.commit(return_commits=True)
         multiple_fields_annotator.update_annotation_fields(multiple_fields_annotator.df.index[0], field1='NEW Field 1.1')
-        multiple_fields_annotator.commit()
+        multiple_fields_annotator.commit(return_commits=True)
         sql_df = multiple_fields_annotator.connector.load_dataframe()
         assert set(sql_df['field1']) == {'NEW Field 1.1', 'Field 2.1'}
+
+
+@pytest.mark.parametrize("method", ["new", "same"])
+def test_reconnect(method, tmp_path):
+    db_path = str(tmp_path / "test.db")
+
+    if method == "new":
+        conn1 = SQLiteDB(filename=db_path)
+        conn2 = SQLiteDB(filename=db_path)
+    elif method == "same":
+        conn1 = conn2 = SQLiteDB(filename=db_path)
+
+    # Create annotator with data and commit
+    a1 = Annotator(
+        spec={"TIME": np.datetime64},
+        fields=["description"],
+        region_types=["Range"],
+        connector=conn1,
+    )
+    times = pd.date_range("2022-06-09", "2022-06-13")
+    for t1, t2 in zip(times[:-1], times[1:]):
+        a1.set_range(t1, t2)
+        a1.add_annotation(description='A programmatically defined annotation')
+    a1.commit(return_commits=True)
+
+    # Save internal dataframes
+    a1_df = a1.df.copy()
+    a1_region = a1.annotation_table._region_df.copy()
+    a1_field = a1.annotation_table._field_df.copy()
+
+    # Add new connector
+    a2 = Annotator(
+        spec={"TIME": np.datetime64},
+        fields=["description"],
+        region_types=["Range"],
+        connector=conn2,
+    )
+    a2_df = a2.df.copy()
+    a2_region = a2.annotation_table._region_df.copy()
+    a2_field = a2.annotation_table._field_df.copy()
+
+    pd.testing.assert_frame_equal(a1_df, a2_df)
+    pd.testing.assert_frame_equal(a1_region, a2_region)
+    pd.testing.assert_frame_equal(a1_field, a2_field)

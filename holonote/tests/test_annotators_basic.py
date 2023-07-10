@@ -24,9 +24,9 @@ class TestBasicRange1DAnnotator:
     def test_insertion_edit_table_columns(self, annotator_range1d):
         annotator_range1d.set_range(np.datetime64('2022-06-06'), np.datetime64('2022-06-08'))
         annotator_range1d.add_annotation(description='A test annotation!')
-        commits = annotator_range1d.annotation_table.commits()
+        commits = annotator_range1d.commit(return_commits=True)
         assert len(commits)==1, 'Only one insertion commit made '
-        annotator_range1d.commit()
+        annotator_range1d.commit(return_commits=True)
         assert commits[0]['operation'] == 'insert'
         assert set(commits[0]['kwargs'].keys()) == set(annotator_range1d.connector.columns)
 
@@ -34,7 +34,7 @@ class TestBasicRange1DAnnotator:
         start, end = np.datetime64('2022-06-06'), np.datetime64('2022-06-08')
         annotator_range1d.set_range(start, end)
         annotator_range1d.add_annotation(description='A test annotation!')
-        commits = annotator_range1d.annotation_table.commits()
+        commits = annotator_range1d.commit(return_commits=True)
         assert len(commits)==1, 'Only one insertion commit made'
         kwargs = commits[0]['kwargs']
         assert 'uuid' in kwargs.keys(), 'Expected uuid primary key in kwargs'
@@ -46,7 +46,7 @@ class TestBasicRange1DAnnotator:
         description = 'A test annotation!'
         annotator_range1d.set_range(start, end)
         annotator_range1d.add_annotation(description=description)
-        annotator_range1d.commit()
+        annotator_range1d.commit(return_commits=True)
 
         df = pd.DataFrame({'uuid': pd.Series(annotator_range1d.df.index[0], dtype=object),
                            'start_TIME':[start],
@@ -68,12 +68,12 @@ class TestBasicRange1DAnnotator:
         annotator_range1d.add_annotation(description='Annotation 2', uuid='08286429')
         annotator_range1d.set_range(start3, end3)
         annotator_range1d.add_annotation(description='Annotation 3')
-        annotator_range1d.commit()
+        annotator_range1d.commit(return_commits=True)
         sql_df = annotator_range1d.connector.load_dataframe()
         assert set(sql_df['description']) ==set(['Annotation 1', 'Annotation 2', 'Annotation 3'])
         deletion_index = sql_df.index[1]
         annotator_range1d.delete_annotation(deletion_index)
-        annotator_range1d.commit()
+        annotator_range1d.commit(return_commits=True)
         sql_df = annotator_range1d.connector.load_dataframe()
         assert set(sql_df['description']) == set(['Annotation 1', 'Annotation 3'])
 
@@ -89,7 +89,7 @@ class TestBasicRange1DAnnotator:
         annotator_range1d.define_ranges(data['start'].iloc[:2], data['end'].iloc[:2])
         msg = f"Following annotations have no associated region: {{{annotation_id[2]!r}}}"
         with pytest.raises(ValueError, match=msg):
-            annotator_range1d.commit()
+            annotator_range1d.commit(return_commits=True)
 
     def test_range_define_auto_index_mismatch(self, annotator_range1d):
         starts = [np.datetime64('2022-06-%.2d' % d) for d in  range(6,15, 4)]
@@ -103,7 +103,7 @@ class TestBasicRange1DAnnotator:
         annotator_range1d.define_ranges(data['start'].iloc[:2], data['end'].iloc[:2])
         with pytest.raises(ValueError,
                            match="Following annotations have no associated region:"):
-            annotator_range1d.commit()
+            annotator_range1d.commit(return_commits=True)
 
     def test_range_define_unassigned_indices(self, annotator_range1d):
         starts = [np.datetime64('2022-06-%.2d' % d) for d in  range(6,15, 4)]
@@ -134,9 +134,8 @@ class TestBasicRange2DAnnotator:
     def test_insertion_edit_table_columns(self, annotator_range2d):
         annotator_range2d.set_range(-0.25, 0.25, -0.1, 0.1)
         annotator_range2d.add_annotation(description='A test annotation!')
-        commits = annotator_range2d.annotation_table.commits()
+        commits = annotator_range2d.commit(return_commits=True)
         assert len(commits)==1, 'Only one insertion commit made '
-        annotator_range2d.commit()
         assert commits[0]['operation'] == 'insert'
         assert set(commits[0]['kwargs'].keys()) == set(annotator_range2d.connector.columns)
 
@@ -144,7 +143,7 @@ class TestBasicRange2DAnnotator:
         startx, endx, starty, endy = -0.25, 0.25, -0.1, 0.1
         annotator_range2d.set_range(startx, endx, starty, endy)
         annotator_range2d.add_annotation(description='A test annotation!')
-        commits = annotator_range2d.annotation_table.commits()
+        commits = annotator_range2d.commit(return_commits=True)
         assert len(commits)==1, 'Only one insertion commit made'
         kwargs = commits[0]['kwargs']
         assert 'uuid' in kwargs.keys(), 'Expected uuid primary key in kwargs'
@@ -157,7 +156,7 @@ class TestBasicRange2DAnnotator:
         description = 'A test annotation!'
         annotator_range2d.set_range(startx, endx, starty, endy)
         annotator_range2d.add_annotation(description=description)
-        annotator_range2d.commit()
+        annotator_range2d.commit(return_commits=True)
 
         df = pd.DataFrame({'uuid': pd.Series(annotator_range2d.df.index[0], dtype=object),
                            'start_x':[startx],
@@ -181,12 +180,12 @@ class TestBasicRange2DAnnotator:
         annotator_range2d.add_annotation(description='Annotation 2', uuid='08286429')
         annotator_range2d.set_range(startx3, endx3, starty3, endy3)
         annotator_range2d.add_annotation(description='Annotation 3')
-        annotator_range2d.commit()
+        annotator_range2d.commit(return_commits=True)
         sql_df = annotator_range2d.connector.load_dataframe()
         assert set(sql_df['description']) == set(['Annotation 1', 'Annotation 2', 'Annotation 3'])
         deletion_index = sql_df.index[1]
         annotator_range2d.delete_annotation(deletion_index)
-        annotator_range2d.commit()
+        annotator_range2d.commit(return_commits=True)
         sql_df = annotator_range2d.connector.load_dataframe()
         assert set(sql_df['description']) == set(['Annotation 1', 'Annotation 3'])
 
@@ -206,7 +205,7 @@ class TestBasicRange2DAnnotator:
 
         msg = f"Following annotations have no associated region: {{{annotation_id[2]!r}}}"
         with pytest.raises(ValueError, match=msg):
-            annotator_range2d.commit()
+            annotator_range2d.commit(return_commits=True)
 
     def test_range_define_auto_index_mismatch(self, annotator_range2d):
         xstarts, xends = [-0.3, -0.2, -0.1], [0.3, 0.2, 0.1]
@@ -221,7 +220,7 @@ class TestBasicRange2DAnnotator:
                                      data['ystart'].iloc[:2], data['yend'].iloc[:2])
         msg = "Following annotations have no associated region:"
         with pytest.raises(ValueError, match=msg):
-            annotator_range2d.commit()
+            annotator_range2d.commit(return_commits=True)
 
     def test_range_define_unassigned_indices(self, annotator_range2d):
         xstarts, xends = [-0.3, -0.2, -0.1], [0.3, 0.2, 0.1]
@@ -249,9 +248,9 @@ class TestBasicPoint1DAnnotator:
     def test_insertion_edit_table_columns(self, annotator_point1d):
         annotator_point1d.set_point(np.datetime64('2022-06-06'))
         annotator_point1d.add_annotation(description='A test annotation!')
-        commits = annotator_point1d.annotation_table.commits()
+        commits = annotator_point1d.commit(return_commits=True)
         assert len(commits)==1, 'Only one insertion commit made '
-        annotator_point1d.commit()
+        annotator_point1d.commit(return_commits=True)
         assert commits[0]['operation'] == 'insert'
         assert set(commits[0]['kwargs'].keys()) == set(annotator_point1d.connector.columns)
 
@@ -265,7 +264,7 @@ class TestBasicPoint1DAnnotator:
         timestamp = np.datetime64('2022-06-06')
         annotator_point1d.set_point(timestamp)
         annotator_point1d.add_annotation(description='A test annotation!')
-        commits = annotator_point1d.annotation_table.commits()
+        commits = annotator_point1d.commit(return_commits=True)
         assert len(commits)==1, 'Only one insertion commit made'
         kwargs = commits[0]['kwargs']
         assert 'uuid' in kwargs.keys(), 'Expected uuid primary key in kwargs'
@@ -277,7 +276,7 @@ class TestBasicPoint1DAnnotator:
         description = 'A test annotation!'
         annotator_point1d.set_point(timestamp)
         annotator_point1d.add_annotation(description=description)
-        annotator_point1d.commit()
+        annotator_point1d.commit(return_commits=True)
 
         df = pd.DataFrame({'uuid': pd.Series(annotator_point1d.df.index[0], dtype=object),
                            'point_TIME':[timestamp],
@@ -298,12 +297,12 @@ class TestBasicPoint1DAnnotator:
         annotator_point1d.add_annotation(description='Annotation 2', uuid='08286429')
         annotator_point1d.set_point(ts3)
         annotator_point1d.add_annotation(description='Annotation 3')
-        annotator_point1d.commit()
+        annotator_point1d.commit(return_commits=True)
         sql_df = annotator_point1d.connector.load_dataframe()
         assert set(sql_df['description']) == set(['Annotation 1', 'Annotation 2', 'Annotation 3'])
         deletion_index = sql_df.index[1]
         annotator_point1d.delete_annotation(deletion_index)
-        annotator_point1d.commit()
+        annotator_point1d.commit(return_commits=True)
         sql_df = annotator_point1d.connector.load_dataframe()
         assert set(sql_df['description']) == set(['Annotation 1', 'Annotation 3'])
 
@@ -318,7 +317,7 @@ class TestBasicPoint1DAnnotator:
         annotator_point1d.define_points(data['timestamps'].iloc[:2])
         msg = f"Following annotations have no associated region: {{{annotation_id[2]!r}}}"
         with pytest.raises(ValueError, match=msg):
-            annotator_point1d.commit()
+            annotator_point1d.commit(return_commits=True)
 
     def test_point_define_auto_index_mismatch(self, annotator_point1d):
         timestamps = [np.datetime64('2022-06-%.2d' % d) for d in  range(6,15, 4)]
@@ -330,7 +329,7 @@ class TestBasicPoint1DAnnotator:
         annotator_point1d.define_fields(data[['description']], preserve_index=False)
         annotator_point1d.define_points(data['timestamps'].iloc[:2])
         with pytest.raises(ValueError, match="Following annotations have no associated region:"):
-            annotator_point1d.commit()
+            annotator_point1d.commit(return_commits=True)
 
     def test_point_define_unassigned_indices(self, annotator_point1d):
         timestamps = [np.datetime64('2022-06-%.2d' % d) for d in  range(6,15, 4)]
@@ -354,9 +353,8 @@ class TestBasicPoint2DAnnotator:
     def test_insertion_edit_table_columns(self, annotator_point2d):
         annotator_point2d.set_point(-0.25, 0.1)
         annotator_point2d.add_annotation(description='A test annotation!')
-        commits = annotator_point2d.annotation_table.commits()
+        commits = annotator_point2d.commit(return_commits=True)
         assert len(commits)==1, 'Only one insertion commit made '
-        annotator_point2d.commit()
         assert commits[0]['operation'] == 'insert'
         assert set(commits[0]['kwargs'].keys()) == set(annotator_point2d.connector.columns)
 
@@ -370,7 +368,7 @@ class TestBasicPoint2DAnnotator:
         x,y = 0.5, 0.3
         annotator_point2d.set_point(x,y)
         annotator_point2d.add_annotation(description='A test annotation!')
-        commits = annotator_point2d.annotation_table.commits()
+        commits = annotator_point2d.commit(return_commits=True)
         assert len(commits)==1, 'Only one insertion commit made'
         kwargs = commits[0]['kwargs']
         assert 'uuid' in kwargs.keys(), 'Expected uuid primary key in kwargs'
@@ -382,7 +380,7 @@ class TestBasicPoint2DAnnotator:
         description = 'A test annotation!'
         annotator_point2d.set_point(x,y)
         annotator_point2d.add_annotation(description=description)
-        annotator_point2d.commit()
+        annotator_point2d.commit(return_commits=True)
 
         df = pd.DataFrame({'uuid': pd.Series(annotator_point2d.df.index[0], dtype=object),
                            'point_x':[x],
@@ -404,12 +402,12 @@ class TestBasicPoint2DAnnotator:
         annotator_point2d.add_annotation(description='Annotation 2', uuid='08286429')
         annotator_point2d.set_point(x3, y3)
         annotator_point2d.add_annotation(description='Annotation 3')
-        annotator_point2d.commit()
+        annotator_point2d.commit(return_commits=True)
         sql_df = annotator_point2d.connector.load_dataframe()
         assert set(sql_df['description']) == set(['Annotation 1', 'Annotation 2', 'Annotation 3'])
         deletion_index = sql_df.index[1]
         annotator_point2d.delete_annotation(deletion_index)
-        annotator_point2d.commit()
+        annotator_point2d.commit(return_commits=True)
         sql_df = annotator_point2d.connector.load_dataframe()
         assert set(sql_df['description']) == set(['Annotation 1', 'Annotation 3'])
 
@@ -424,7 +422,7 @@ class TestBasicPoint2DAnnotator:
         annotator_point2d.define_points(data['xs'].iloc[:2], data['ys'].iloc[:2])
         msg = f"Following annotations have no associated region: {{{annotation_id[2]!r}}}"
         with pytest.raises(ValueError, match=msg):
-            annotator_point2d.commit()
+            annotator_point2d.commit(return_commits=True)
 
     def test_point_define_auto_index_mismatch(self, annotator_point2d):
         xs, ys  = [-0.1,-0.2,-0.3], [0.1,0.2,0.3]
@@ -437,7 +435,7 @@ class TestBasicPoint2DAnnotator:
         annotator_point2d.define_points(data['xs'].iloc[:2], data['ys'].iloc[:2])
         msg = "Following annotations have no associated region:"
         with pytest.raises(ValueError, match=msg):
-            annotator_point2d.commit()
+            annotator_point2d.commit(return_commits=True)
 
     def test_point_define_unassigned_indices(self, annotator_point2d):
         xs, ys  = [-0.1,-0.2,-0.3], [0.1,0.2,0.3]
