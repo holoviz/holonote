@@ -110,7 +110,7 @@ class AnnotatorInterface(param.Parameterized):
 
     def __init__(self, init=True, **params):
         if "annotation_table" not in params:
-            params["annotation_table"] = AnnotationTable() #connector=params.get("connector"))
+            params["annotation_table"] = AnnotationTable()
 
         super().__init__(**params)
         self._region = {}
@@ -175,12 +175,12 @@ class AnnotatorInterface(param.Parameterized):
         "Method to update display state of the annotator and optionally clear stale visual state"
         pass
 
-    # def set_annotation_table(self, annotation_table): # FIXME! Won't work anymore, set_connector??
-    #     self._region = {}
-    #     self.annotation_table = annotation_table
-    #     self.annotation_table.register_annotator(self)
-    #     self.annotation_table._update_index()
-    #     self.snapshot()
+    def set_annotation_table(self, annotation_table): # FIXME! Won't work anymore, set_connector??
+        self._region = {}
+        self.annotation_table = annotation_table
+        self.annotation_table.register_annotator(self)
+        self.annotation_table._update_index()
+        self.snapshot()
 
     # Selecting annotations
 

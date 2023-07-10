@@ -57,10 +57,6 @@ class AnnotationTable(param.Parameterized):
             fields_df = fields_df.set_index(primary_key_name)
             self._field_df = fields_df
 
-        # FIXME: Proper solution is to only load relevant columns
-        self._field_df = self._field_df
-        self._region_df = self._region_df
-
         self.clear_edits()
         self._update_index()
 
@@ -359,8 +355,6 @@ class AnnotationTable(param.Parameterized):
         )
 
     def load_annotation_table(self, conn, fields):
-        # if conn.table_name not in conn.get_tables():
-        #     return
         df = conn.transforms['load'](conn.load_dataframe())
         fields_df = df[fields].copy()
         self.define_fields(fields_df, {ind:ind for ind in fields_df.index})
@@ -394,7 +388,6 @@ class AnnotationTable(param.Parameterized):
         self.clear_edits()
 
     def add_schema_to_conn(self, conn):
-        # if conn.table_name not in conn.get_tables():
         field_dtypes = {col: str for col in conn.fields} # FIXME - generalize
         all_region_types = [an.region_types for an in self._annotators.values()]
         all_kdim_dtypes = [an.kdim_dtypes for an in self._annotators.values()]

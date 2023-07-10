@@ -363,5 +363,5 @@ class SQLiteDB(Connector):
         self.con.commit()
 
     def add_schema(self, schema):
-        # self._schemas.append(schema)
-        self.column_schema |= schema
+        # TODO: Check if schema don't overwrite existing columns
+        self.column_schema = {**self.column_schema, **schema}
