@@ -425,7 +425,7 @@ class Annotator(AnnotatorInterface):
     def selection_element(self):
         if self.element is None:
             kdims = list(self.kdim_dtypes.keys())
-            kdim_dtype = list(self.kdim_dtypes.values())[0]
+            kdim_dtype = next(iter(self.kdim_dtypes.values()))
             return hv.Curve(([kdim_dtype(), kdim_dtype()],
                              [0,1]), kdims=kdims) # Note: Any concrete Selection1dExpr will do...
 
