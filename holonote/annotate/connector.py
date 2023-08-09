@@ -1,4 +1,3 @@
-import os
 import uuid
 import sqlite3
 import datetime as dt
@@ -9,10 +8,8 @@ import numpy as np
 
 try:
     import sqlalchemy
-except:
+except ModuleNotFoundError:
     sqlalchemy = None
-
-from .table import AnnotationTable
 
 
 class PrimaryKey(param.Parameterized):
@@ -133,7 +130,6 @@ class WidgetKey(PrimaryKey):
     Placeholder for a concept where the user can insert a primary key
     value via a widget.
     """
-    pass
 
 
 
@@ -186,7 +182,7 @@ class Connector(param.Parameterized):
         elif isinstance(value, param.Parameter) and value.default is not None:
             return type(value.default)
         else:
-            raise Exception(f'Connector cannot handle type {str(type(value))}')
+            raise Exception(f'Connector cannot handle type {type(value)!s}')
 
     @classmethod
     def schema_from_field_values(cls, fields):
@@ -231,7 +227,7 @@ class Connector(param.Parameterized):
         missing_region_columns = set(expected_keys) - non_field_columns
         if missing_region_columns:
             raise Exception(msg_prefix
-                            + f'Missing {repr(region_type)} region columns {missing_region_columns}. '
+                            + f'Missing {region_type!r} region columns {missing_region_columns}. '
                             + msg_suffix)
 
 
@@ -315,7 +311,7 @@ class SQLiteDB(Connector):
 
     def create_table(self, column_schema=None):
         column_schema = column_schema if column_schema else self.column_schema
-        column_spec = ',\n'.join(['{name} {spec}'.format(name=name, spec=spec)
+        column_spec = ',\n'.join([f'{name} {spec}'
                                   for name, spec in column_schema.items()])
         create_table_sql = f'CREATE TABLE IF NOT EXISTS {self.table_name} (' + column_spec +  ');'
         self.cursor.execute(create_table_sql)
@@ -340,7 +336,7 @@ class SQLiteDB(Connector):
            columns = columns[1:]
 
         placeholders = ', '.join(['?'] * len(field_values))
-        self.cursor.execute(f"INSERT INTO {self.table_name} {str(columns)} VALUES({placeholders});", field_values)
+        self.cursor.execute(f"INSERT INTO {self.table_name} {columns!s} VALUES({placeholders});", field_values)
         self.primary_key.validate(self.cursor.lastrowid, fields[self.primary_key.field_name])
         self.con.commit()
 

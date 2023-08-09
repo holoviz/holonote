@@ -1,1 +1,1 @@
-from .editors import PathEditor
+from .editors import PathEditor  # noqa: F401

@@ -1,5 +1,3 @@
-import sys
-import weakref
 import holoviews as hv
 import numpy as np
 import pandas as pd
@@ -173,7 +171,6 @@ class AnnotatorInterface(param.Parameterized):
 
     def refresh(self, clear=False):
         "Method to update display state of the annotator and optionally clear stale visual state"
-        pass
 
     def set_annotation_table(self, annotation_table): # FIXME! Won't work anymore, set_connector??
         self._region = {}

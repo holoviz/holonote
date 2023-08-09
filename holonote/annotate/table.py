@@ -1,5 +1,4 @@
 import param
-import sys
 import weakref
 
 import numpy as np
