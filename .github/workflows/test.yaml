@@ -12,8 +12,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: pre-commit/action@v3.0.0
   unit_test_suite:
     name: Unit tests on ${{ matrix.os }} with Python ${{ matrix.python-version }}
+    needs: [pre-commit]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false

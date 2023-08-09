@@ -26,6 +26,11 @@ dependencies = ["pytest"]
 scripts.run = "python -m pytest holonote/tests"
 matrix = [{ python = ["3.8", "3.9", "3.10"] }]
 
+[tool.hatch.envs.fmt]
+dependencies = ["pre-commit"]
+scripts.run = "pre-commit run --all"
+scripts.update = "pre-commit autoupdate"
+
 [tool.pytest.ini_options]
 addopts = "-vv"
 
