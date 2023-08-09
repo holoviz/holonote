@@ -55,7 +55,7 @@ class AnnotationTable(param.Parameterized):
         elif connector:
             self.load_annotation_table(connector, fields)
         elif fields_df is None:
-            fields_df = pd.DataFrame(columns=[primary_key_name] + fields)
+            fields_df = pd.DataFrame(columns=[primary_key_name, *fields])
             fields_df = fields_df.set_index(primary_key_name)
             self._field_df = fields_df
 

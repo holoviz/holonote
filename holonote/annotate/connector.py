@@ -357,7 +357,7 @@ class SQLiteDB(Connector):
         id_val = updates.pop(self.primary_key.field_name)
         set_updates = ', '.join('\"' + k + '\"' + " = ?" for k in updates.keys())
         query = f"UPDATE {self.table_name} SET " + set_updates + f" WHERE \"{self.primary_key.field_name}\" = ?;"
-        self.cursor.execute(query, list(updates.values()) + [id_val])
+        self.cursor.execute(query, [*updates.values(), id_val])
         self.con.commit()
 
     def add_schema(self, schema):

@@ -167,7 +167,7 @@ class AnnotatorInterface(param.Parameterized):
             region_column_names.extend(point_column_names)
         view = pd.concat(views)
         view = view.rename(columns={'_id':field_name})
-        column_ordering = [field_name] + region_column_names + fields_columns
+        column_ordering = [field_name, *region_column_names, *fields_columns]
         return view[column_ordering].set_index(field_name)
 
 
