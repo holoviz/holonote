@@ -591,7 +591,7 @@ class Annotator(AnnotatorInterface):
         extra_cols = [(col, '@{%s}' % col.replace(' ','_')) for col in self.annotation_table._field_df.columns]
         region_tooltips = []
         region_formatters = {}
-        for direction, kdim, dtype in zip(['x','y'], self.kdim_dtypes.keys(), self.kdim_dtypes.values()):
+        for direction, kdim in zip(['x','y'], self.kdim_dtypes.keys()):
             if self.kdim_dtypes[kdim] is np.datetime64:
                 region_tooltips.append((f'start {kdim}', f'@{direction}0{{%F}}'))
                 region_tooltips.append((f'end {kdim}', f'@{direction}1{{%F}}'))

@@ -33,6 +33,7 @@ addopts = "-vv"
 target-version = "py38"
 
 select = [
+    "B",
     "E",
     "F",
     "FLY",
