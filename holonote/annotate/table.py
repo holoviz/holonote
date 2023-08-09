@@ -1,8 +1,11 @@
-import param
+from __future__ import annotations
+
 import weakref
 
 import numpy as np
 import pandas as pd
+import param
+
 
 class AnnotationTable(param.Parameterized):
     """

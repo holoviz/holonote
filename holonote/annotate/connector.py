@@ -1,10 +1,12 @@
-import uuid
-import sqlite3
-import datetime as dt
+from __future__ import annotations
 
-import param
-import pandas as pd
+import datetime as dt
+import sqlite3
+import uuid
+
 import numpy as np
+import pandas as pd
+import param
 
 try:
     import sqlalchemy

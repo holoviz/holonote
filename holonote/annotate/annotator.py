@@ -1,11 +1,13 @@
+from __future__ import annotations
+
 import holoviews as hv
 import numpy as np
 import pandas as pd
 import param
 from bokeh.models.tools import BoxSelectTool, HoverTool
 from holoviews.element.selection import Selection1DExpr
-from .connector import Connector, SQLiteDB, AnnotationTable
 
+from .connector import AnnotationTable, Connector, SQLiteDB
 
 
 class Indicator:

@@ -38,6 +38,7 @@ select = [
     "F",
     "FLY",
     "ICN",
+    "I",
     "NPY",
     "PIE",
     "PLC",
@@ -74,6 +75,12 @@ unfixable = [
 
 [tool.ruff.per-file-ignores]
 "__init__.py" = ["F403"]
+
+[tool.ruff.isort]
+known-first-party = ["holonote"]
+required-imports = ["from __future__ import annotations"]
+force-wrap-aliases = true
+combine-as-imports = true
 
 [tool.codespell]
 write-changes = true
