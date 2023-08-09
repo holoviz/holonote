@@ -17,11 +17,11 @@ class Indicator:
     """
 
     range_style = dict(color='red', alpha=0.4, apply_ranges=False)
-    point_style = dict()
+    point_style = {}
     indicator_highlight = {'alpha':(0.7,0.2)}
 
     edit_range_style = dict(alpha=0.4, line_alpha=1, line_width=1, line_color='black')
-    edit_point_style = dict()
+    edit_point_style = {}
 
     @classmethod
     def indicator_style(cls, range_style, point_style, highlighters):
