@@ -21,13 +21,13 @@ repos:
       - id: ruff
         args: [holonote]
         files: holonote/
-  # - repo: https://github.com/hoxbro/clean_notebook
-  #   rev: v0.1.10
-  #   hooks:
-  #     - id: clean-notebook
-  # - repo: https://github.com/codespell-project/codespell
-  #   rev: v2.2.5
-  #   hooks:
-  #   - id: codespell
-  #     additional_dependencies:
-  #       - tomli
+  - repo: https://github.com/hoxbro/clean_notebook
+    rev: v0.1.10
+    hooks:
+      - id: clean-notebook
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.2.5
+    hooks:
+    - id: codespell
+      additional_dependencies:
+        - tomli

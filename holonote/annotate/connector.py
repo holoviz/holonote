@@ -18,12 +18,12 @@ class PrimaryKey(param.Parameterized):
     HoloViews.
 
     The generated key is used to reference annotations until they are
-    comitted, at which point they may 1) be inserted in the database as
+    committed, at which point they may 1) be inserted in the database as
     the primary key value (policy='insert') 2) are checked against the
     primary key value chosen by the database which is expected to match
     in most cases.
 
-    In real situations where the key is chosen by the databse, the key
+    In real situations where the key is chosen by the database, the key
     generated will *not* always match the actual key assigned. The
     policy parameter decides the resulting behavior in these cases.
     """
@@ -41,7 +41,7 @@ class PrimaryKey(param.Parameterized):
     def __call__(self, connector, key_list=None):
         """
         The key list is the current list of index values that are
-        outstanding (i.e. have not been comitted).
+        outstanding (i.e. have not been committed).
         """
         raise NotImplementedError
 
