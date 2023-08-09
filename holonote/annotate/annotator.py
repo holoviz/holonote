@@ -7,7 +7,8 @@ import param
 from bokeh.models.tools import BoxSelectTool, HoverTool
 from holoviews.element.selection import Selection1DExpr
 
-from .connector import AnnotationTable, Connector, SQLiteDB
+from .connector import Connector, SQLiteDB
+from .table import AnnotationTable
 
 
 class Indicator:
