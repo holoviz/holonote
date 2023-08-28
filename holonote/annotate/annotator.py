@@ -6,7 +6,7 @@ import pandas as pd
 import param
 from bokeh.models.tools import BoxSelectTool, HoverTool
 from holoviews.element.selection import Selection1DExpr
-from .connector import Connector, SQLiteDB
+from .connector import Connector, SQLiteDB, AnnotationTable
 
 
 
@@ -101,23 +101,30 @@ class AnnotatorInterface(param.Parameterized):
 
     connector = param.ClassSelector(class_=Connector, allow_None=False)
 
+    annotation_table = param.ClassSelector(class_=AnnotationTable, allow_None=False)
+
     region_types = param.ListSelector(default=['Range'], objects=['Range', 'Point'], doc="""
        Enabled region types for the current Annotator.""")
 
     connector_class = SQLiteDB
 
-    def __init__(self, **params):
+    def __init__(self, init=True, **params):
+        if "annotation_table" not in params:
+            params["annotation_table"] = AnnotationTable()
+
         super().__init__(**params)
         self._region = {}
         self._last_region = None
+
         self.annotation_table.register_annotator(self)
+        self.annotation_table.add_schema_to_conn(self.connector)
 
+        if init:
+            self.load()
+
+    def load(self):
+        self.connector._initialize(self.connector.column_schema)
         self.annotation_table.load(self.connector, fields=self.connector.fields)
-
-    @property
-    def annotation_table(self):
-        return self.connector.annotation_table
-
 
     @property
     def df(self):
@@ -193,6 +200,8 @@ class AnnotatorInterface(param.Parameterized):
         if dim2_pos is not None:
             mask_dim2 = ranges['value'].apply(lambda tpl: tpl[2] <= dim2_pos < tpl[3])
             mask = mask & mask_dim2
+        if not len(mask):
+            return []
         return list(ranges[mask]['_id'])
 
 
@@ -202,7 +211,6 @@ class AnnotatorInterface(param.Parameterized):
         range_matches = self._get_range_indices_by_position(dim1_pos, dim2_pos)
         event_matches = [] # TODO: Needs hit testing or similar for point events
         return range_matches + event_matches
-
 
     @property
     def region(self):
@@ -300,6 +308,11 @@ class AnnotatorInterface(param.Parameterized):
     def snapshot(self):
         self.annotation_table.snapshot()
 
+    def commit(self, return_commits=False):
+        # self.annotation_table.initialize_table(self.connector)  # Only if not in params
+        commits = self.annotation_table.commits(self.connector)
+        if return_commits:
+            return commits
 
 
 class Annotator(AnnotatorInterface):
@@ -708,9 +721,6 @@ class Annotator(AnnotatorInterface):
     def revert_to_snapshot(self):
         super().revert_to_snapshot()
         self.refresh()
-
-    def commit(self):
-        self.connector.commit()
 
     def set_range(self, startx, endx, starty=None, endy=None):
         super().set_range(startx, endx, starty, endy)

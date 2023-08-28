@@ -34,10 +34,13 @@ class AnnotationTable(param.Parameterized):
 
         self._annotators = weakref.WeakValueDictionary()
 
-    def load(self, connector=None, fields_df=None, primary_key_name=None, fields=[]):
+    def load(self, connector=None, fields_df=None, primary_key_name=None, fields=None):
         """
         Load the AnnotationTable from a connector or a fields DataFrame.
         """
+        if fields is None:
+            fields = []
+
         if [connector, primary_key_name] == [None,None]:
             raise ValueError('Either a connector instance must be supplied or the primary key name supplied')
         if len(fields) < 1:
@@ -47,16 +50,12 @@ class AnnotationTable(param.Parameterized):
         if fields_df:
             fields_df = fields_df[fields].copy() # Primary key/index for annotations
             self._field_df = fields_df
-        elif connector and not connector.uninitialized:
-            connector.load_annotation_table(self, fields)
+        elif connector:
+            self.load_annotation_table(connector, fields)
         elif fields_df is None:
             fields_df = pd.DataFrame(columns=[primary_key_name] + fields)
             fields_df = fields_df.set_index(primary_key_name)
             self._field_df = fields_df
-
-        # FIXME: Proper solution is to only load relevant columns
-        self._field_df = self._field_df.drop_duplicates()
-        self._region_df = self._region_df.drop_duplicates()
 
         self.clear_edits()
         self._update_index()
@@ -143,7 +142,7 @@ class AnnotationTable(param.Parameterized):
     def _expand_save_commits(self, ids):
         return {'field_list':[self._expand_commit_by_id(id_val) for id_val in ids]}
 
-    def commits(self):
+    def _create_commits(self):
         "Expands out the commit history into commit operations"
         fields_inds = set(self._field_df.index)
         region_inds = set(self._region_df['_id'].unique())
@@ -174,6 +173,17 @@ class AnnotationTable(param.Parameterized):
 
         return commits
 
+    def commits(self, connector):
+        commits = self._create_commits()
+        for commit in commits:
+            operation = commit['operation']
+            kwargs = connector.transforms[operation](commit['kwargs'])
+            getattr(connector,connector.operation_mapping[operation])(**kwargs)
+
+        for annotator in self._annotators.values():
+            annotator.annotation_table.clear_edits()
+
+        return commits
 
     def clear_edits(self, edit_type=None):
         "Clear edit state and index mapping"
@@ -299,7 +309,6 @@ class AnnotationTable(param.Parameterized):
                                   "_id":[self._index_mapping[ind] for ind in posx.index]})
         self._region_df = pd.concat((self._region_df, additions), ignore_index=True)
 
-
     def define_ranges(self, dims, startx, endx, starty=None, endy=None):
         if isinstance(dims, str):
             dims = (dims,)
@@ -345,3 +354,42 @@ class AnnotationTable(param.Parameterized):
             self._region_df["dim1"] == dim1_name, self._region_df["dim2"] == dim2_name
         )
 
+    def load_annotation_table(self, conn, fields):
+        df = conn.transforms['load'](conn.load_dataframe())
+        fields_df = df[fields].copy()
+        self.define_fields(fields_df, {ind:ind for ind in fields_df.index})
+        all_region_types = [an.region_types for an in self._annotators.values()]
+        all_kdim_dtypes = [an.kdim_dtypes for an in self._annotators.values()]
+        for region_types, kdim_dtypes in zip(all_region_types, all_kdim_dtypes):
+            assert all(el in ['Range', 'Point'] for el in region_types)
+            for region_type in region_types:
+                if len(kdim_dtypes)==1:
+                    kdim = list(kdim_dtypes.keys())[0]
+                    if region_type == 'Range':
+                        expected_keys = [f'start_{kdim}', f'end_{kdim}']
+                        conn._incompatible_schema_check(expected_keys, list(df.columns), fields, region_type)
+                        self.define_ranges(kdim, df[f'start_{kdim}'], df[f'end_{kdim}'])
+                    elif region_type == 'Point':
+                        conn._incompatible_schema_check([f'point_{kdim}'], list(df.columns), fields, region_type)
+                        self.define_points(kdim, df[f'point_{kdim}'])
+                elif len(kdim_dtypes)==2:
+                    kdim1, kdim2 = list(kdim_dtypes.keys())
+                    if region_type == 'Range':
+                        conn._incompatible_schema_check([f'start_{kdim1}', f'end_{kdim1}',
+                                                         f'start_{kdim2}', f'end_{kdim2}'],
+                                                        list(df.columns), fields, region_type)
+                        self.define_ranges([kdim1, kdim2],
+                                                       df[f'start_{kdim1}'], df[f'end_{kdim1}'],
+                                                       df[f'start_{kdim2}'], df[f'end_{kdim2}'])
+                    elif region_type == 'Point':
+                        conn._incompatible_schema_check([f'point_{kdim1}', f'point_{kdim2}'],
+                                                        list(df.columns), fields, region_type)
+                        self.define_points([kdim1, kdim2], df[f'point_{kdim1}'], df[f'point_{kdim2}'])
+        self.clear_edits()
+
+    def add_schema_to_conn(self, conn):
+        field_dtypes = {col: str for col in conn.fields} # FIXME - generalize
+        all_region_types = [an.region_types for an in self._annotators.values()]
+        all_kdim_dtypes = [an.kdim_dtypes for an in self._annotators.values()]
+        schema = conn.generate_schema(conn.primary_key, all_region_types, all_kdim_dtypes, field_dtypes)
+        conn.add_schema(schema)
