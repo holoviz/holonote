@@ -1,2 +1,3 @@
-from . import annotate
-from . import editor
+from __future__ import annotations
+
+from . import annotate, editor  # noqa: F401

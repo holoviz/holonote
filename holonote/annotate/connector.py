@@ -1,18 +1,17 @@
-import os
-import uuid
-import sqlite3
-import datetime as dt
+from __future__ import annotations
 
-import param
-import pandas as pd
+import datetime as dt
+import sqlite3
+import uuid
+
 import numpy as np
+import pandas as pd
+import param
 
 try:
     import sqlalchemy
-except:
+except ModuleNotFoundError:
     sqlalchemy = None
-
-from .table import AnnotationTable
 
 
 class PrimaryKey(param.Parameterized):
@@ -21,12 +20,12 @@ class PrimaryKey(param.Parameterized):
     HoloViews.
 
     The generated key is used to reference annotations until they are
-    comitted, at which point they may 1) be inserted in the database as
+    committed, at which point they may 1) be inserted in the database as
     the primary key value (policy='insert') 2) are checked against the
     primary key value chosen by the database which is expected to match
     in most cases.
 
-    In real situations where the key is chosen by the databse, the key
+    In real situations where the key is chosen by the database, the key
     generated will *not* always match the actual key assigned. The
     policy parameter decides the resulting behavior in these cases.
     """
@@ -44,7 +43,7 @@ class PrimaryKey(param.Parameterized):
     def __call__(self, connector, key_list=None):
         """
         The key list is the current list of index values that are
-        outstanding (i.e. have not been comitted).
+        outstanding (i.e. have not been committed).
         """
         raise NotImplementedError
 
@@ -133,7 +132,6 @@ class WidgetKey(PrimaryKey):
     Placeholder for a concept where the user can insert a primary key
     value via a widget.
     """
-    pass
 
 
 
@@ -186,7 +184,7 @@ class Connector(param.Parameterized):
         elif isinstance(value, param.Parameter) and value.default is not None:
             return type(value.default)
         else:
-            raise Exception(f'Connector cannot handle type {str(type(value))}')
+            raise Exception(f'Connector cannot handle type {type(value)!s}')
 
     @classmethod
     def schema_from_field_values(cls, fields):
@@ -231,7 +229,7 @@ class Connector(param.Parameterized):
         missing_region_columns = set(expected_keys) - non_field_columns
         if missing_region_columns:
             raise Exception(msg_prefix
-                            + f'Missing {repr(region_type)} region columns {missing_region_columns}. '
+                            + f'Missing {region_type!r} region columns {missing_region_columns}. '
                             + msg_suffix)
 
 
@@ -315,7 +313,7 @@ class SQLiteDB(Connector):
 
     def create_table(self, column_schema=None):
         column_schema = column_schema if column_schema else self.column_schema
-        column_spec = ',\n'.join(['{name} {spec}'.format(name=name, spec=spec)
+        column_spec = ',\n'.join([f'{name} {spec}'
                                   for name, spec in column_schema.items()])
         create_table_sql = f'CREATE TABLE IF NOT EXISTS {self.table_name} (' + column_spec +  ');'
         self.cursor.execute(create_table_sql)
@@ -340,7 +338,7 @@ class SQLiteDB(Connector):
            columns = columns[1:]
 
         placeholders = ', '.join(['?'] * len(field_values))
-        self.cursor.execute(f"INSERT INTO {self.table_name} {str(columns)} VALUES({placeholders});", field_values)
+        self.cursor.execute(f"INSERT INTO {self.table_name} {columns!s} VALUES({placeholders});", field_values)
         self.primary_key.validate(self.cursor.lastrowid, fields[self.primary_key.field_name])
         self.con.commit()
 
@@ -359,7 +357,7 @@ class SQLiteDB(Connector):
         id_val = updates.pop(self.primary_key.field_name)
         set_updates = ', '.join('\"' + k + '\"' + " = ?" for k in updates.keys())
         query = f"UPDATE {self.table_name} SET " + set_updates + f" WHERE \"{self.primary_key.field_name}\" = ?;"
-        self.cursor.execute(query, list(updates.values()) + [id_val])
+        self.cursor.execute(query, [*updates.values(), id_val])
         self.con.commit()
 
     def add_schema(self, schema):

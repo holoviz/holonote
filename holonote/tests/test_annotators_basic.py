@@ -1,17 +1,17 @@
-# TODO:
-
-# * (after refactor) annotators -> annotator, connectors -> connector [ ]
-
-# TESTS
-
-# Schema error (needs file or connect in memory??)
-# .snapshot() and .revert_to_snapshot()
+from __future__ import annotations
 
 import uuid
 
 import numpy as np
 import pandas as pd
 import pytest
+
+# TODO:
+
+# * (after refactor) annotators -> annotator, connectors -> connector [ ]
+# TESTS
+# Schema error (needs file or connect in memory??)
+# .snapshot() and .revert_to_snapshot()
 
 
 class TestBasicRange1DAnnotator:

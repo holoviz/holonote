@@ -1,13 +1,14 @@
-import sys
-import weakref
+from __future__ import annotations
+
 import holoviews as hv
 import numpy as np
 import pandas as pd
 import param
 from bokeh.models.tools import BoxSelectTool, HoverTool
 from holoviews.element.selection import Selection1DExpr
-from .connector import Connector, SQLiteDB, AnnotationTable
 
+from .connector import Connector, SQLiteDB
+from .table import AnnotationTable
 
 
 class Indicator:
@@ -17,11 +18,11 @@ class Indicator:
     """
 
     range_style = dict(color='red', alpha=0.4, apply_ranges=False)
-    point_style = dict()
+    point_style = {}
     indicator_highlight = {'alpha':(0.7,0.2)}
 
     edit_range_style = dict(alpha=0.4, line_alpha=1, line_width=1, line_color='black')
-    edit_point_style = dict()
+    edit_point_style = {}
 
     @classmethod
     def indicator_style(cls, range_style, point_style, highlighters):
@@ -167,13 +168,12 @@ class AnnotatorInterface(param.Parameterized):
             region_column_names.extend(point_column_names)
         view = pd.concat(views)
         view = view.rename(columns={'_id':field_name})
-        column_ordering = [field_name] + region_column_names + fields_columns
+        column_ordering = [field_name, *region_column_names, *fields_columns]
         return view[column_ordering].set_index(field_name)
 
 
     def refresh(self, clear=False):
         "Method to update display state of the annotator and optionally clear stale visual state"
-        pass
 
     def set_annotation_table(self, annotation_table): # FIXME! Won't work anymore, set_connector??
         self._region = {}
@@ -430,7 +430,7 @@ class Annotator(AnnotatorInterface):
     def selection_element(self):
         if self.element is None:
             kdims = list(self.kdim_dtypes.keys())
-            kdim_dtype = list(self.kdim_dtypes.values())[0]
+            kdim_dtype = next(iter(self.kdim_dtypes.values()))
             return hv.Curve(([kdim_dtype(), kdim_dtype()],
                              [0,1]), kdims=kdims) # Note: Any concrete Selection1dExpr will do...
 
@@ -596,7 +596,7 @@ class Annotator(AnnotatorInterface):
         extra_cols = [(col, '@{%s}' % col.replace(' ','_')) for col in self.annotation_table._field_df.columns]
         region_tooltips = []
         region_formatters = {}
-        for direction, kdim, dtype in zip(['x','y'], self.kdim_dtypes.keys(), self.kdim_dtypes.values()):
+        for direction, kdim in zip(['x','y'], self.kdim_dtypes.keys()):
             if self.kdim_dtypes[kdim] is np.datetime64:
                 region_tooltips.append((f'start {kdim}', f'@{direction}0{{%F}}'))
                 region_tooltips.append((f'end {kdim}', f'@{direction}1{{%F}}'))

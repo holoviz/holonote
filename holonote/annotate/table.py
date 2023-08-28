@@ -1,9 +1,11 @@
-import param
-import sys
+from __future__ import annotations
+
 import weakref
 
 import numpy as np
 import pandas as pd
+import param
+
 
 class AnnotationTable(param.Parameterized):
     """
@@ -53,7 +55,7 @@ class AnnotationTable(param.Parameterized):
         elif connector:
             self.load_annotation_table(connector, fields)
         elif fields_df is None:
-            fields_df = pd.DataFrame(columns=[primary_key_name] + fields)
+            fields_df = pd.DataFrame(columns=[primary_key_name, *fields])
             fields_df = fields_df.set_index(primary_key_name)
             self._field_df = fields_df
 
@@ -66,7 +68,7 @@ class AnnotationTable(param.Parameterized):
 
     # FIXME: Multiple region updates
     def update_annotation_region(self, index):
-        region = list(self._annotators.values())[0]._region
+        region = next(iter(self._annotators.values()))._region
         if region == {}:
             print('No new region selected. Skipping')
             return
@@ -364,7 +366,7 @@ class AnnotationTable(param.Parameterized):
             assert all(el in ['Range', 'Point'] for el in region_types)
             for region_type in region_types:
                 if len(kdim_dtypes)==1:
-                    kdim = list(kdim_dtypes.keys())[0]
+                    kdim = next(iter(kdim_dtypes.keys()))
                     if region_type == 'Range':
                         expected_keys = [f'start_{kdim}', f'end_{kdim}']
                         conn._incompatible_schema_check(expected_keys, list(df.columns), fields, region_type)
