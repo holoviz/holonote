@@ -477,11 +477,19 @@ class AnnotatorPlot(AnnotatorInterface):
         tap_stream.add_subscriber(tap_selector)
         return element
 
+    def register_double_tap_clear(self, element):
+        def double_tap_clear(x, y):
+            self.clear_indicated_region()
+
+        double_tap_stream = hv.streams.DoubleTap(source=element, transient=True)
+        double_tap_stream.add_subscriber(double_tap_clear)
+        return element
 
     def indicators(self):
 
         if self.element is not None:
             self.register_tap_selector(self.element)
+            self.register_double_tap_clear(self.element)
 
         def inner(_count):
             return self.static_indicators
