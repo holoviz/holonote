@@ -78,7 +78,7 @@ class TestSQLiteDB:
         end = pd.Timestamp('2022-06-03')
         description = 'A description'
         insertion = {"uuid": id1, 'description':description, 'start':start, 'end':end}
-        df = pd.DataFrame({"uuid":pd.Series([id1], dtype=object),
+        df = pd.DataFrame({"uuid":[database.primary_key.cast(id1)],
                            'description':[description], 'start':[start], 'end':[end]}).set_index("uuid")
         database.add_row(**insertion)
         pd.testing.assert_frame_equal(database.load_dataframe(), df)
@@ -102,10 +102,12 @@ class TestSQLiteDB:
                      'start':pd.Timestamp('2026-06-01'),
                      'end':pd.Timestamp('2026-06-03')}
 
-        df_data = {'uuid': pd.Series([insertion1['uuid'], insertion3['uuid']], dtype=object),
-                   'description':[insertion1['description'], insertion3['description']],
-                   'start':[insertion1['start'], insertion3['start']],
-                   'end':[insertion1['end'], insertion3['end']]}
+        df_data = {
+            'uuid': map(database.primary_key.cast, [insertion1['uuid'], insertion3['uuid']]),
+            'description':[insertion1['description'], insertion3['description']],
+            'start':[insertion1['start'], insertion3['start']],
+            'end':[insertion1['end'], insertion3['end']]
+        }
         df = pd.DataFrame(df_data).set_index('uuid')
         database.add_row(**insertion1)
         database.add_row(**insertion2)

@@ -243,7 +243,7 @@ class AnnotationTable(param.Parameterized):
 
     def update_annotation_fields(self, index, **fields):
         for column, value in fields.items():
-            self._field_df.loc[index][column] = value
+            self._field_df.loc[index, column] = value
 
         self._edits.append({'operation':'update', 'id':index,
                             'fields' : [c for c in fields.keys()],
@@ -303,7 +303,7 @@ class AnnotationTable(param.Parameterized):
             raise KeyError(f'Keys {mismatches} do not match any fields entries')
 
         dim2 = None if len(dims)==1 else dims[1]
-        value = zip(posx,  pd.Series([None for el in range(len(posx))])) if len(dims)==1 else zip(posx, posy)
+        value = zip(posx, [None] * len(posx)) if len(dims)==1 else zip(posx, posy)
         additions = pd.DataFrame({"region_type":'Point',
                                   "dim1":dims[0],
                                   "dim2":dim2,
