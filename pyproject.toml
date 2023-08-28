@@ -16,7 +16,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Operating System :: OS Independent",
 ]
-dependencies = ["holoviews", "pandas<2"]
+dependencies = ["holoviews", "pandas"]
 
 [tool.hatch.version]
 source = "vcs"
