@@ -113,7 +113,9 @@ class AnnotatorInterface(param.Parameterized):
         if "annotation_table" not in params:
             params["annotation_table"] = AnnotationTable()
 
-        super().__init__(**params)
+        connector_kws = {'fields':params.pop('fields')} if 'fields' in params else {}
+        connector = params.pop('connector') if 'connector' in params else self.connector_class(**connector_kws)
+        super().__init__(connector=connector, **params)
         self._region = {}
         self._last_region = None
 
@@ -315,45 +317,19 @@ class AnnotatorInterface(param.Parameterized):
             return commits
 
 
-class Annotator(AnnotatorInterface):
-    """
-    An annotator displays the contents of an AnnotationTable and
-    provides the means to manipulate view the corresponding contents,
-    add new annotations and update existing annotations.
-    """
-
+class AnnotatorPlot(AnnotatorInterface):
     rect_min = param.Number(default=-1000, doc="Temporary parameter until vectorized element fully supported")
 
     rect_max = param.Number(default=1050, doc="Temporary parameter until vectorized element fully supported")
 
-    _count = param.Integer(default=None, precedence=-1)
-
     indicator = Indicator
 
-    def __init__(self, spec, **params):
-        """
-        The spec argument must be an element or a dictionary of kdim dtypes
-        """
-        params['_count'] = 0
-        self.element = None
-        if not isinstance(spec, dict):
-            self.element = spec.clone() # Clone so we can add a tap tool and trust our copy.
-
-        connector_kws = {'fields':params.pop('fields')} if 'fields' in params else {}
-        connector = params.pop('connector') if 'connector' in params else self.connector_class(**connector_kws)
-        super().__init__(connector = connector,
-                         **dict(kdim_dtypes=(spec if self.element is None
-                                             else self._infer_kdim_dtypes(spec)), **params))
-
-        self._selection_info = {}
-
-        self._annotation_count_stream = hv.streams.Params(parameterized=self,
-                                                          parameters=['_count'], transient=True)
-        self._selected_values = []
-        self._selected_options = []
-
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self._selection_enabled = True
         self._editable_enabled = True
+        self._selected_values = []
+        self._selected_options = []
 
         transient=False
         self._edit_streams = [
@@ -384,41 +360,6 @@ class Annotator(AnnotatorInterface):
             kdim_dtypes[str(kdim)] = type(element.dimension_values(kdim)[0])
         return kdim_dtypes
 
-    def refresh(self, clear=False):
-        hv.streams.Stream.trigger([self._annotation_count_stream])
-        if clear:
-            self.clear_indicated_region()
-
-    def set_annotation_table(self, annotation_table):
-        self.select_by_index()
-        self._set_region(None)
-        super().set_annotation_table(annotation_table)
-        self.refresh(clear=True)
-
-    @property
-    def selection_enabled(self):
-        return self._selection_enabled
-
-    @selection_enabled.setter
-    def selection_enabled(self, enabled):
-        self._selection_enabled = enabled
-        if not enabled:
-            self.select_by_index()
-
-    @property
-    def editable_enabled(self):
-        return self._editable_enabled
-
-    @editable_enabled.setter
-    def editable_enabled(self, enabled):
-        self._editable_enabled = enabled
-        if not enabled:
-            self.clear_indicated_region()
-
-    def enable_editable(self, enabled=True):
-        print('enable_editable method deprecated - set editable_enabled property directly')
-        self.editable_enabled = enabled
-
     def clear_indicated_region(self):
         "Clear any region currently indicated on the plot by the editor"
         self._edit_streams[0].event(bounds=None)
@@ -443,33 +384,26 @@ class Annotator(AnnotatorInterface):
         else:
             return self.element
 
+    @property
+    def selection_enabled(self):
+        return self._selection_enabled
 
-    def selected_dim_expr(self, selected_value, non_selected_value):
-        self._selected_values.append(selected_value)
-        self._selected_options.append({i:selected_value for i in self.selected_indices})
-        index_name = ('id' if (self.annotation_table._field_df.index.name is None)
-                      else self.annotation_table._field_df.index.name)
-        return hv.dim(index_name).categorize(
-            self._selected_options[-1], default=non_selected_value)
-
-    def clear_edits(self):
-        super().clear_edits()
-        self.clear_indicated_region()
+    @selection_enabled.setter
+    def selection_enabled(self, enabled):
+        self._selection_enabled = enabled
+        if not enabled:
+            self.select_by_index()
 
     @property
-    def dim_expr(self):
-        return self._selection_info["dim_expr"]
+    def editable_enabled(self):
+        return self._editable_enabled
 
+    @editable_enabled.setter
+    def editable_enabled(self, enabled):
+        self._editable_enabled = enabled
+        if not enabled:
+            self.clear_indicated_region()
 
-    def show_region(self):
-        if self.region != {}:
-            if len(self.region['value']) == 2:
-                bounds = (self.region['value'][0], 0,
-                      self.region['value'][1], 1)
-            else:
-                bounds = (self.region['value'][0], self.region['value'][2],
-                          self.region['value'][1], self.region['value'][3])
-            self._edit_streams[0].event(bounds = bounds)
 
     def _filter_stream_values(self, bounds, x, y, geometry):
         if not self._editable_enabled:
@@ -484,6 +418,7 @@ class Annotator(AnnotatorInterface):
             x, y = None, None
 
         return bounds, x, y, geometry
+
 
     def _make_selection_dmap(self):
         def inner(bounds, x, y, geometry):
@@ -655,6 +590,83 @@ class Annotator(AnnotatorInterface):
                 raise NotImplementedError  # FIXME: Both in overlay
 
 
+    def set_range(self, startx, endx, starty=None, endy=None):
+        super().set_range(startx, endx, starty, endy)
+        self.show_region()
+
+    def set_point(self, posx, posy=None):
+        super().set_point(posx, posy)
+        self.show_region()
+
+
+class Annotator(AnnotatorPlot):
+    """
+    An annotator displays the contents of an AnnotationTable and
+    provides the means to manipulate view the corresponding contents,
+    add new annotations and update existing annotations.
+    """
+
+
+    _count = param.Integer(default=0, precedence=-1)
+
+
+    def __init__(self, spec, **params):
+        """
+        The spec argument must be an element or a dictionary of kdim dtypes
+        """
+        self.element = None
+        if not isinstance(spec, dict):
+            self.element = spec.clone() # Clone so we can add a tap tool and trust our copy.
+
+        super().__init__(
+            kdim_dtypes=spec if self.element is None else self._infer_kdim_dtypes(spec),
+            **params,
+        )
+        self._selection_info = {}
+
+        self._annotation_count_stream = hv.streams.Params(
+            parameterized=self,
+            parameters=['_count'],
+            transient=True,
+        )
+
+    def refresh(self, clear=False) -> None:
+        hv.streams.Stream.trigger([self._annotation_count_stream])
+        if clear:
+            self.clear_indicated_region()
+
+    def set_annotation_table(self, annotation_table):
+        self.select_by_index()
+        self._set_region(None)
+        super().set_annotation_table(annotation_table)
+        self.refresh(clear=True)
+
+    def selected_dim_expr(self, selected_value, non_selected_value):
+        self._selected_values.append(selected_value)
+        self._selected_options.append({i:selected_value for i in self.selected_indices})
+        index_name = ('id' if (self.annotation_table._field_df.index.name is None)
+                      else self.annotation_table._field_df.index.name)
+        return hv.dim(index_name).categorize(
+            self._selected_options[-1], default=non_selected_value)
+
+    def clear_edits(self):
+        super().clear_edits()
+        self.clear_indicated_region()
+
+    @property
+    def dim_expr(self):
+        return self._selection_info["dim_expr"]
+
+    def show_region(self):
+        if self.region != {}:
+            if len(self.region['value']) == 2:
+                bounds = (self.region['value'][0], 0,
+                      self.region['value'][1], 1)
+            else:
+                bounds = (self.region['value'][0], self.region['value'][2],
+                          self.region['value'][1], self.region['value'][3])
+            self._edit_streams[0].event(bounds = bounds)
+
     # Methods overriding the baseclass to add extra interactivity
 
     def select_by_index(self, *inds):
@@ -721,11 +733,3 @@ class Annotator(AnnotatorInterface):
     def revert_to_snapshot(self):
         super().revert_to_snapshot()
         self.refresh()
-
-    def set_range(self, startx, endx, starty=None, endy=None):
-        super().set_range(startx, endx, starty, endy)
-        self.show_region()
-
-    def set_point(self, posx, posy=None):
-        super().set_point(posx, posy)
-        self.show_region()
