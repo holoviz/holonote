@@ -200,6 +200,8 @@ class AnnotatorInterface(param.Parameterized):
         if dim2_pos is not None:
             mask_dim2 = ranges['value'].apply(lambda tpl: tpl[2] <= dim2_pos < tpl[3])
             mask = mask & mask_dim2
+        if not len(mask):
+            return []
         return list(ranges[mask]['_id'])
 
 
