@@ -1,0 +1,23 @@
+name: Build and Publish
+
+on:
+  workflow_dispatch:
+  pull_request:
+  release:
+    types:
+    - published
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    - name: Install hatch
+      run: pipx install hatch
+    - name: Build sdist and wheel
+      run: hatch build --clean
+    - name: Publish
+      if: github.event_name == 'release' && github.event.action == 'published'
+      run: hatch publish --user __token__ --auth ${{ secrets.pypi_password }}
