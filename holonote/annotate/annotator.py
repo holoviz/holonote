@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 import param
 from bokeh.models.tools import BoxSelectTool, HoverTool
-from holoviews.element.selection import Selection1DExpr
 
 from .connector import Connector, SQLiteDB
 from .table import AnnotationTable
@@ -303,6 +302,9 @@ class AnnotatorInterface(param.Parameterized):
 
 
     # Snapshotting and reverting
+    @property
+    def has_snapshot(self):
+        return self.annotation_table.has_snapshot
 
     def revert_to_snapshot(self):
         self.annotation_table.revert_to_snapshot()
@@ -317,15 +319,27 @@ class AnnotatorInterface(param.Parameterized):
             return commits
 
 
-class AnnotatorPlot(AnnotatorInterface):
+class AnnotatorPlot(param.Parameterized):
     rect_min = param.Number(default=-1000, doc="Temporary parameter until vectorized element fully supported")
 
     rect_max = param.Number(default=1050, doc="Temporary parameter until vectorized element fully supported")
 
     indicator = Indicator
 
-    def __init__(self, **kwargs):
+    _count = param.Integer(default=0, precedence=-1)
+
+    def __init__(self, annotator, **kwargs):
         super().__init__(**kwargs)
+        self._element = hv.Curve([])  # TODO: Should accept kdims
+
+        self._annotation_count_stream = hv.streams.Params(
+            parameterized=self,
+            parameters=['_count'],
+            transient=True,
+        )
+
+        self._selection_info = {}
+
         self._selection_enabled = True
         self._editable_enabled = True
         self._selected_values = []
@@ -338,15 +352,22 @@ class AnnotatorPlot(AnnotatorInterface):
                 hv.streams.Lasso(transient=transient),
         ]
 
+        # TODO: Don't want this circular reference
+        self.anno = annotator
+
+    @property
+    def element(self):
+        return self.overlay()
+
     @property
     def edit_tools(self):
         tools = []
-        if 'Range' in self.region_types and len(self.kdim_dtypes)==1:
+        if 'Range' in self.anno.region_types and len(self.anno.kdim_dtypes)==1:
             tools.append(BoxSelectTool(dimensions="width"))
-        elif 'Range' in self.region_types and len(self.kdim_dtypes)==2:
+        elif 'Range' in self.anno.region_types and len(self.anno.kdim_dtypes)==2:
             tools.append(BoxSelectTool())
 
-        if 'Point' in self.region_types:
+        if 'Point' in self.anno.region_types:
             tools.append('tap')
 
         return tools
@@ -365,24 +386,16 @@ class AnnotatorPlot(AnnotatorInterface):
         self._edit_streams[0].event(bounds=None)
         self._edit_streams[1].event(x=None, y=None)
         self._edit_streams[2].event(geometry=None)
-        self._set_region(None)
+        self.anno._set_region(None)
 
     @property
     def selection_element(self):
-        if self.element is None:
-            kdims = list(self.kdim_dtypes.keys())
-            kdim_dtype = next(iter(self.kdim_dtypes.values()))
-            return hv.Curve(([kdim_dtype(), kdim_dtype()],
-                             [0,1]), kdims=kdims) # Note: Any concrete Selection1dExpr will do...
+        # if self._element is None:
+        kdims = list(self.anno.kdim_dtypes.keys())
+        kdim_dtype = next(iter(self.anno.kdim_dtypes.values()))
+        return hv.Curve(([kdim_dtype(), kdim_dtype()],
+                            [0,1]), kdims=kdims) # Note: Any concrete Selection1dExpr will do...
 
-        if isinstance(self.element, (hv.NdOverlay, hv.Overlay)):
-            expr_1d_set = set(isinstance(el, Selection1DExpr) for el in self.element)
-            if len(expr_1d_set) == 1:
-                return next(iter(self.element))
-            else:
-                raise ValueError("Inconsistent selection types in overlay")
-        else:
-            return self.element
 
     @property
     def selection_enabled(self):
@@ -408,13 +421,13 @@ class AnnotatorPlot(AnnotatorInterface):
     def _filter_stream_values(self, bounds, x, y, geometry):
         if not self._editable_enabled:
             return (None, None, None, None)
-        if 'Range' not in self.region_types:
+        if 'Range' not in self.anno.region_types:
             bounds = None
 
         # If selection enabled, tap stream used for selection not for creating point regions
-        if 'Point' in self.region_types and self.selection_enabled:
+        if 'Point' in self.anno.region_types and self.selection_enabled:
             x, y = None, None
-        elif 'Point' not in self.region_types:
+        elif 'Point' not in self.anno.region_types:
             x, y = None, None
 
         return bounds, x, y, geometry
@@ -450,12 +463,12 @@ class AnnotatorPlot(AnnotatorInterface):
                     start2,end2 = bbox[dim2]
                     value = (start1, end1, start2,end2)
 
-                self._set_region('Range', value=value, dim1=dim1, dim2=dim2)
+                self.anno._set_region('Range', value=value, dim1=dim1, dim2=dim2)
 
             if None not in [x,y]:
                 kdims = list(self.kdim_dtypes.keys())
                 value = (x,None) if len(self.kdim_dtypes) == 1 else (x,y)
-                self._set_region('Point', value,  *kdims)
+                self.anno._set_region('Point', value,  *kdims)
 
             return region_element
 
@@ -465,14 +478,14 @@ class AnnotatorPlot(AnnotatorInterface):
         def tap_selector(x,y): # Tap tool must be enabled on the element
             # Only select the first
 
-            if len(self.kdim_dtypes) == 1:
-                indices = self.get_indices_by_position(x)
-            elif len(self.kdim_dtypes) == 2:
-                indices = self.get_indices_by_position(x, y)
+            if len(self.anno.kdim_dtypes) == 1:
+                indices = self.anno.get_indices_by_position(x)
+            elif len(self.anno.kdim_dtypes) == 2:
+                indices = self.anno.get_indices_by_position(x, y)
             if indices:
-                self.select_by_index(indices[0])
+                self.anno.select_by_index(indices[0])
             else:
-                self.select_by_index()
+                self.anno.select_by_index()
         tap_stream = hv.streams.Tap(source=element, transient=True)
         tap_stream.add_subscriber(tap_selector)
         return element
@@ -487,9 +500,8 @@ class AnnotatorPlot(AnnotatorInterface):
 
     def indicators(self):
 
-        if self.element is not None:
-            self.register_tap_selector(self.element)
-            self.register_double_tap_clear(self.element)
+        self.register_tap_selector(self._element)
+        self.register_double_tap_clear(self._element)
 
         def inner(_count):
             return self.static_indicators
@@ -504,7 +516,7 @@ class AnnotatorPlot(AnnotatorInterface):
                 point_style=None,
                 edit_range_style=None,
                 edit_point_style=None,
-                highlight=None):
+                highlight=None) -> hv.Overlay:
 
         if range_style is None: range_style = Indicator.range_style
         if point_style is None: point_style = Indicator.point_style
@@ -517,13 +529,13 @@ class AnnotatorPlot(AnnotatorInterface):
         region_style = Indicator.region_style(edit_range_style, edit_point_style)
 
         layers = []
-        if element is True and self.element is None:
+        if element is True and self._element is None:
             raise ValueError('Annotator was not supplied an element to display.')
         elif element not in [True, False]:
             element = self.register_tap_selector(element)
             layers.append(element.opts(tools=self.edit_tools, active_tools=["box_select"]))
         else:
-            layers.append(self.element.opts(tools=self.edit_tools))
+            layers.append(self._element.opts(tools=self.edit_tools, active_tools=["box_select"]))
 
         if indicators:
             layers.append(self.indicators().opts(*indicator_style))
@@ -536,11 +548,12 @@ class AnnotatorPlot(AnnotatorInterface):
 
     def _build_hover_tool(self):
         # FIXME: Not generalized yet - assuming range
-        extra_cols = [(col, '@{%s}' % col.replace(' ','_')) for col in self.annotation_table._field_df.columns]
+        # extra_cols = [(col, '@{%s}' % col.replace(' ','_')) for col in self.annotation_table._field_df.columns]
+        extra_cols = []
         region_tooltips = []
         region_formatters = {}
-        for direction, kdim in zip(['x','y'], self.kdim_dtypes.keys()):
-            if self.kdim_dtypes[kdim] is np.datetime64:
+        for direction, kdim in zip(['x','y'], self.anno.kdim_dtypes.keys()):
+            if self.anno.kdim_dtypes[kdim] is np.datetime64:
                 region_tooltips.append((f'start {kdim}', f'@{direction}0{{%F}}'))
                 region_tooltips.append((f'end {kdim}', f'@{direction}1{{%F}}'))
                 region_formatters[f'@{direction}0'] = 'datetime'
@@ -560,8 +573,8 @@ class AnnotatorPlot(AnnotatorInterface):
             return Indicator.points_2d(filtered_df, None, invert_axes=invert_axes)
 
     def _range_indicators(self, filtered_df, dimensionality, invert_axes=False):
-        fields_mask = self.annotation_table._field_df.index.isin(filtered_df['_id'])
-        field_df = self.annotation_table._field_df[fields_mask]  # Currently assuming 1-to-1
+        fields_mask = self.anno.annotation_table._field_df.index.isin(filtered_df['_id'])
+        field_df = self.anno.annotation_table._field_df[fields_mask]  # Currently assuming 1-to-1
         if dimensionality == '1d':
             extra_params = {'rect_min':self.rect_min, 'rect_max':self.rect_max} # TODO: Remove extra_params!
             vectorized = Indicator.ranges_1d(filtered_df, field_df, invert_axes=invert_axes,
@@ -574,11 +587,11 @@ class AnnotatorPlot(AnnotatorInterface):
     @property
     def static_indicators(self):
         invert_axes = False  # Not yet handled
-        kdims = list(self.kdim_dtypes.keys())
+        kdims = list(self.anno.kdim_dtypes.keys())
         if len(kdims) == 1:
-            dim_mask = self.annotation_table._mask1D(kdims)
-            points_df = self.annotation_table._filter(dim_mask, "Point")
-            ranges_df = self.annotation_table._filter(dim_mask, "Range")
+            dim_mask = self.anno.annotation_table._mask1D(kdims)
+            points_df = self.anno.annotation_table._filter(dim_mask, "Point")
+            ranges_df = self.anno.annotation_table._filter(dim_mask, "Range")
             if len(points_df) == 0:
                 return self._range_indicators(ranges_df, '1d', invert_axes=invert_axes)
             elif len(ranges_df) == 0:
@@ -587,9 +600,9 @@ class AnnotatorPlot(AnnotatorInterface):
                 raise NotImplementedError  # FIXME: Both in overlay
 
         if len(kdims) > 1:
-            dim_mask = self.annotation_table._mask2D(kdims)
-            points_df = self.annotation_table._filter(dim_mask, "Point")
-            ranges_df = self.annotation_table._filter(dim_mask, "Range")
+            dim_mask = self.anno.annotation_table._mask2D(kdims)
+            points_df = self.anno.annotation_table._filter(dim_mask, "Point")
+            ranges_df = self.anno.annotation_table._filter(dim_mask, "Range")
             if len(points_df) == 0:
                 return self._range_indicators(ranges_df, '2d', invert_axes=invert_axes)
             elif len(ranges_df) == 0:
@@ -597,69 +610,13 @@ class AnnotatorPlot(AnnotatorInterface):
             else:
                 raise NotImplementedError  # FIXME: Both in overlay
 
-
-    def set_range(self, startx, endx, starty=None, endy=None):
-        super().set_range(startx, endx, starty, endy)
-        self.show_region()
-
-    def set_point(self, posx, posy=None):
-        super().set_point(posx, posy)
-        self.show_region()
-
-
-class Annotator(AnnotatorPlot):
-    """
-    An annotator displays the contents of an AnnotationTable and
-    provides the means to manipulate view the corresponding contents,
-    add new annotations and update existing annotations.
-    """
-
-
-    _count = param.Integer(default=0, precedence=-1)
-
-
-    def __init__(self, spec, **params):
-        """
-        The spec argument must be an element or a dictionary of kdim dtypes
-        """
-        self.element = None
-        if not isinstance(spec, dict):
-            self.element = spec.clone() # Clone so we can add a tap tool and trust our copy.
-
-        super().__init__(
-            kdim_dtypes=spec if self.element is None else self._infer_kdim_dtypes(spec),
-            **params,
-        )
-        self._selection_info = {}
-
-        self._annotation_count_stream = hv.streams.Params(
-            parameterized=self,
-            parameters=['_count'],
-            transient=True,
-        )
-
-    def refresh(self, clear=False) -> None:
-        hv.streams.Stream.trigger([self._annotation_count_stream])
-        if clear:
-            self.clear_indicated_region()
-
-    def set_annotation_table(self, annotation_table):
-        self.select_by_index()
-        self._set_region(None)
-        super().set_annotation_table(annotation_table)
-        self.refresh(clear=True)
-
     def selected_dim_expr(self, selected_value, non_selected_value):
         self._selected_values.append(selected_value)
-        self._selected_options.append({i:selected_value for i in self.selected_indices})
-        index_name = ('id' if (self.annotation_table._field_df.index.name is None)
-                      else self.annotation_table._field_df.index.name)
+        self._selected_options.append({i:selected_value for i in self.anno.selected_indices})
+        index_name = ('id' if (self.anno.annotation_table._field_df.index.name is None)
+                      else self.anno.annotation_table._field_df.index.name)
         return hv.dim(index_name).categorize(
             self._selected_options[-1], default=non_selected_value)
-
-    def clear_edits(self):
-        super().clear_edits()
-        self.clear_indicated_region()
 
     @property
     def dim_expr(self):
@@ -675,21 +632,60 @@ class Annotator(AnnotatorPlot):
                           self.region['value'][1], self.region['value'][3])
             self._edit_streams[0].event(bounds = bounds)
 
-    # Methods overriding the baseclass to add extra interactivity
 
-    def select_by_index(self, *inds):
-        "Set the selection state by the indices i.e. primary key values"
+class Annotator(AnnotatorInterface):
+    """
+    An annotator displays the contents of an AnnotationTable and
+    provides the means to manipulate view the corresponding contents,
+    add new annotations and update existing annotations.
+    """
 
-        if not self.selection_enabled:
-            inds = ()
-        super().select_by_index(*inds)
+    def __init__(self, spec: dict, **params):
+        """
+        The spec argument must be an element or a dictionary of kdim dtypes
+        """
 
-        for d, val in zip(self._selected_options, self._selected_values):
-            d.clear()
-            for ind in inds:
-                d[ind] = val
+        self._elements = {}
 
-        self.refresh()
+        super().__init__(
+            kdim_dtypes=spec if isinstance(spec, dict) else self._infer_kdim_dtypes(spec),
+            **params,
+        )
+
+    @classmethod
+    def _infer_kdim_dtypes(self, element: hv.Element) -> dict:
+        # Remove?
+        return AnnotatorPlot._infer_kdim_dtypes(element)
+
+    def _create_annotation_element(self, element_key: tuple[str, ...]):
+        return AnnotatorPlot(self) #[], kdims=list(element_key))  <-- TODO: Add kdims
+
+    def __mul__(self, other: hv.Element) -> hv.Overlay:
+        element_key = tuple(map(str, other.kdims))
+        if element_key in self._elements:
+            anno = self._elements[element_key]
+        else:
+            self._elements[element_key] = anno = self._create_annotation_element(element_key)
+        return anno.element * other
+
+    def refresh(self, clear=False) -> None:
+        for v in self._elements.values():
+            hv.streams.Stream.trigger([v._annotation_count_stream])
+            if clear:
+                v.clear_indicated_region()
+
+    def set_annotation_table(self, annotation_table):
+        self.select_by_index()
+        for v in self._elements.values():
+            v.select_by_index()
+        self._set_region(None)
+        super().set_annotation_table(annotation_table)
+        self.refresh(clear=True)
+
+
+    def clear_edits(self):
+        super().clear_edits()
+        self.clear_indicated_region()
 
     def add_annotation(self, **fields):
         super().add_annotation(**fields)
@@ -712,13 +708,28 @@ class Annotator(AnnotatorPlot):
             super().delete_annotation(index)
         self.refresh()
 
+    def select_by_index(self, *inds):
+        "Set the selection state by the indices i.e. primary key values"
+
+        for v in self._elements.values():
+            if not v.selection_enabled:
+                inds = ()
+            # self.select_by_index(*inds)
+
+            for d, val in zip(v._selected_options, v._selected_values):
+                d.clear()
+                for ind in inds:
+                    d[ind] = val
+
+        self.refresh()
+
+
     def define_fields(self, fields_df, preserve_index=False):
         """
         If insert_index is True, the index values are inserted as primary key values
         """
         super().define_fields(fields_df, preserve_index=preserve_index)
 
-    # Pass-through methods that get dimensionality from self.element
     def define_ranges(self, startx, endx, starty=None, endy=None, dims=None):
         "Define ranges using element kdims as default dimensions."
         if dims is None:
@@ -733,10 +744,6 @@ class Annotator(AnnotatorPlot):
             dims = list(self.kdim_dtypes.keys())
         super().define_points(posx, posy=posy, dims=dims)
         self.refresh()
-
-    @property
-    def has_snapshot(self):
-        return self.annotation_table.has_snapshot
 
     def revert_to_snapshot(self):
         super().revert_to_snapshot()
