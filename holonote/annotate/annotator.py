@@ -390,12 +390,14 @@ class AnnotatorPlot(param.Parameterized):
 
     @property
     def selection_element(self):
-        # if self._element is None:
-        kdims = list(self.anno.kdim_dtypes.keys())
-        kdim_dtype = next(iter(self.anno.kdim_dtypes.values()))
-        return hv.Curve(([kdim_dtype(), kdim_dtype()],
-                            [0,1]), kdims=kdims) # Note: Any concrete Selection1dExpr will do...
+        if not hasattr(self, "_selection_element"):
+            kdims = list(self.anno.kdim_dtypes.keys())
+            kdim_dtype = next(iter(self.anno.kdim_dtypes.values()))
+            # Note: Any concrete Selection1dExpr will do...
+            self._selection_element = hv.Curve(([kdim_dtype(), kdim_dtype()],
+                                [0,1]), kdims=kdims)
 
+        return self._selection_element
 
     @property
     def selection_enabled(self):
@@ -433,7 +435,7 @@ class AnnotatorPlot(param.Parameterized):
         return bounds, x, y, geometry
 
 
-    def _make_selection_dmap(self):
+    def _make_selection_editor(self):
         def inner(bounds, x, y, geometry):
             bounds, x, y, geometry = self._filter_stream_values(bounds, x, y, geometry)
 
@@ -544,7 +546,9 @@ class AnnotatorPlot(param.Parameterized):
         return hv.Overlay(layers).collate()
 
     def region_editor(self):
-        return self._make_selection_dmap()
+        if not hasattr(self, "_region_editor"):
+            self._region_editor = self._make_selection_editor()
+        return self._region_editor
 
     def _build_hover_tool(self):
         # FIXME: Not generalized yet - assuming range
