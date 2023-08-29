@@ -476,7 +476,7 @@ class AnnotatorPlot(param.Parameterized):
 
         return hv.DynamicMap(inner, streams=self._edit_streams)
 
-    def register_tap_selector(self, element):
+    def register_tap_selector(self, element: hv.Element) -> hv.Element:
         def tap_selector(x,y): # Tap tool must be enabled on the element
             # Only select the first
 
@@ -492,7 +492,7 @@ class AnnotatorPlot(param.Parameterized):
         tap_stream.add_subscriber(tap_selector)
         return element
 
-    def register_double_tap_clear(self, element):
+    def register_double_tap_clear(self, element: hv.Element) -> hv.Element:
         def double_tap_clear(x, y):
             self.clear_indicated_region()
 
@@ -500,7 +500,7 @@ class AnnotatorPlot(param.Parameterized):
         double_tap_stream.add_subscriber(double_tap_clear)
         return element
 
-    def indicators(self):
+    def indicators(self) -> hv.DynamicMap:
 
         self.register_tap_selector(self._element)
         self.register_double_tap_clear(self._element)
@@ -511,14 +511,15 @@ class AnnotatorPlot(param.Parameterized):
         return hv.DynamicMap(inner, streams=[self._annotation_count_stream])
 
     def overlay(self,
-                element = True,
-                indicators=True,
-                editor=True,
-                range_style=None,
-                point_style=None,
-                edit_range_style=None,
-                edit_point_style=None,
-                highlight=None) -> hv.Overlay:
+        element = True,
+        indicators=True,
+        editor=True,
+        range_style=None,
+        point_style=None,
+        edit_range_style=None,
+        edit_point_style=None,
+        highlight=None
+    ) -> hv.Overlay:
 
         if range_style is None: range_style = Indicator.range_style
         if point_style is None: point_style = Indicator.point_style
