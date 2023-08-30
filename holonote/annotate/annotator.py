@@ -319,7 +319,7 @@ class AnnotatorInterface(param.Parameterized):
             return commits
 
 
-class AnnotatorPlot(param.Parameterized):
+class AnnotatorElement(param.Parameterized):
     rect_min = param.Number(default=-1000, doc="Temporary parameter until vectorized element fully supported")
 
     rect_max = param.Number(default=1050, doc="Temporary parameter until vectorized element fully supported")
@@ -391,10 +391,7 @@ class AnnotatorPlot(param.Parameterized):
 
     def _make_empty_element(self) -> hv.Element:
         kdims = list(self.anno.kdim_dtypes.keys())
-        kdim_dtype = next(iter(self.anno.kdim_dtypes.values()))
-        return hv.Curve(
-            ([kdim_dtype(), kdim_dtype()], [0,1]), kdims=kdims
-        )
+        return hv.Curve([], kdims=kdims).opts(apply_ranges=False)
 
     @property
     def selection_element(self) -> hv.Element:
@@ -519,7 +516,6 @@ class AnnotatorPlot(param.Parameterized):
         return hv.DynamicMap(inner, streams=[self._annotation_count_stream])
 
     def overlay(self,
-        element = True,
         indicators=True,
         editor=True,
         range_style=None,
@@ -540,13 +536,7 @@ class AnnotatorPlot(param.Parameterized):
         region_style = Indicator.region_style(edit_range_style, edit_point_style)
 
         layers = []
-        if element is True and self._element is None:
-            raise ValueError('Annotator was not supplied an element to display.')
-        elif element not in [True, False]:
-            element = self.register_tap_selector(element)
-            layers.append(element.opts(tools=self.edit_tools, active_tools=["box_select"]))
-        else:
-            layers.append(self._element.opts(tools=self.edit_tools, active_tools=["box_select"]))
+        layers.append(self._element.opts(tools=self.edit_tools, active_tools=["box_select"]))
 
         if indicators:
             layers.append(self.indicators().opts(*indicator_style))
@@ -663,10 +653,10 @@ class Annotator(AnnotatorInterface):
     @classmethod
     def _infer_kdim_dtypes(self, element: hv.Element) -> dict:
         # Remove?
-        return AnnotatorPlot._infer_kdim_dtypes(element)
+        return AnnotatorElement._infer_kdim_dtypes(element)
 
     def _create_annotation_element(self, element_key: tuple[str, ...]):
-        return AnnotatorPlot(self) #[], kdims=list(element_key))  <-- TODO: Add kdims
+        return AnnotatorElement(self) #[], kdims=list(element_key))  <-- TODO: Add kdims
 
     def __mul__(self, other: hv.Element) -> hv.Overlay:
         element_key = tuple(map(str, other.kdims))
@@ -674,7 +664,11 @@ class Annotator(AnnotatorInterface):
             anno = self._elements[element_key]
         else:
             self._elements[element_key] = anno = self._create_annotation_element(element_key)
-        return anno.element * other
+
+        return other * anno.element
+
+    def __rmul__(self, other: hv.Element) -> hv.Overlay:
+        return self.__mul__(other)
 
     def refresh(self, clear=False) -> None:
         for v in self._elements.values():
