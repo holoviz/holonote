@@ -108,13 +108,13 @@ class AnnotatorInterface(param.Parameterized):
 
     connector_class = SQLiteDB
 
-    def __init__(self, init=True, **params):
+    def __init__(self, kdim_dtypes=kdim_dtypes, *, init=True, **params):
         if "annotation_table" not in params:
             params["annotation_table"] = AnnotationTable()
 
         connector_kws = {'fields':params.pop('fields')} if 'fields' in params else {}
         connector = params.pop('connector') if 'connector' in params else self.connector_class(**connector_kws)
-        super().__init__(connector=connector, **params)
+        super().__init__(kdim_dtypes=kdim_dtypes, connector=connector, **params)
         self._region = {}
         self._last_region = None
 
