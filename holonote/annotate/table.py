@@ -82,7 +82,7 @@ class AnnotationTable(param.Parameterized):
                             'region_fields':[]})
 
     @property
-    def has_snapshot(self):
+    def has_snapshot(self) -> bool:
         return self._field_df_snapshot is not None
 
     def revert_to_snapshot(self):

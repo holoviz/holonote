@@ -4,7 +4,7 @@ import holoviews as hv
 import numpy as np
 import pandas as pd
 import param
-from bokeh.models.tools import BoxSelectTool, HoverTool
+from bokeh.models.tools import BoxSelectTool, HoverTool, Tool
 
 from .connector import Connector, SQLiteDB
 from .table import AnnotationTable
@@ -303,13 +303,13 @@ class AnnotatorInterface(param.Parameterized):
 
     # Snapshotting and reverting
     @property
-    def has_snapshot(self):
+    def has_snapshot(self) -> bool:
         return self.annotation_table.has_snapshot
 
-    def revert_to_snapshot(self):
+    def revert_to_snapshot(self) -> None:
         self.annotation_table.revert_to_snapshot()
 
-    def snapshot(self):
+    def snapshot(self) -> None:
         self.annotation_table.snapshot()
 
     def commit(self, return_commits=False):
@@ -328,7 +328,7 @@ class AnnotatorPlot(param.Parameterized):
 
     _count = param.Integer(default=0, precedence=-1)
 
-    def __init__(self, annotator, **kwargs):
+    def __init__(self, annotator, **kwargs) -> None:
         super().__init__(**kwargs)
 
         self._annotation_count_stream = hv.streams.Params(
@@ -361,7 +361,7 @@ class AnnotatorPlot(param.Parameterized):
         return self.overlay()
 
     @property
-    def edit_tools(self):
+    def edit_tools(self)-> list[Tool]:
         tools = []
         if 'Range' in self.anno.region_types and len(self.anno.kdim_dtypes)==1:
             tools.append(BoxSelectTool(dimensions="width"))
@@ -403,21 +403,21 @@ class AnnotatorPlot(param.Parameterized):
         return self._selection_element
 
     @property
-    def selection_enabled(self):
+    def selection_enabled(self) -> bool:
         return self._selection_enabled
 
     @selection_enabled.setter
-    def selection_enabled(self, enabled):
+    def selection_enabled(self, enabled: bool) -> None:
         self._selection_enabled = enabled
         if not enabled:
             self.select_by_index()
 
     @property
-    def editable_enabled(self):
+    def editable_enabled(self) -> bool:
         return self._editable_enabled
 
     @editable_enabled.setter
-    def editable_enabled(self, enabled):
+    def editable_enabled(self, enabled: bool) -> None:
         self._editable_enabled = enabled
         if not enabled:
             self.clear_indicated_region()
@@ -478,6 +478,11 @@ class AnnotatorPlot(param.Parameterized):
             return region_element
 
         return hv.DynamicMap(inner, streams=self._edit_streams)
+
+    def region_editor(self) -> hv.DynamicMap:
+        if not hasattr(self, "_region_editor"):
+            self._region_editor = self._make_selection_editor()
+        return self._region_editor
 
     def register_tap_selector(self, element: hv.Element) -> hv.Element:
         def tap_selector(x,y): # Tap tool must be enabled on the element
@@ -548,11 +553,6 @@ class AnnotatorPlot(param.Parameterized):
         if editor:
             layers.append(self.region_editor().opts(*region_style))
         return hv.Overlay(layers).collate()
-
-    def region_editor(self):
-        if not hasattr(self, "_region_editor"):
-            self._region_editor = self._make_selection_editor()
-        return self._region_editor
 
     def _build_hover_tool(self):
         # FIXME: Not generalized yet - assuming range
