@@ -330,7 +330,6 @@ class AnnotatorPlot(param.Parameterized):
 
     def __init__(self, annotator, **kwargs):
         super().__init__(**kwargs)
-        self._element = hv.Curve([])  # TODO: Should accept kdims
 
         self._annotation_count_stream = hv.streams.Params(
             parameterized=self,
@@ -354,6 +353,8 @@ class AnnotatorPlot(param.Parameterized):
 
         # TODO: Don't want this circular reference
         self.anno = annotator
+
+        self._element = self._make_empty_element()
 
     @property
     def element(self):
@@ -388,15 +389,17 @@ class AnnotatorPlot(param.Parameterized):
         self._edit_streams[2].event(geometry=None)
         self.anno._set_region(None)
 
-    @property
-    def selection_element(self):
-        if not hasattr(self, "_selection_element"):
-            kdims = list(self.anno.kdim_dtypes.keys())
-            kdim_dtype = next(iter(self.anno.kdim_dtypes.values()))
-            # Note: Any concrete Selection1dExpr will do...
-            self._selection_element = hv.Curve(([kdim_dtype(), kdim_dtype()],
-                                [0,1]), kdims=kdims)
+    def _make_empty_element(self) -> hv.Element:
+        kdims = list(self.anno.kdim_dtypes.keys())
+        kdim_dtype = next(iter(self.anno.kdim_dtypes.values()))
+        return hv.Curve(
+            ([kdim_dtype(), kdim_dtype()], [0,1]), kdims=kdims
+        )
 
+    @property
+    def selection_element(self) -> hv.Element:
+        if not hasattr(self, "_selection_element"):
+            self._selection_element = self._make_empty_element()
         return self._selection_element
 
     @property
