@@ -391,7 +391,8 @@ class AnnotatorElement(param.Parameterized):
 
     def _make_empty_element(self) -> hv.Element:
         kdims = list(self.anno.kdim_dtypes.keys())
-        return hv.Curve([], kdims=kdims).opts(apply_ranges=False)
+        El = hv.Curve if len(kdims) == 1 else hv.Image
+        return El([], kdims=kdims).opts(apply_ranges=False)
 
     @property
     def selection_element(self) -> hv.Element:
