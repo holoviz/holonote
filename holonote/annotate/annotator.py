@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
+
 import holoviews as hv
 import numpy as np
 import pandas as pd
@@ -8,6 +10,9 @@ from bokeh.models.tools import BoxSelectTool, HoverTool, Tool
 
 from .connector import Connector, SQLiteDB
 from .table import AnnotationTable
+
+if TYPE_CHECKING:
+    from .typing import SpecDict
 
 
 class Indicator:
@@ -96,8 +101,7 @@ class AnnotatorInterface(param.Parameterized):
 
     selected_indices = param.List(default=[], doc="Indices of selected annotations")
 
-    kdim_dtypes = param.Dict(default=None, allow_None=True, doc="""
-       Dictionary of one or two key dimension names to dtypes (e.g. int, float, datetime).""")
+    spec = param.Dict(default={}, doc="Specification of annotation types")
 
     connector = param.ClassSelector(class_=Connector, allow_None=False)
 
@@ -108,13 +112,16 @@ class AnnotatorInterface(param.Parameterized):
 
     connector_class = SQLiteDB
 
-    def __init__(self, kdim_dtypes=kdim_dtypes, *, init=True, **params):
+    def __init__(self, spec, *, init=True, **params):
         if "annotation_table" not in params:
             params["annotation_table"] = AnnotationTable()
 
         connector_kws = {'fields':params.pop('fields')} if 'fields' in params else {}
         connector = params.pop('connector') if 'connector' in params else self.connector_class(**connector_kws)
-        super().__init__(kdim_dtypes=kdim_dtypes, connector=connector, **params)
+
+        spec = self.clean_spec(spec)
+
+        super().__init__(spec=spec, connector=connector, **params)
         self._region = {}
         self._last_region = None
 
@@ -123,6 +130,52 @@ class AnnotatorInterface(param.Parameterized):
 
         if init:
             self.load()
+
+    @property
+    def kdim_dtypes(self) -> dict[str, Any]:
+        # LEGACY: This is a temporary property
+        return {k: v["type"] for k, v in self.spec.items()}
+
+    # @property
+    # def region_types(self) -> list[str]:
+    #     # LEGACY: This is a temporary property
+    #     return [v["region"].capitalize() for v in self.spec.values()]
+
+    @classmethod
+    def clean_spec(self, input_spec: dict[str, Any]) -> SpecDict:
+        """ Convert spec to a DataFrame with columns: type, region
+
+        Accepted input spec formats:
+        spec = {
+            # Range (two values)
+            "A1": (np.float64, "range"),
+            "A2": {"type": np.float64, "region": "range"},
+            "A3": np.float64,  # Special case
+            # Single
+            "B1": (np.float64, "single"),
+            "B2": {"type": np.float64, "region": "single"},
+            # Multi
+            ("C1", "D1"): {"type": np.float64, "region": "multi"},
+            ("C2", "D2"): (np.float64, "multi"),
+        }
+        """
+
+        new_spec: SpecDict = {}
+        for k, v in input_spec.items():
+            if isinstance(v, dict):
+                pass
+            elif isinstance(v, tuple):
+                v = {"type": v[0], "region": v[1]}
+            else:
+                v = {"type": v, "region": "range"}
+
+            if v["region"] not in ["range", "single", "multi"]:
+                raise ValueError("Region type must be range, single, or multi.")
+            if v["region"] == "multi" and not isinstance(k, tuple):
+                raise ValueError("Multi region dimension must be a tuple.")
+            new_spec[k] = v
+
+        return new_spec
 
     def load(self):
         self.connector._initialize(self.connector.column_schema)
@@ -647,7 +700,7 @@ class Annotator(AnnotatorInterface):
         self._elements = {}
 
         super().__init__(
-            kdim_dtypes=spec if isinstance(spec, dict) else self._infer_kdim_dtypes(spec),
+            spec if isinstance(spec, dict) else self._infer_kdim_dtypes(spec),
             **params,
         )
 

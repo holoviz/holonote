@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import weakref
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 import param
+
+if TYPE_CHECKING:
+    from .connector import Connector
 
 
 class AnnotationTable(param.Parameterized):
@@ -217,9 +221,9 @@ class AnnotationTable(param.Parameterized):
         self._edits.append({'operation':'insert', 'id':index_value})
         self._update_index()
 
-    def refresh_annotators(self, clear=False):
-        for annotator in self._annotators.values():
-            annotator.refresh(clear=clear)
+    # def refresh_annotators(self, clear=False):
+    #     for annotator in self._annotators.values():
+    #         annotator.refresh(clear=clear)
 
     def _add_annotation_fields(self, index_value, fields=None):
 
@@ -356,7 +360,16 @@ class AnnotationTable(param.Parameterized):
             self._region_df["dim1"] == dim1_name, self._region_df["dim2"] == dim2_name
         )
 
-    def load_annotation_table(self, conn, fields):
+    def load_annotation_table(self, conn: Connector, fields: list[str]):
+        """Load the AnnotationTable region and field DataFrame from a connector.
+
+        Parameters
+        ----------
+        conn : Connector
+            Database connection
+        fields : list[str]
+            List of field columns to load from the connector
+        """
         df = conn.transforms['load'](conn.load_dataframe())
         fields_df = df[fields].copy()
         self.define_fields(fields_df, {ind:ind for ind in fields_df.index})
