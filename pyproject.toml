@@ -82,7 +82,7 @@ unfixable = [
 
 [tool.ruff.isort]
 known-first-party = ["holonote"]
-required-imports = ["from __future__ import annotations"]
+# required-imports = ["from __future__ import annotations"]
 force-wrap-aliases = true
 combine-as-imports = true
 
