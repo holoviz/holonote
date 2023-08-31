@@ -206,22 +206,23 @@ class AnnotatorInterface(param.Parameterized):
         "Convenience property returning a single selected index (the first one) or None"
         return self.selected_indices[0] if len(self.selected_indices) > 0 else None
 
+    def _get_range_indices_by_position(self, **inputs) -> list[Any]:
+        df = self.annotation_table._region_df
+        ranges = df[df['region']=='range']
 
-    def _get_range_indices_by_position(self, dim1_pos, dim2_pos=None):
-        ranges = self.annotation_table._region_df[self.annotation_table._region_df['region_type']=='Range']
-        mask = ranges['value'].apply(lambda tpl: tpl[0] <= dim1_pos < tpl[1])
-        if dim2_pos is not None:
-            mask_dim2 = ranges['value'].apply(lambda tpl: tpl[2] <= dim2_pos < tpl[3])
-            mask = mask & mask_dim2
-        if not len(mask):
-            return []
-        return list(ranges[mask]['_id'])
+        for i, (k, v) in enumerate(inputs.items()):
+            dim = ranges[ranges["dim"] == k]
+            mask = dim["value"].apply(lambda d: d[0] <= v < d[1])  # noqa: B023
+            if i == 0:
+                ids = set(dim[mask]._id)
+            else:
+                ids = ids & set(dim[mask]._id)
+        return list(ids)
 
-
-    def get_indices_by_position(self, dim1_pos, dim2_pos=None):
+    def get_indices_by_position(self, **inputs) -> list[Any]:
         "Return primary key values matching given position in data space"
         # Lots TODO! 2 Dimensions, different annotation types etc.
-        range_matches = self._get_range_indices_by_position(dim1_pos, dim2_pos)
+        range_matches = self._get_range_indices_by_position(**inputs)
         event_matches = [] # TODO: Needs hit testing or similar for point events
         return range_matches + event_matches
 
@@ -478,18 +479,7 @@ class AnnotatorElement(param.Parameterized):
             }
 
             if bbox is not None:
-                dim1, dim2 = None, None
-                dim_names = list(bbox.keys())
-                dim1 = dim_names[0]
-                value = bbox[dim1]
-
-                if len(bbox)== 2:
-                    dim2 = dim_names[1]
-                    start1,end1 = value
-                    start2,end2 = bbox[dim2]
-                    value = (start1, end1, start2,end2)
-
-                self.anno._set_region('Range', value=value, dim1=dim1, dim2=dim2)
+                self.anno.set_regions(**bbox)
 
             if None not in [x,y]:
                 kdims = list(self.kdim_dtypes.keys())
@@ -508,11 +498,8 @@ class AnnotatorElement(param.Parameterized):
     def register_tap_selector(self, element: hv.Element) -> hv.Element:
         def tap_selector(x,y): # Tap tool must be enabled on the element
             # Only select the first
-
-            if len(self.anno.kdim_dtypes) == 1:
-                indices = self.anno.get_indices_by_position(x)
-            elif len(self.anno.kdim_dtypes) == 2:
-                indices = self.anno.get_indices_by_position(x, y)
+            inputs = {str(k): v for k, v in zip(self.anno.kdim_dtypes, (x, y))}
+            indices = self.anno.get_indices_by_position(**inputs)
             if indices:
                 self.anno.select_by_index(indices[0])
             else:
@@ -612,8 +599,8 @@ class AnnotatorElement(param.Parameterized):
         kdims = list(self.anno.kdim_dtypes.keys())
         if len(kdims) == 1:
             dim_mask = self.anno.annotation_table._mask1D(kdims)
-            points_df = self.anno.annotation_table._filter(dim_mask, "Point")
-            ranges_df = self.anno.annotation_table._filter(dim_mask, "Range")
+            points_df = self.anno.annotation_table._filter(dim_mask, "single")
+            ranges_df = self.anno.annotation_table._filter(dim_mask, "range")
             if len(points_df) == 0:
                 return self._range_indicators(ranges_df, '1d', invert_axes=invert_axes)
             elif len(ranges_df) == 0:
@@ -622,9 +609,21 @@ class AnnotatorElement(param.Parameterized):
                 raise NotImplementedError  # FIXME: Both in overlay
 
         if len(kdims) > 1:
-            dim_mask = self.anno.annotation_table._mask2D(kdims)
-            points_df = self.anno.annotation_table._filter(dim_mask, "Point")
-            ranges_df = self.anno.annotation_table._filter(dim_mask, "Range")
+
+            # FIXME: SHH, Converting new region_df format into old format
+            df_dim = self.anno.annotation_table._collapse_region_df(columns=kdims)
+            order = [
+                f"start[{kdims[0]}]",
+                f"end[{kdims[0]}]",
+                f"start[{kdims[1]}]",
+                f"end[{kdims[1]}]"
+            ]
+            df2 = df_dim.dropna(axis=0)
+            value = tuple(df2[order].values)
+
+            # Convert to accepted format for further processing
+            ranges_df = pd.DataFrame({"_id": df2.index, "value": value})
+            points_df = [] # self.anno.annotation_table._filter(dim_mask, "Point")
             if len(points_df) == 0:
                 return self._range_indicators(ranges_df, '2d', invert_axes=invert_axes)
             elif len(ranges_df) == 0:

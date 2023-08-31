@@ -326,11 +326,13 @@ class AnnotationTable(param.Parameterized):
         self._region_df = pd.concat((self._region_df, additions), ignore_index=True)
         self._update_index()
 
-    def _collapse_region_df(self) -> pd.DataFrame:
+    def _collapse_region_df(self, columns: list[str] | None=None) -> pd.DataFrame:
+        # TODO: Move columns filtering to the top!
         regions = self._region_df.groupby("dim")["region"].first()
         data = self._region_df.pivot(index="_id", columns="dim", values="value")
 
-        dims = list(data.columns)
+        all_columns = list(data.columns)
+        dims = columns or all_columns
         for dim in dims:
             region = regions[dim]
             if region == "range":
@@ -341,7 +343,7 @@ class AnnotationTable(param.Parameterized):
                 data[f"{region}[{dim}]"] = data[dim]
 
         # Clean up
-        data = data.drop(dims, axis=1)
+        data = data.drop(all_columns, axis=1)
         data.index.name = None
         data.columns.name = None
         return data
@@ -357,12 +359,10 @@ class AnnotationTable(param.Parameterized):
 
     def _filter(self, dim_mask, region_type):
         region_mask = self._region_df["region"] == region_type
-        return self._region_df[np.logical_and(region_mask, dim_mask)]
+        return self._region_df[region_mask & dim_mask]
 
     def _mask1D(self, kdims):
-        return np.logical_and(
-            self._region_df["dim1"] == str(kdims[0]), self._region_df["dim2"].isnull()
-        )
+        return self._region_df["dim"] == str(kdims[0])
 
     def _mask2D(self, kdims):
         dim1_name, dim2_name = str(kdims[0]), str(kdims[1])
