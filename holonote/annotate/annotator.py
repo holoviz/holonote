@@ -179,7 +179,7 @@ class AnnotatorInterface(param.Parameterized):
 
     def load(self):
         self.connector._initialize(self.connector.column_schema)
-        self.annotation_table.load(self.connector, fields=self.connector.fields)
+        self.annotation_table.load(self.connector, fields=self.connector.fields, spec=self.spec)
 
     @property
     def df(self):
@@ -270,7 +270,17 @@ class AnnotatorInterface(param.Parameterized):
     def region(self):
         return self._region
 
-    def set_range(self, startx, endx, starty=None, endy=None):
+    def set_regions(self, **items):
+        # TODO: Validate multi region types
+        for dim, values in items.items():
+            if dim not in self.spec:
+                raise ValueError(f"Dimension {dim} not in spec")
+            self._region[dim] = values
+
+    def clear_regions(self):
+        self._region = {}
+
+    def set_range(self, startx, endx, starty=None, endy=None):# LEGACY
         if len(self.kdim_dtypes) == 2 and None in [starty, endy ]:
             raise ValueError('Two key dimensions specified: both starty and endy arguments required')
         if 'Range' not in self.region_types:
@@ -282,7 +292,7 @@ class AnnotatorInterface(param.Parameterized):
         kdims = list(self.kdim_dtypes.keys())
         self._set_region('Range', value, *kdims)
 
-    def set_point(self, posx, posy=None):
+    def set_point(self, posx, posy=None):# LEGACY
         if 'Point' not in self.region_types:
             raise ValueError(f'Point region types not enabled as region_types={self.region_types}')
 
@@ -291,7 +301,7 @@ class AnnotatorInterface(param.Parameterized):
         self._set_region('Point', value,  *kdims)
 
 
-    def _set_region(self, region_type, value=None, dim1=None, dim2=None):
+    def _set_region(self, region_type, value=None, dim1=None, dim2=None):  # Legacy
         "Use _set_region(None) to clear currently defined region"
         if (region_type, value, dim1, dim2) == (None, None, None, None):
             self._region = {}
@@ -311,7 +321,7 @@ class AnnotatorInterface(param.Parameterized):
             if len(self.annotation_table._annotators)>1:
                 raise AssertionError('Multiple annotation instances attached to the connector: '
                                      'Call add_annotation directly from the associated connector.')
-            self.annotation_table.add_annotation('annotator-regions', **fields)
+            self.annotation_table.add_annotation(self._region, spec=self.spec, **fields)
         self._last_region = self._region
 
     def update_annotation_region(self, index):
@@ -440,7 +450,7 @@ class AnnotatorElement(param.Parameterized):
         self._edit_streams[0].event(bounds=None)
         self._edit_streams[1].event(x=None, y=None)
         self._edit_streams[2].event(geometry=None)
-        self.anno._set_region(None)
+        self.anno.clear_regions()
 
     def _make_empty_element(self) -> hv.Element:
         kdims = list(self.anno.kdim_dtypes.keys())
@@ -734,7 +744,7 @@ class Annotator(AnnotatorInterface):
         self.select_by_index()
         for v in self._elements.values():
             v.select_by_index()
-        self._set_region(None)
+        self.clear_regions()
         super().set_annotation_table(annotation_table)
         self.refresh(clear=True)
 

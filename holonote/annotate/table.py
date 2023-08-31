@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import weakref
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -9,6 +9,7 @@ import param
 
 if TYPE_CHECKING:
     from .connector import Connector
+    from .typing import SpecDict
 
 
 class AnnotationTable(param.Parameterized):
@@ -17,7 +18,7 @@ class AnnotationTable(param.Parameterized):
     to declare annotations and commit edits back to the original data
     source such as a database.
     """
-    columns = ("region_type", "dim1", "dim2", "value", "_id")
+    columns = ("region", "dim", "value", "_id")
 
     index = param.List(default=[])
 
@@ -40,7 +41,7 @@ class AnnotationTable(param.Parameterized):
 
         self._annotators = weakref.WeakValueDictionary()
 
-    def load(self, connector=None, fields_df=None, primary_key_name=None, fields=None):
+    def load(self, connector=None, fields_df=None, primary_key_name=None, fields=None, spec=None):
         """
         Load the AnnotationTable from a connector or a fields DataFrame.
         """
@@ -57,7 +58,7 @@ class AnnotationTable(param.Parameterized):
             fields_df = fields_df[fields].copy() # Primary key/index for annotations
             self._field_df = fields_df
         elif connector:
-            self.load_annotation_table(connector, fields)
+            self.load_annotation_table(connector, fields, spec)
         elif fields_df is None:
             fields_df = pd.DataFrame(columns=[primary_key_name, *fields])
             fields_df = fields_df.set_index(primary_key_name)
@@ -106,14 +107,12 @@ class AnnotationTable(param.Parameterized):
     def _snapshot(self):
         return self._field_df.copy(), self._region_df.copy()
 
-    def _update_index(self):
-        index_list = list(self._region_df['_id'])
+    def _update_index(self) -> None:
+        if self._field_df is None:
+            self.index = []
+            return
 
-        #for ind in self._deletions:
-        #    if ind in index_list:
-        #        index_list.remove(ind)
-        self.index = list(set(index_list))
-
+        self.index = list(self._field_df.index)
 
     def _expand_commit_by_id(self, id_val, fields=None, region_fields=None):
         kwargs = self._field_df.loc[[id_val]].to_dict('records')[0]
@@ -122,27 +121,13 @@ class AnnotationTable(param.Parameterized):
         kwargs[self._field_df.index.name] = id_val
         if region_fields == []:
             return kwargs
-        region_rows = self._region_df[self._region_df['_id'] == id_val]
-        for _, region in region_rows.iterrows():
-            # TODO: Handle region_fields. Use id? or uuid? or hash?
-            # Or value + kdim + region_type?
-            dims =  [el for el in [region['dim1'], region['dim2']] if el is not None]
-            for dim in dims:
-                if region['region_type'] == 'Range':
-                    if len(dims)==1:
-                        start, end = region['value']
-                    elif dim==dims[0]:
-                        start, end, _, _ = region['value']
-                    elif dim==dims[1]:
-                        _, _, start, end = region['value']
-                    kwargs[f'start_{dim}'] = start
-                    kwargs[f'end_{dim}'] = end
-                elif region['region_type'] == 'Point':
-                    point_dim1, point_dim2 = region['value']
-                    if dim==dims[0]: # FIXME timestamp mapping
-                        kwargs[f'point_{dim}'] = region['value'][0]
-                    elif dim==dims[1]:
-                        kwargs[f'point_{dim}'] = region['value'][1]
+        items = self._region_df[self._region_df['_id'] == id_val]
+        for i in items.itertuples(index=False):
+            if i.region == "range":
+                kwargs[f"start_{i.dim}"] = i.value[0]
+                kwargs[f"end_{i.dim}"] = i.value[1]
+            else:
+                kwargs[f"{i.range}_{i.dim}"] = i.value
         return kwargs
 
     def _expand_save_commits(self, ids):
@@ -196,27 +181,24 @@ class AnnotationTable(param.Parameterized):
         self._edits = []
         self._index_mapping = {}
 
-    def add_annotation(self, regions, **fields):
+    def add_annotation(self, regions: dict[str, Any], spec: SpecDict, **fields):
         "Takes a list of regions or the special value 'annotation-regions' to use attached annotators"
         index_value = fields.pop(self._field_df.index.name)
-        if regions == 'annotator-regions':
-            regions = [a._region for a in self._annotators.values()]
-        if all(el=={} for el in regions):
-            print('No new region selected. Skipping')
-            return
         self._add_annotation_fields(index_value, fields=fields)
 
-        for region in regions:
-            if region == {}:
+        data = []
+        for kdim, value in regions.items():
+            if not value:
                 continue
 
-            region_type, dim1, dim2, value = (region['region_type'], region['dim1'],
-                                              region['dim2'], region['value'])
-            if region_type not in ['Range', 'Point']:
-                raise Exception('TODO: Currently only supporting Range and Point annotations')
+            d = {"region": spec[kdim]["region"], "dim": kdim, "value": value, "_id": index_value}
+            data.append(
+                # pd.DataFrame(d) does not work because tuples is expanded into multiple rows:
+                # pd.DataFrame({'v': (1, 2)})
+                pd.DataFrame(d.values(), index=d.keys()).T
+            )
 
-            new_region_row = pd.DataFrame([[region_type, dim1, dim2, value, index_value]], columns=self.columns)
-            self._region_df = pd.concat((self._region_df, new_region_row), ignore_index=True)
+        self._region_df = pd.concat((self._region_df, *data), ignore_index=True)
 
         self._edits.append({'operation':'insert', 'id':index_value})
         self._update_index()
@@ -360,7 +342,7 @@ class AnnotationTable(param.Parameterized):
             self._region_df["dim1"] == dim1_name, self._region_df["dim2"] == dim2_name
         )
 
-    def load_annotation_table(self, conn: Connector, fields: list[str]):
+    def load_annotation_table(self, conn: Connector, fields: list[str], spec: SpecDict) -> None:
         """Load the AnnotationTable region and field DataFrame from a connector.
 
         Parameters
@@ -369,37 +351,36 @@ class AnnotationTable(param.Parameterized):
             Database connection
         fields : list[str]
             List of field columns to load from the connector
+        spec : SpecDict
+            Dictionary of region specifications
         """
         df = conn.transforms['load'](conn.load_dataframe())
+
+        # Load fields dataframe
         fields_df = df[fields].copy()
         self.define_fields(fields_df, {ind:ind for ind in fields_df.index})
-        all_region_types = [an.region_types for an in self._annotators.values()]
-        all_kdim_dtypes = [an.kdim_dtypes for an in self._annotators.values()]
-        for region_types, kdim_dtypes in zip(all_region_types, all_kdim_dtypes):
-            assert all(el in ['Range', 'Point'] for el in region_types)
-            for region_type in region_types:
-                if len(kdim_dtypes)==1:
-                    kdim = next(iter(kdim_dtypes.keys()))
-                    if region_type == 'Range':
-                        expected_keys = [f'start_{kdim}', f'end_{kdim}']
-                        conn._incompatible_schema_check(expected_keys, list(df.columns), fields, region_type)
-                        self.define_ranges(kdim, df[f'start_{kdim}'], df[f'end_{kdim}'])
-                    elif region_type == 'Point':
-                        conn._incompatible_schema_check([f'point_{kdim}'], list(df.columns), fields, region_type)
-                        self.define_points(kdim, df[f'point_{kdim}'])
-                elif len(kdim_dtypes)==2:
-                    kdim1, kdim2 = list(kdim_dtypes.keys())
-                    if region_type == 'Range':
-                        conn._incompatible_schema_check([f'start_{kdim1}', f'end_{kdim1}',
-                                                         f'start_{kdim2}', f'end_{kdim2}'],
-                                                        list(df.columns), fields, region_type)
-                        self.define_ranges([kdim1, kdim2],
-                                                       df[f'start_{kdim1}'], df[f'end_{kdim1}'],
-                                                       df[f'start_{kdim2}'], df[f'end_{kdim2}'])
-                    elif region_type == 'Point':
-                        conn._incompatible_schema_check([f'point_{kdim1}', f'point_{kdim2}'],
-                                                        list(df.columns), fields, region_type)
-                        self.define_points([kdim1, kdim2], df[f'point_{kdim1}'], df[f'point_{kdim2}'])
+
+        # Load region dataframe
+        if df.empty:
+            self._region_df = pd.DataFrame(columns=self.columns)
+            return
+
+        data = []
+        for kdim, info in spec.items():
+            region = info["region"]
+            if region == "range":
+                value = list(zip(df[f"start_{kdim}"], df[f"end_{kdim}"]))
+            else:
+                value = df[f"{region}_{kdim}"]
+
+            d = {"region": region, "dim": kdim, "value": value, "_id": list(df.index)}
+            data.append(pd.DataFrame(d))
+
+        rdf = pd.concat(data, ignore_index=True)
+        empty_mask = (rdf.value == (None, None)) | rdf.value.isnull()
+        self._region_df = rdf[~empty_mask].copy()
+
+        self._update_index()
         self.clear_edits()
 
     def add_schema_to_conn(self, conn):
