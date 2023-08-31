@@ -271,7 +271,7 @@ class AnnotatorInterface(param.Parameterized):
         return self._region
 
     def set_regions(self, **items):
-        # TODO: Validate multi region types
+        # TODO: Validate values based on spec
         for dim, values in items.items():
             if dim not in self.spec:
                 raise ValueError(f"Dimension {dim} not in spec")
@@ -311,7 +311,7 @@ class AnnotatorInterface(param.Parameterized):
             raise Exception('Both value and dim1 required for non-None region type')
 
     def add_annotation(self, **fields):  #   Rename box to range.
-        "Primary key specification is optional"
+        # Primary key specification is optional
         if self.connector.primary_key.field_name not in fields:
             index_val = self.connector.primary_key(self.connector,
                                                    list(self.annotation_table._field_df.index))
@@ -322,7 +322,7 @@ class AnnotatorInterface(param.Parameterized):
                 raise AssertionError('Multiple annotation instances attached to the connector: '
                                      'Call add_annotation directly from the associated connector.')
             self.annotation_table.add_annotation(self._region, spec=self.spec, **fields)
-        self._last_region = self._region
+        self._last_region = self._region.copy()
 
     def update_annotation_region(self, index):
         self.annotation_table.update_annotation_region(index)
