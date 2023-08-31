@@ -183,48 +183,7 @@ class AnnotatorInterface(param.Parameterized):
 
     @property
     def df(self):
-        # NOTE: This code is not general yet and makes assumptions
-        # 1) That there is a 1-to-1 mapping after filtering
-        field_name = self.connector.primary_key.field_name
-        field_df = self.annotation_table._field_df
-        fields_columns = list(field_df.columns)
-        kdim_names = list(self.kdim_dtypes.keys()) # Needed?? If not, moved to AnnotationTable
-        if len(self.kdim_dtypes) == 2:
-            dim_mask = self.annotation_table._mask2D(kdim_names)
-        elif len(self.kdim_dtypes) == 1:
-            dim_mask = self.annotation_table._mask1D(kdim_names)
-
-        region_column_names = []
-        views = []
-        if 'Range' in self.region_types:
-            ranges_df = self.annotation_table._filter(dim_mask, 'Range')
-            range_view = field_df.merge(ranges_df, left_index=True, right_on='_id')
-            views.append(range_view)
-            kdim_names = list(self.kdim_dtypes.keys())
-            range_column_names = [f'start[{kdim_names[0]}]', f'end[{kdim_names[0]}]']
-            range_view[range_column_names[0]] = range_view['value'].apply(lambda x: x[0])
-            range_view[range_column_names[1]] = range_view['value'].apply(lambda x: x[1])
-            if len(self.kdim_dtypes) == 2:
-                range_column_names.extend([f'start[{kdim_names[1]}]', f'end[{kdim_names[1]}]'])
-                range_view[range_column_names[2]] = range_view['value'].apply(lambda x: x[2])
-                range_view[range_column_names[3]] = range_view['value'].apply(lambda x: x[3])
-            region_column_names.extend(range_column_names)
-        if 'Point' in self.region_types:
-            points_df = self.annotation_table._filter(dim_mask, 'Point')
-            point_view = field_df.merge(points_df, left_index=True, right_on="_id")
-            views.append(point_view)
-            kdim_names = list(self.kdim_dtypes.keys())
-            point_column_names = [f'point[{kdim_names[0]}]']
-            point_view[point_column_names[0]] = point_view['value'].apply(lambda x: x[0])
-            if len(self.kdim_dtypes) == 2:
-                point_column_names.extend([f'point[{kdim_names[1]}]'])
-                point_view[point_column_names[1]] = point_view['value'].apply(lambda x: x[1])
-            region_column_names.extend(point_column_names)
-        view = pd.concat(views)
-        view = view.rename(columns={'_id':field_name})
-        column_ordering = [field_name, *region_column_names, *fields_columns]
-        return view[column_ordering].set_index(field_name)
-
+        return self.annotation_table.dataframe
 
     def refresh(self, clear=False):
         "Method to update display state of the annotator and optionally clear stale visual state"
@@ -279,6 +238,7 @@ class AnnotatorInterface(param.Parameterized):
 
     def clear_regions(self):
         self._region = {}
+        self._last_region = {}
 
     def set_range(self, startx, endx, starty=None, endy=None):# LEGACY
         if len(self.kdim_dtypes) == 2 and None in [starty, endy ]:

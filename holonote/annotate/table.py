@@ -127,7 +127,7 @@ class AnnotationTable(param.Parameterized):
                 kwargs[f"start_{i.dim}"] = i.value[0]
                 kwargs[f"end_{i.dim}"] = i.value[1]
             else:
-                kwargs[f"{i.range}_{i.dim}"] = i.value
+                kwargs[f"{i.region}_{i.dim}"] = i.value
         return kwargs
 
     def _expand_save_commits(self, ids):
@@ -326,9 +326,37 @@ class AnnotationTable(param.Parameterized):
         self._region_df = pd.concat((self._region_df, additions), ignore_index=True)
         self._update_index()
 
+    def _collapse_region_df(self) -> pd.DataFrame:
+        regions = self._region_df.groupby("dim")["region"].first()
+        data = self._region_df.pivot(index="_id", columns="dim", values="value")
+
+        dims = list(data.columns)
+        for dim in dims:
+            region = regions[dim]
+            if region == "range":
+                na_mask = data[dim].isnull()
+                data.loc[na_mask, dim] = data.loc[na_mask, dim].apply(lambda *x: (None, None))
+                data[[f"start[{dim}]", f"end[{dim}]"]] = list(data[dim])
+            else:
+                data[f"{region}[{dim}]"] = data[dim]
+
+        # Clean up
+        data = data.drop(dims, axis=1)
+        data.index.name = None
+        data.columns.name = None
+        return data
+
+    @property
+    def dataframe(self) -> pd.DataFrame:
+        field_df = self._field_df
+        region_df = self._collapse_region_df()
+
+        df = pd.merge(region_df, field_df, left_index=True, right_index=True)
+        df.index.name = self._field_df.index.name
+        return df
 
     def _filter(self, dim_mask, region_type):
-        region_mask = self._region_df["region_type"] == region_type
+        region_mask = self._region_df["region"] == region_type
         return self._region_df[np.logical_and(region_mask, dim_mask)]
 
     def _mask1D(self, kdims):
