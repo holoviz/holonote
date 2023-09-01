@@ -36,7 +36,7 @@ def annotator_range1d(conn_sqlite_uuid) -> Annotator:
 @pytest.fixture()
 def annotator_point1d(conn_sqlite_uuid) -> Annotator:
     anno = Annotator(
-        {"TIME": np.datetime64},
+        {"TIME": (np.datetime64, 'single')},
         fields=["description"],
         region_types=["Point"],
         connector=conn_sqlite_uuid,
@@ -58,7 +58,7 @@ def annotator_range2d(conn_sqlite_uuid) -> Annotator:
 @pytest.fixture()
 def annotator_point2d(conn_sqlite_uuid) -> Annotator:
     anno = Annotator(
-        {"x": float, "y": float},
+        {"x": (float, "single"), "y": (float, "single")},
         fields=["description"],
         region_types=["Point"],
         connector=conn_sqlite_uuid,

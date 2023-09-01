@@ -17,7 +17,7 @@ import pytest
 class TestBasicRange1DAnnotator:
     def test_point_insertion_exception(self, annotator_range1d):
         timestamp = np.datetime64('2022-06-06')
-        expected_msg = r"Point region types not enabled as region_types=\['Range'\]"
+        expected_msg = "Only 'single' region allowed for 'set_point'"
         with pytest.raises(ValueError, match=expected_msg):
             annotator_range1d.set_point(timestamp)
 
@@ -127,7 +127,7 @@ class TestBasicRange2DAnnotator:
 
     def test_point_insertion_exception(self, annotator_range2d):
         x,y = 0.5,0.5
-        expected_msg = r"Point region types not enabled as region_types=\['Range'\]"
+        expected_msg = "Only 'single' region allowed for 'set_point'"
         with pytest.raises(ValueError, match=expected_msg):
             annotator_range2d.set_point(x,y)
 
@@ -256,7 +256,7 @@ class TestBasicPoint1DAnnotator:
 
     def test_range_insertion_exception(self, annotator_point1d):
         start, end = np.datetime64('2022-06-06'), np.datetime64('2022-06-08')
-        msg = r"Range region types not enabled as region_types=\['Point'\]"
+        msg = "Only 'range' region allowed for 'set_range'"
         with pytest.raises(ValueError, match=msg):
             annotator_point1d.set_range(start, end)
 
@@ -269,7 +269,7 @@ class TestBasicPoint1DAnnotator:
         kwargs = commits[0]['kwargs']
         assert 'uuid' in kwargs.keys(), 'Expected uuid primary key in kwargs'
         kwargs.pop('uuid')
-        assert kwargs == dict(description='A test annotation!', point_TIME=timestamp)
+        assert kwargs == dict(description='A test annotation!', single_TIME=timestamp)
 
     def test_point_commit_insertion(self, annotator_point1d):
         timestamp = np.datetime64('2022-06-06')
@@ -279,7 +279,7 @@ class TestBasicPoint1DAnnotator:
         annotator_point1d.commit(return_commits=True)
 
         df = pd.DataFrame({'uuid': pd.Series(annotator_point1d.df.index[0], dtype=object),
-                           'point_TIME':[timestamp],
+                           'single_TIME':[timestamp],
                            'description':[description]}
                            ).set_index('uuid')
 
@@ -360,7 +360,7 @@ class TestBasicPoint2DAnnotator:
 
     def test_range_insertion_exception(self, annotator_point2d):
         x1,x2,y1,y2 = -0.25,0.25, -0.3, 0.3
-        expected_msg = r"Range region types not enabled as region_types=\['Point'\]"
+        expected_msg = "Only 'range' region allowed for 'set_range'"
         with pytest.raises(ValueError, match=expected_msg):
             annotator_point2d.set_range(x1,x2,y1,y2)
 
@@ -373,7 +373,7 @@ class TestBasicPoint2DAnnotator:
         kwargs = commits[0]['kwargs']
         assert 'uuid' in kwargs.keys(), 'Expected uuid primary key in kwargs'
         kwargs.pop('uuid')
-        assert kwargs == dict(description='A test annotation!', point_x=x, point_y=y)
+        assert kwargs == dict(description='A test annotation!', single_x=x, single_y=y)
 
     def test_point_commit_insertion(self, annotator_point2d):
         x, y = 0.5, 0.3
@@ -383,8 +383,8 @@ class TestBasicPoint2DAnnotator:
         annotator_point2d.commit(return_commits=True)
 
         df = pd.DataFrame({'uuid': pd.Series(annotator_point2d.df.index[0], dtype=object),
-                           'point_x':[x],
-                           'point_y':[y],
+                           'single_x':[x],
+                           'single_y':[y],
                            'description':[description]}
                            ).set_index('uuid')
 
