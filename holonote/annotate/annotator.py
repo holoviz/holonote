@@ -209,6 +209,8 @@ class AnnotatorInterface(param.Parameterized):
     def _get_range_indices_by_position(self, **inputs) -> list[Any]:
         df = self.annotation_table._region_df
         ranges = df[df['region']=='range']
+        if df.empty:
+            return []
 
         for i, (k, v) in enumerate(inputs.items()):
             dim = ranges[ranges["dim"] == k]
@@ -649,17 +651,20 @@ class AnnotatorElement(param.Parameterized):
 
             # FIXME: SHH, Converting new region_df format into old format
             df_dim = self.anno.annotation_table._collapse_region_df(columns=kdims)
-            order = [
-                f"start[{kdims[0]}]",
-                f"end[{kdims[0]}]",
-                f"start[{kdims[1]}]",
-                f"end[{kdims[1]}]"
-            ]
-            df2 = df_dim.dropna(axis=0)
-            value = tuple(df2[order].values)
+            if df_dim.empty:
+                ranges_df = pd.DataFrame({"_id": [], "value": []})
+            else:
+                order = [
+                    f"start[{kdims[0]}]",
+                    f"end[{kdims[0]}]",
+                    f"start[{kdims[1]}]",
+                    f"end[{kdims[1]}]"
+                ]
+                df2 = df_dim.dropna(axis=0)
+                value = tuple(df2[order].values)
 
-            # Convert to accepted format for further processing
-            ranges_df = pd.DataFrame({"_id": df2.index, "value": value})
+                # Convert to accepted format for further processing
+                ranges_df = pd.DataFrame({"_id": df2.index, "value": value})
             points_df = [] # self.anno.annotation_table._filter(dim_mask, "Point")
             if len(points_df) == 0:
                 return self._range_indicators(ranges_df, '2d', invert_axes=invert_axes)

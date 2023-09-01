@@ -331,6 +331,9 @@ class AnnotationTable(param.Parameterized):
         regions = self._region_df.groupby("dim")["region"].first()
         data = self._region_df.pivot(index="_id", columns="dim", values="value")
 
+        if data.empty:
+            return data
+
         all_columns = list(data.columns)
         dims = columns or all_columns
         for dim in dims:
