@@ -355,6 +355,7 @@ class AnnotationTable(param.Parameterized):
 
         df = pd.merge(region_df, field_df, left_index=True, right_index=True)
         df.index.name = self._field_df.index.name
+        df = df.reindex(field_df.index)
         return df
 
     def _filter(self, dim_mask, region_type):

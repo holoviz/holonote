@@ -198,7 +198,7 @@ class Connector(param.Parameterized):
 
     @classmethod
     def expand_region_column_schema(cls, region_types, kdim_dtypes):
-        region_type_column_prefixes = {'Range':('start', 'end'), 'Point':('point',)}
+        region_type_column_prefixes = {'Range':('start', 'end'), 'Point':('single',)}
         fields = {}
         for region_type in region_types:
             for column in region_type_column_prefixes[region_type]:
