@@ -233,6 +233,10 @@ class AnnotatorInterface(param.Parameterized):
         return self._region
 
     def set_regions(self, **items):
+        self._set_regions(**items)
+
+    def _set_regions(self, **items):
+        """Updating regions"""
         # TODO: Validate values based on spec
         for dim, values in items.items():
             if dim not in self.spec:
@@ -514,14 +518,14 @@ class AnnotatorElement(param.Parameterized):
             }
 
             if bbox is not None:
-                self.anno.set_regions(**bbox)
+                self.anno._set_regions(**bbox)
 
             if None not in [x,y]:
                 kdims = list(self.anno.kdim_dtypes)
                 if len(kdims) == 1:
-                    self.anno.set_regions(**{kdims[0]: x})
+                    self.anno._set_regions(**{kdims[0]: x})
                 elif len(kdims) == 2:
-                    self.anno.set_regions(**{kdims[0]: x, kdims[1]: y})
+                    self.anno._set_regions(**{kdims[0]: x, kdims[1]: y})
                 else:
                     raise ValueError('Only 1d and 2d supported for Points')
 
@@ -686,14 +690,23 @@ class AnnotatorElement(param.Parameterized):
         return self._selection_info["dim_expr"]
 
     def show_region(self):
-        if self.region != {}:
-            if len(self.region['value']) == 2:
-                bounds = (self.region['value'][0], 0,
-                      self.region['value'][1], 1)
-            else:
-                bounds = (self.region['value'][0], self.region['value'][2],
-                          self.region['value'][1], self.region['value'][3])
-            self._edit_streams[0].event(bounds = bounds)
+        kdims = list(self.anno.kdim_dtypes)
+        region = self.anno._region
+
+        if not region:
+            return
+
+        if len(kdims) == 1:
+            value = region[kdims[0]]
+            bounds = (value[0], 0, value[1], 1)
+        elif len(kdims) == 2:
+            bounds = (region[kdims[0]][0], region[kdims[1]][0],
+                      region[kdims[0]][1], region[kdims[1]][1])
+        else:
+            bounds = False
+
+        if bounds:
+            self._edit_streams[0].event(bounds=bounds)
 
 
 class Annotator(AnnotatorInterface):
@@ -740,6 +753,7 @@ class Annotator(AnnotatorInterface):
             hv.streams.Stream.trigger([v._annotation_count_stream])
             if clear:
                 v.clear_indicated_region()
+            v.show_region()
 
     def set_annotation_table(self, annotation_table):
         self.select_by_index()
@@ -814,4 +828,8 @@ class Annotator(AnnotatorInterface):
 
     def revert_to_snapshot(self):
         super().revert_to_snapshot()
+        self.refresh()
+
+    def set_regions(self, **items):
+        super().set_regions(**items)
         self.refresh()
