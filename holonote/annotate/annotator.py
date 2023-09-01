@@ -241,35 +241,68 @@ class AnnotatorInterface(param.Parameterized):
         self._region = {}
         self._last_region = {}
 
-    def set_range(self, startx, endx, starty=None, endy=None):# LEGACY
-        if len(self.kdim_dtypes) == 2 and None in [starty, endy ]:
-            raise ValueError('Two key dimensions specified: both starty and endy arguments required')
-        if 'Range' not in self.region_types:
-            raise ValueError(f'Range region types not enabled as region_types={self.region_types}')
+    def set_range(self, startx, endx, starty=None, endy=None):
+        print("set_range is legacy use set_regions instead")
         if None in [starty, endy] and ([starty, endy] != [None, None]):
             raise ValueError('Both starty and endy need to be non-None')
 
-        value = (startx, endx) if(None in [starty, endy]) else (startx, endx, starty, endy)
-        kdims = list(self.kdim_dtypes.keys())
-        self._set_region('Range', value, *kdims)
+        value = (startx, endx) if starty is None else (startx, endx, starty, endy)
+        kdims = list(self.spec)
+        if len(value) == 2:
+            if len(kdims) != 1:
+                raise ValueError('Only one key dimension is allowed in spec.')
+            if (r := self.spec[kdims[0]]['region']) != 'range':
+                raise ValueError(
+                    "Only 'range' region allowed for 'set_range', "
+                    f"{kdims[0]!r} is {r!r}."
+                )
+            regions = {kdims[0]: value}
+        elif len(value) == 4:
+            if len(kdims) != 2:
+                raise ValueError('Only two key dimensions is allowed in spec.')
+            if (r := self.spec[kdims[0]]['region']) != 'range':
+                raise ValueError(
+                    "Only 'range' region allowed for 'set_range', "
+                    f"{kdims[0]!r} is {r!r}."
+                )
+            if (r := self.spec[kdims[1]]['region']) != 'range':
+                raise ValueError(
+                    "Only 'range' region allowed for 'set_range', "
+                    f"{kdims[1]!r} is {r!r}."
+                )
+            regions = {kdims[0]: (value[0], value[1]), kdims[1]: (value[2], value[3])}
 
-    def set_point(self, posx, posy=None):# LEGACY
-        if 'Point' not in self.region_types:
-            raise ValueError(f'Point region types not enabled as region_types={self.region_types}')
+        self.set_regions(**regions)
 
-        value = (posx,None) if posy is None else (posx, posy)
-        kdims = list(self.kdim_dtypes.keys())
-        self._set_region('Point', value,  *kdims)
+    def set_point(self, posx, posy=None):
+        print("set_point is legacy use set_regions instead")
 
-
-    def _set_region(self, region_type, value=None, dim1=None, dim2=None):  # Legacy
-        "Use _set_region(None) to clear currently defined region"
-        if (region_type, value, dim1, dim2) == (None, None, None, None):
-            self._region = {}
-        elif None not in [value, dim1]:
-            self._region = {'region_type':region_type, 'value':value, 'dim1':dim1, 'dim2':dim2}
+        kdims = list(self.spec)
+        if posy is None:
+            if len(kdims) != 1:
+                raise ValueError('Only one key dimension is allowed in spec.')
+            if (r := self.spec[kdims[0]]['region']) != 'single':
+                raise ValueError(
+                    "Only 'single' region allowed for 'set_point', "
+                    f"{kdims[0]!r} is {r!r}."
+                )
+            regions = {kdims[0]: posx}
         else:
-            raise Exception('Both value and dim1 required for non-None region type')
+            if len(kdims) != 2:
+                raise ValueError('Only two key dimensions is allowed in spec.')
+            if (r := self.spec[kdims[0]]['region']) != 'single':
+                raise ValueError(
+                    "Only 'single' region allowed for 'set_point', "
+                    f"{kdims[0]!r} is {r!r}."
+                )
+            if (r := self.spec[kdims[1]]['region']) != 'single':
+                raise ValueError(
+                    "Only 'single' region allowed for 'set_point', "
+                    f"{kdims[1]!r} is {r!r}."
+                )
+            regions = {kdims[0]: posx, kdims[1]: posy}
+
+        self.set_regions(**regions)
 
     def add_annotation(self, **fields):  #   Rename box to range.
         # Primary key specification is optional
@@ -482,9 +515,13 @@ class AnnotatorElement(param.Parameterized):
                 self.anno.set_regions(**bbox)
 
             if None not in [x,y]:
-                kdims = list(self.kdim_dtypes.keys())
-                value = (x,None) if len(self.kdim_dtypes) == 1 else (x,y)
-                self.anno._set_region('Point', value,  *kdims)
+                kdims = list(self.anno.kdim_dtypes)
+                if len(kdims) == 1:
+                    self.anno.set_regions(**{kdims[0]: x})
+                elif len(kdims) == 2:
+                    self.anno.set_regions(**{kdims[0]: x, kdims[1]: y})
+                else:
+                    raise ValueError('Only 1d and 2d supported for Points')
 
             return region_element
 
