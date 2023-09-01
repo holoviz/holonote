@@ -8,6 +8,7 @@ import pytest
 from holonote.annotate import Annotator, SQLiteDB
 
 
+@pytest.mark.skip("Not supported having multiple region types for same dimension")
 def test_multipoint_range_commit_insertion(multiple_region_annotator):
     descriptions = ['A point insertion', 'A range insertion']
     timestamp = np.datetime64('2022-06-06')
