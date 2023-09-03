@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Iterator
 
+import holoviews as hv
 import numpy as np
 import pytest
 
@@ -36,7 +37,7 @@ def annotator_range1d(conn_sqlite_uuid) -> Annotator:
 @pytest.fixture()
 def annotator_point1d(conn_sqlite_uuid) -> Annotator:
     anno = Annotator(
-        {"TIME": (np.datetime64, 'single')},
+        {"TIME": (np.datetime64, "single")},
         fields=["description"],
         region_types=["Point"],
         connector=conn_sqlite_uuid,
@@ -111,3 +112,8 @@ def multiple_fields_annotator(conn_sqlite_uuid) -> Annotator:
         connector=conn_sqlite_uuid,
     )
     return anno
+
+
+@pytest.fixture()
+def element_range2d() -> hv.Image:
+    return hv.Image(np.arange(10)[:, np.newaxis] * np.arange(10), kdims=["x", "y"])

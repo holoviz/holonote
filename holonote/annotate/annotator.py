@@ -44,13 +44,17 @@ class Indicator:
     @classmethod
     def points_1d(cls, region_df, field_df, invert_axes=False):
         "Vectorizes point regions to VLines. Note does not support hover info"
-        return hv.VLines(list(region_df["value"]))
+        el = hv.VLines(list(region_df["value"]))
+        el._annotation_type = "indicator"
+        return el
 
     @classmethod
     def points_2d(cls, region_df, field_df, invert_axes=False):
         "Vectorizes point regions to VLines * HLines. Note does not support hover info"
-        return (hv.VLines([el[0] for el in region_df["value"]])
+        el = (hv.VLines([el[0] for el in region_df["value"]])
               * hv.HLines([el[1] for el in region_df["value"]]))
+        el._annotation_type = "indicator"
+        return el
 
     @classmethod
     def ranges_2d(cls, region_df, field_df, invert_axes=False):
@@ -86,8 +90,9 @@ class Indicator:
             rect_data.append(coords + mdata_tuple + (id_val,))
 
         index_col_name = ['id'] if field_df.index.name is None else [field_df.index.name]
-        return hv.Rectangles(rect_data, vdims=list(field_df.columns)+index_col_name) # kdims?
-
+        el = hv.Rectangles(rect_data, vdims=list(field_df.columns)+index_col_name) # kdims?
+        el._annotation_type = "indicator"
+        return el
 
 
 
@@ -529,6 +534,8 @@ class AnnotatorElement(param.Parameterized):
                 else:
                     raise ValueError('Only 1d and 2d supported for Points')
 
+            for el in region_element.values():
+                el._annotation_type = "selector"
             return region_element
 
         return hv.DynamicMap(inner, streams=self._edit_streams)
