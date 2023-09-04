@@ -779,13 +779,12 @@ class Annotator(AnnotatorInterface):
         for v in self._elements.values():
             if not v.selection_enabled:
                 inds = ()
-            # self.select_by_index(*inds)
 
             for d, val in zip(v._selected_options, v._selected_values):
                 d.clear()
                 for ind in inds:
                     d[ind] = val
-
+        super().select_by_index(*inds)
         self.refresh()
 
 
