@@ -303,12 +303,13 @@ class AnnotatorInterface(param.Parameterized):
                                                    list(self.annotation_table._field_df.index))
             fields[self.connector.primary_key.field_name] = index_val
 
-        if self.region != self._last_region:
+        # Don't do anything if self.region is an empty dict
+        if self.region and self.region != self._last_region:
             if len(self.annotation_table._annotators)>1:
                 raise AssertionError('Multiple annotation instances attached to the connector: '
                                      'Call add_annotation directly from the associated connector.')
             self.annotation_table.add_annotation(self._region, spec=self.spec, **fields)
-        self._last_region = self._region.copy()
+            self._last_region = self._region.copy()
 
     def update_annotation_region(self, index):
         self.annotation_table.update_annotation_region(index)
@@ -374,7 +375,7 @@ class AnnotatorElement(param.Parameterized):
 
     _count = param.Integer(default=0, precedence=-1)
 
-    def __init__(self, annotator, **params) -> None:
+    def __init__(self, annotator: Annotator, **params) -> None:
         super().__init__(**params)
 
         self._annotation_count_stream = hv.streams.Params(
