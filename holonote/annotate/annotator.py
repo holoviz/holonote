@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import weakref
 from typing import TYPE_CHECKING, Any
 
 import holoviews as hv
@@ -393,13 +394,12 @@ class AnnotatorElement(param.Parameterized):
                 hv.streams.Lasso(transient=transient),
         ]
 
-        # TODO: Don't want this circular reference
-        self.anno = annotator
+        self.annotator = weakref.proxy(annotator)
         self._set_region_types()
         self._element = self._make_empty_element()
 
     def _set_region_types(self) -> None:
-        self.region_types = "-".join([self.anno.spec[k]['region'] for k in self.kdims])
+        self.region_types = "-".join([self.annotator.spec[k]['region'] for k in self.kdims])
 
     @property
     def element(self):
@@ -430,7 +430,7 @@ class AnnotatorElement(param.Parameterized):
         self._edit_streams[0].event(bounds=None)
         self._edit_streams[1].event(x=None, y=None)
         self._edit_streams[2].event(geometry=None)
-        self.anno.clear_regions()
+        self.annotator.clear_regions()
 
     def _make_empty_element(self) -> hv.Curve | hv.Image:
         El = hv.Curve if len(self.kdims) == 1 else hv.Image
@@ -497,15 +497,15 @@ class AnnotatorElement(param.Parameterized):
             }
 
             if bbox is not None:
-                # self.anno.set_regions will give recursion error
-                self.anno._set_regions(**bbox)
+                # self.annotator.set_regions will give recursion error
+                self.annotator._set_regions(**bbox)
 
             if None not in [x,y]:
                 kdims = list(self.kdims)
                 if len(kdims) == 1:
-                    self.anno._set_regions(**{kdims[0]: x})
+                    self.annotator._set_regions(**{kdims[0]: x})
                 elif len(kdims) == 2:
-                    self.anno._set_regions(**{kdims[0]: x, kdims[1]: y})
+                    self.annotator._set_regions(**{kdims[0]: x, kdims[1]: y})
                 else:
                     raise ValueError('Only 1d and 2d supported for Points')
 
@@ -522,11 +522,11 @@ class AnnotatorElement(param.Parameterized):
         def tap_selector(x,y): # Tap tool must be enabled on the element
             # Only select the first
             inputs = {str(k): v for k, v in zip(self.kdims, (x, y))}
-            indices = self.anno.get_indices_by_position(**inputs)
+            indices = self.annotator.get_indices_by_position(**inputs)
             if indices:
-                self.anno.select_by_index(indices[0])
+                self.annotator.select_by_index(indices[0])
             else:
-                self.anno.select_by_index()
+                self.annotator.select_by_index()
         tap_stream = hv.streams.Tap(source=element, transient=True)
         tap_stream.add_subscriber(tap_selector)
         return element
@@ -585,7 +585,7 @@ class AnnotatorElement(param.Parameterized):
         region_tooltips = []
         region_formatters = {}
         for direction, kdim in zip(['x','y'], self.kdims):
-            if isinstance(self.anno.spec[kdim]["type"], datetime_types):
+            if isinstance(self.annotator.spec[kdim]["type"], datetime_types):
                 region_tooltips.append((f'start {kdim}', f'@{direction}0{{%F}}'))
                 region_tooltips.append((f'end {kdim}', f'@{direction}1{{%F}}'))
                 region_formatters[f'@{direction}0'] = 'datetime'
@@ -605,8 +605,8 @@ class AnnotatorElement(param.Parameterized):
             return Indicator.points_2d(filtered_df, None, invert_axes=invert_axes)
 
     def _range_indicators(self, filtered_df, dimensionality, invert_axes=False):
-        fields_mask = self.anno.annotation_table._field_df.index.isin(filtered_df['_id'])
-        field_df = self.anno.annotation_table._field_df[fields_mask]  # Currently assuming 1-to-1
+        fields_mask = self.annotator.annotation_table._field_df.index.isin(filtered_df['_id'])
+        field_df = self.annotator.annotation_table._field_df[fields_mask]  # Currently assuming 1-to-1
         if dimensionality == '1d':
             extra_params = {'rect_min':self.rect_min, 'rect_max':self.rect_max} # TODO: Remove extra_params!
             vectorized = Indicator.ranges_1d(filtered_df, field_df, invert_axes=invert_axes,
@@ -620,9 +620,9 @@ class AnnotatorElement(param.Parameterized):
     def static_indicators(self):
         invert_axes = False  # Not yet handled
         if len(self.kdims) == 1:
-            dim_mask = self.anno.annotation_table._mask1D(self.kdims)
-            points_df = self.anno.annotation_table._filter(dim_mask, "single")
-            ranges_df = self.anno.annotation_table._filter(dim_mask, "range")
+            dim_mask = self.annotator.annotation_table._mask1D(self.kdims)
+            points_df = self.annotator.annotation_table._filter(dim_mask, "single")
+            ranges_df = self.annotator.annotation_table._filter(dim_mask, "range")
             if len(points_df) == 0:
                 return self._range_indicators(ranges_df, '1d', invert_axes=invert_axes)
             elif len(ranges_df) == 0:
@@ -633,7 +633,7 @@ class AnnotatorElement(param.Parameterized):
         if len(self.kdims) > 1:
 
             # FIXME: SHH, Converting new region_df format into old format
-            df_dim = self.anno.annotation_table._collapse_region_df(columns=self.kdims)
+            df_dim = self.annotator.annotation_table._collapse_region_df(columns=self.kdims)
             if df_dim.empty:
                 ranges_df = pd.DataFrame({"_id": [], "value": []})
             else:
@@ -648,7 +648,7 @@ class AnnotatorElement(param.Parameterized):
 
                 # Convert to accepted format for further processing
                 ranges_df = pd.DataFrame({"_id": df2.index, "value": value})
-            points_df = [] # self.anno.annotation_table._filter(dim_mask, "Point")
+            points_df = [] # self.annotator.annotation_table._filter(dim_mask, "Point")
             if len(points_df) == 0:
                 return self._range_indicators(ranges_df, '2d', invert_axes=invert_axes)
             elif len(ranges_df) == 0:
@@ -658,9 +658,9 @@ class AnnotatorElement(param.Parameterized):
 
     def selected_dim_expr(self, selected_value, non_selected_value):
         self._selected_values.append(selected_value)
-        self._selected_options.append({i:selected_value for i in self.anno.selected_indices})
-        index_name = ('id' if (self.anno.annotation_table._field_df.index.name is None)
-                      else self.anno.annotation_table._field_df.index.name)
+        self._selected_options.append({i:selected_value for i in self.annotator.selected_indices})
+        index_name = ('id' if (self.annotator.annotation_table._field_df.index.name is None)
+                      else self.annotator.annotation_table._field_df.index.name)
         return hv.dim(index_name).categorize(
             self._selected_options[-1], default=non_selected_value)
 
@@ -670,7 +670,7 @@ class AnnotatorElement(param.Parameterized):
 
     def show_region(self):
         kdims = list(self.kdims)
-        region = {k: v for k, v in self.anno._region.items() if k in self.kdims}
+        region = {k: v for k, v in self.annotator._region.items() if k in self.kdims}
 
         if not region:
             return
