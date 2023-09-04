@@ -34,7 +34,7 @@ def test_set_regions_range1d(annotator_range1d, element_range1d) -> None:
     annotator_element = annotator * element
     bk_renderer.get_plot(annotator_element)
 
-    # No regions has been set.
+    # No regions has been set
     output = get_region_editor_data(annotator, hv.VSpan)
     expected = [None, None]
     assert output == expected
@@ -54,7 +54,6 @@ def test_set_regions_range1d(annotator_range1d, element_range1d) -> None:
     output = get_indicators_data(annotator, hv.Rectangles)
     output1 = output.loc[0, ["x0", "x1"]].tolist()
     expected1 = [-0.25, 0.25]
-
     assert output1 == expected1
     output2 = output.iloc[0, 4]
     expected2 = "Test"
@@ -67,7 +66,7 @@ def test_set_regions_range2d(annotator_range2d, element_range2d) -> None:
     annotator_element = annotator * element
     bk_renderer.get_plot(annotator_element)
 
-    # No regions has been set.
+    # No regions has been set
     output = get_region_editor_data(annotator, hv.Rectangles)
     assert output.empty
 
@@ -83,6 +82,61 @@ def test_set_regions_range2d(annotator_range2d, element_range2d) -> None:
     assert output.empty
 
     output = get_indicators_data(annotator, hv.Rectangles)
+    output1 = output.iloc[0, :4].tolist()
+    expected1 = [-0.25, -0.25, 0.25, 0.25]
+    assert output1 == expected1
+    output2 = output.iloc[0, 4]
+    expected2 = "Test"
+    assert output2 == expected2
+
+
+def test_set_regions_multiple(multiple_annotators, element_range1d, element_range2d):
+    annotator = multiple_annotators
+    time_annotation = annotator * element_range1d
+    xy_annotation = annotator * element_range2d
+    annotator_element = time_annotation + xy_annotation
+    bk_renderer.get_plot(annotator_element)
+
+    # No regions has been set
+    # Time annotation
+    output = get_region_editor_data(annotator, hv.VSpan, "TIME")
+    expected = [None, None]
+    assert output == expected
+    # xy annotation
+    output = get_region_editor_data(annotator, hv.Rectangles, ("x", "y"))
+    assert output.empty
+
+    # Setting regions
+    annotator.set_regions(TIME=(-0.25, 0.25), x=(-0.25, 0.25), y=(-0.25, 0.25))
+    # Time annotation
+    output = get_region_editor_data(annotator, hv.VSpan, "TIME")
+    expected = [-0.25, 0.25]
+    assert output == expected
+    # xy annotation
+    output = get_region_editor_data(annotator, hv.Rectangles, ("x", "y")).iloc[0].to_list()
+    expected = [-0.25, -0.25, 0.25, 0.25]
+    assert output == expected
+
+    # Adding annotation and remove selection regions.
+    annotator.add_annotation(description="Test")
+    # Time annotation
+    output = get_region_editor_data(annotator, hv.VSpan, "TIME")
+    expected = [None, None]
+    assert output == expected
+
+    output = get_indicators_data(annotator, hv.Rectangles, "TIME")
+    output1 = output.loc[0, ["x0", "x1"]].tolist()
+    expected1 = [-0.25, 0.25]
+    assert output1 == expected1
+    output2 = output.iloc[0, 4]
+    expected2 = "Test"
+    assert output2 == expected2
+
+    # xy annotation
+    output = get_region_editor_data(annotator, hv.Rectangles, ("x", "y"))
+    assert output.empty
+
+    output = get_indicators_data(annotator, hv.Rectangles, ("x", "y"))
     output1 = output.iloc[0, :4].tolist()
     expected1 = [-0.25, -0.25, 0.25, 0.25]
     assert output1 == expected1
