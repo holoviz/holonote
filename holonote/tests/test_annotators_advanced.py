@@ -99,12 +99,26 @@ class TestAnnotatorMultipleStringFields:
         pd.testing.assert_frame_equal(sql_df, df)
 
 
-    def test_commit_update(self, multiple_fields_annotator):
+    def test_commit_update_set_range(self, multiple_fields_annotator):
         start1, end1  = np.datetime64('2022-06-06'), np.datetime64('2022-06-08')
         start2, end2  = np.datetime64('2023-06-06'), np.datetime64('2023-06-08')
         multiple_fields_annotator.set_range(start1, end1)
         multiple_fields_annotator.add_annotation(field1='Field 1.1', field2='Field 1.2')
         multiple_fields_annotator.set_range(start2, end2)
+        multiple_fields_annotator.add_annotation(field1='Field 2.1', field2='Field 2.2')
+        multiple_fields_annotator.commit(return_commits=True)
+        multiple_fields_annotator.update_annotation_fields(multiple_fields_annotator.df.index[0], field1='NEW Field 1.1')
+        multiple_fields_annotator.commit(return_commits=True)
+        sql_df = multiple_fields_annotator.connector.load_dataframe()
+        assert set(sql_df['field1']) == {'NEW Field 1.1', 'Field 2.1'}
+
+
+    def test_commit_update_set_region(self, multiple_fields_annotator):
+        start1, end1  = np.datetime64('2022-06-06'), np.datetime64('2022-06-08')
+        start2, end2  = np.datetime64('2023-06-06'), np.datetime64('2023-06-08')
+        multiple_fields_annotator.set_regions(TIME=(start1, end1))
+        multiple_fields_annotator.add_annotation(field1='Field 1.1', field2='Field 1.2')
+        multiple_fields_annotator.set_regions(TIME=(start2, end2))
         multiple_fields_annotator.add_annotation(field1='Field 2.1', field2='Field 2.2')
         multiple_fields_annotator.commit(return_commits=True)
         multiple_fields_annotator.update_annotation_fields(multiple_fields_annotator.df.index[0], field1='NEW Field 1.1')
