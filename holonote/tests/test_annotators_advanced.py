@@ -46,12 +46,24 @@ def test_infer_kdim_dtype_curve():
 
 
 def test_multiplot_add_annotation(multiple_annotators):
-    multiple_annotators["annotation1d"].set_range(np.datetime64('2005-02-13'), np.datetime64('2005-02-16'))
-    multiple_annotators["annotation2d"].set_range(-0.25, 0.25, -0.1, 0.1)
-    multiple_annotators["annotation1d"].add_annotation(description='Multi-plot annotation')
-    multiple_annotators["annotation2d"].add_annotation(description='Multi-plot annotation')
-    multiple_annotators["annotation1d"].commit()
-    multiple_annotators["annotation2d"].commit()
+    start_time, end_time = np.datetime64('2005-02-13'), np.datetime64('2005-02-16')
+    multiple_annotators.set_regions(TIME=(start_time, end_time))
+    multiple_annotators.set_regions(x=(-0.25, 0.25), y=(-0.1, 0.1))
+    multiple_annotators.add_annotation(description='Multi-plot annotation', uuid="A")
+    multiple_annotators.commit()
+
+    d = {
+        "start[TIME]": {"A": start_time},
+        "end[TIME]": {"A": end_time},
+        "start[x]": {"A": -0.25},
+        "end[x]": {"A": 0.25},
+        "start[y]": {"A": -0.1},
+        "end[y]": {"A": 0.1},
+        "description": {"A": "Multi-plot annotation"},
+    }
+    expected = pd.DataFrame(d)
+    expected.index.name = "uuid"
+    pd.testing.assert_frame_equal(multiple_annotators.df, expected)
 
 
 class TestAnnotatorMultipleStringFields:

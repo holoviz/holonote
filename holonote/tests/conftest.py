@@ -79,29 +79,13 @@ def multiple_region_annotator(conn_sqlite_uuid) -> Annotator:
 
 
 @pytest.fixture()
-def multiple_annotators(conn_sqlite_uuid) -> dict[str, Annotator | SQLiteDB]:
-    annotator_range1d = Annotator(
-        {"TIME": np.datetime64},
-        fields=["description"],
-        region_types=["Range"],
-        connector=conn_sqlite_uuid,
-        init=False,
-    )
-    annotator_range2d = Annotator(
-        {"x": float, "y": float},
+def multiple_annotators(conn_sqlite_uuid) -> Annotator:
+    return Annotator(
+        {"TIME": np.datetime64, "x": float, "y": float},
         fields=["description"],
         region_types=["Range"],
         connector=conn_sqlite_uuid,
     )
-
-    annotator_range1d.load()
-    annotator_range2d.load()
-    output = {
-        "annotation1d": annotator_range1d,
-        "annotation2d": annotator_range2d,
-        "conn": conn_sqlite_uuid,
-    }
-    return output
 
 
 @pytest.fixture()
@@ -119,6 +103,7 @@ def multiple_fields_annotator(conn_sqlite_uuid) -> Annotator:
 def element_range1d() -> hv.Image:
     time = pd.date_range("2020-01-01", "2020-01-10", freq="D").to_numpy()
     return hv.Curve(time, kdims=["TIME"])
+
 
 @pytest.fixture()
 def element_range2d() -> hv.Image:
