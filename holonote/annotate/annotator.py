@@ -733,7 +733,7 @@ class Annotator(AnnotatorInterface):
         # Remove?
         return AnnotatorElement._infer_kdim_dtypes(element)
 
-    def _create_annotation_element(self, element_key: tuple[str, ...]):
+    def _create_annotation_element(self, element_key: tuple[str, ...]) -> AnnotatorElement:
         return AnnotatorElement(self) #[], kdims=list(element_key))  <-- TODO: Add kdims
 
     def __mul__(self, other: hv.Element) -> hv.Overlay:

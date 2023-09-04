@@ -343,7 +343,7 @@ class AnnotationTable(param.Parameterized):
                 data.loc[na_mask, dim] = data.loc[na_mask, dim].apply(lambda *x: (None, None))
                 data[[f"start[{dim}]", f"end[{dim}]"]] = list(data[dim])
             else:
-                data[f"{region}[{dim}]"] = data[dim]
+                data[f"{region}[{dim}]"] = data[dim].infer_objects()
 
         # Clean up
         data = data.drop(all_columns, axis=1)
