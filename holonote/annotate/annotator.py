@@ -130,11 +130,6 @@ class AnnotatorInterface(param.Parameterized):
         if init:
             self.load()
 
-    @property
-    def kdim_dtypes(self) -> dict[str, Any]:
-        # LEGACY: This is a temporary property
-        return {k: v["type"] for k, v in self.spec.items()}
-
     # @property
     # def region_types(self) -> list[str]:
     #     # LEGACY: This is a temporary property
@@ -386,12 +381,14 @@ class AnnotatorElement(param.Parameterized):
 
     rect_max = param.Number(default=1050, doc="Temporary parameter until vectorized element fully supported")
 
+    kdims = param.List(default=["x"], bounds=(1,3), constant=True, doc="Dimensions of the element")
+
     indicator = Indicator
 
     _count = param.Integer(default=0, precedence=-1)
 
-    def __init__(self, annotator, **kwargs) -> None:
-        super().__init__(**kwargs)
+    def __init__(self, annotator, **params) -> None:
+        super().__init__(**params)
 
         self._annotation_count_stream = hv.streams.Params(
             parameterized=self,
@@ -423,11 +420,15 @@ class AnnotatorElement(param.Parameterized):
         return self.overlay()
 
     @property
+    def region_type(self):
+        ...
+
+    @property
     def edit_tools(self)-> list[Tool]:
         tools = []
-        if 'Range' in self.anno.region_types and len(self.anno.kdim_dtypes)==1:
+        if 'Range' in self.anno.region_types and len(self.kdims)==1:
             tools.append(BoxSelectTool(dimensions="width"))
-        elif 'Range' in self.anno.region_types and len(self.anno.kdim_dtypes)==2:
+        elif 'Range' in self.anno.region_types and len(self.kdims)==2:
             tools.append(BoxSelectTool())
 
         if 'Point' in self.anno.region_types:
@@ -451,10 +452,9 @@ class AnnotatorElement(param.Parameterized):
         self._edit_streams[2].event(geometry=None)
         self.anno.clear_regions()
 
-    def _make_empty_element(self) -> hv.Element:
-        kdims = list(self.anno.kdim_dtypes.keys())
-        El = hv.Curve if len(kdims) == 1 else hv.Image
-        return El([], kdims=kdims).opts(apply_ranges=False)
+    def _make_empty_element(self) -> hv.Curve | hv.Image:
+        El = hv.Curve if len(self.kdims) == 1 else hv.Image
+        return El([], kdims=self.kdims).opts(apply_ranges=False)
 
     @property
     def selection_element(self) -> hv.Element:
@@ -521,7 +521,7 @@ class AnnotatorElement(param.Parameterized):
                 self.anno._set_regions(**bbox)
 
             if None not in [x,y]:
-                kdims = list(self.anno.kdim_dtypes)
+                kdims = list(self.kdims)
                 if len(kdims) == 1:
                     self.anno._set_regions(**{kdims[0]: x})
                 elif len(kdims) == 2:
@@ -541,7 +541,7 @@ class AnnotatorElement(param.Parameterized):
     def register_tap_selector(self, element: hv.Element) -> hv.Element:
         def tap_selector(x,y): # Tap tool must be enabled on the element
             # Only select the first
-            inputs = {str(k): v for k, v in zip(self.anno.kdim_dtypes, (x, y))}
+            inputs = {str(k): v for k, v in zip(self.kdims, (x, y))}
             indices = self.anno.get_indices_by_position(**inputs)
             if indices:
                 self.anno.select_by_index(indices[0])
@@ -604,7 +604,7 @@ class AnnotatorElement(param.Parameterized):
         extra_cols = []
         region_tooltips = []
         region_formatters = {}
-        for direction, kdim in zip(['x','y'], self.anno.kdim_dtypes.keys()):
+        for direction, kdim in zip(['x','y'], self.kdims):
             if isinstance(self.anno.spec[kdim]["type"], datetime_types):
                 region_tooltips.append((f'start {kdim}', f'@{direction}0{{%F}}'))
                 region_tooltips.append((f'end {kdim}', f'@{direction}1{{%F}}'))
@@ -639,9 +639,8 @@ class AnnotatorElement(param.Parameterized):
     @property
     def static_indicators(self):
         invert_axes = False  # Not yet handled
-        kdims = list(self.anno.kdim_dtypes.keys())
-        if len(kdims) == 1:
-            dim_mask = self.anno.annotation_table._mask1D(kdims)
+        if len(self.kdims) == 1:
+            dim_mask = self.anno.annotation_table._mask1D(self.kdims)
             points_df = self.anno.annotation_table._filter(dim_mask, "single")
             ranges_df = self.anno.annotation_table._filter(dim_mask, "range")
             if len(points_df) == 0:
@@ -651,18 +650,18 @@ class AnnotatorElement(param.Parameterized):
             else:
                 raise NotImplementedError  # FIXME: Both in overlay
 
-        if len(kdims) > 1:
+        if len(self.kdims) > 1:
 
             # FIXME: SHH, Converting new region_df format into old format
-            df_dim = self.anno.annotation_table._collapse_region_df(columns=kdims)
+            df_dim = self.anno.annotation_table._collapse_region_df(columns=self.kdims)
             if df_dim.empty:
                 ranges_df = pd.DataFrame({"_id": [], "value": []})
             else:
                 order = [
-                    f"start[{kdims[0]}]",
-                    f"end[{kdims[0]}]",
-                    f"start[{kdims[1]}]",
-                    f"end[{kdims[1]}]"
+                    f"start[{self.kdims[0]}]",
+                    f"end[{self.kdims[0]}]",
+                    f"start[{self.kdims[1]}]",
+                    f"end[{self.kdims[1]}]"
                 ]
                 df2 = df_dim.dropna(axis=0)
                 value = tuple(df2[order].values)
@@ -690,8 +689,8 @@ class AnnotatorElement(param.Parameterized):
         return self._selection_info["dim_expr"]
 
     def show_region(self):
-        kdims = list(self.anno.kdim_dtypes)
-        region = self.anno._region
+        kdims = list(self.kdims)
+        region = {k: v for k, v in self.anno._region.items() if k in self.kdims}
 
         if not region:
             return
@@ -734,7 +733,7 @@ class Annotator(AnnotatorInterface):
         return AnnotatorElement._infer_kdim_dtypes(element)
 
     def _create_annotation_element(self, element_key: tuple[str, ...]) -> AnnotatorElement:
-        return AnnotatorElement(self) #[], kdims=list(element_key))  <-- TODO: Add kdims
+        return AnnotatorElement(self, kdims=list(element_key))
 
     def __mul__(self, other: hv.Element) -> hv.Overlay:
         element_key = tuple(map(str, other.kdims))
@@ -814,7 +813,7 @@ class Annotator(AnnotatorInterface):
     def define_ranges(self, startx, endx, starty=None, endy=None, dims=None):
         "Define ranges using element kdims as default dimensions."
         if dims is None:
-            dims = list(self.kdim_dtypes.keys())
+            dims = list(self.spec)
         super().define_ranges(startx, endx, starty=starty, endy=endy, dims=dims)
         self.refresh()
 
@@ -822,7 +821,7 @@ class Annotator(AnnotatorInterface):
     def define_points(self, posx, posy=None, dims=None):
         "Define points using element kdims as default dimensions."
         if dims is None:
-            dims = list(self.kdim_dtypes.keys())
+            dims = list(self.spec)
         super().define_points(posx, posy=posy, dims=dims)
         self.refresh()
 
