@@ -103,12 +103,14 @@ class AnnotatorInterface(param.Parameterized):
 
     spec = param.Dict(default={}, doc="Specification of annotation types")
 
+    fields = param.List(default=["description"], doc="List of fields", constant=True)
+
     connector = param.ClassSelector(class_=Connector, allow_None=False)
 
     connector_class = SQLiteDB
 
     def __init__(self, spec, *, init=True, **params):
-        connector_kws = {'fields':params.pop('fields')} if 'fields' in params else {}
+        connector_kws = {'fields': params.get('fields')} if 'fields' in params else {}
         connector = params.pop('connector') if 'connector' in params else self.connector_class(**connector_kws)
 
         spec = self.clean_spec(spec)
@@ -319,6 +321,40 @@ class AnnotatorInterface(param.Parameterized):
         self.annotation_table.delete_annotation(index)
 
     # Defining initial annotations
+
+    def define_annotations(self, data: pd.DataFrame, **kwargs) -> None:
+        # Will both set regions and add annotations. Can accept multiple inputs
+        # if index is none a new index will be set.
+        # if nothing is given it infer the regions and fields from the column header.
+        # annotator.define_annotations(
+        #     df, TIME=("start", "end"), description="description", index=None
+        # )
+
+        # kwargs = dict(A=("start", "end"), description="description")
+        # kwargs = dict(A=("start", "end"))
+        # kwargs = dict(A=("start", "end"), index=True)
+
+        index = kwargs.pop("index", False)
+        f_keys = set(self.fields) & set(data.columns)
+        r_keys = (kwargs.keys() - f_keys) | (set(self.spec) & set(data.columns))
+        pk = self.connector.primary_key
+
+        # assert len(set(data.columns) - f_keys - r_keys) == 0
+
+        # Vectorize the conversion?
+        for r in data.itertuples(index=index):
+            regions = {
+                k: tuple([getattr(r, a) for a in kwargs[k]])
+                if isinstance(kwargs[k], tuple)
+                else getattr(r, k)
+                for k in r_keys
+            }
+            fields = {k: getattr(r, k) for k in f_keys}
+            if index:
+                fields[pk.field_name] = pk.cast(r.Index)
+
+            self.set_regions(**regions)
+            self.add_annotation(**fields)
 
     def define_fields(self, fields_df, preserve_index=False):
         if not preserve_index:
