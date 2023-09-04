@@ -751,14 +751,14 @@ class Annotator(AnnotatorInterface):
     def _create_annotation_element(self, element_key: tuple[str, ...]) -> AnnotatorElement:
         return AnnotatorElement(self, kdims=list(element_key))
 
-    def __mul__(self, other: hv.Element) -> hv.Overlay:
-        element_key = tuple(map(str, other.kdims))
-        if element_key in self._elements:
-            anno = self._elements[element_key]
-        else:
-            self._elements[element_key] = anno = self._create_annotation_element(element_key)
+    def get_element(self, kdims: tuple[str, ...] | str) -> AnnotatorElement:
+        element_key = (kdims,) if isinstance(kdims, str) else tuple(map(str, kdims))
+        if element_key not in self._elements:
+            self._elements[element_key] = self._create_annotation_element(element_key)
+        return self._elements[element_key]
 
-        return other * anno.element
+    def __mul__(self, other: hv.Element) -> hv.Overlay:
+        return other * self.get_element(other.kdims).element
 
     def __rmul__(self, other: hv.Element) -> hv.Overlay:
         return self.__mul__(other)
