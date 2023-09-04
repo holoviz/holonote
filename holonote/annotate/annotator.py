@@ -104,14 +104,9 @@ class AnnotatorInterface(param.Parameterized):
 
     connector = param.ClassSelector(class_=Connector, allow_None=False)
 
-    annotation_table = param.ClassSelector(class_=AnnotationTable, allow_None=False)
-
     connector_class = SQLiteDB
 
     def __init__(self, spec, *, init=True, **params):
-        if "annotation_table" not in params:
-            params["annotation_table"] = AnnotationTable()
-
         connector_kws = {'fields':params.pop('fields')} if 'fields' in params else {}
         connector = params.pop('connector') if 'connector' in params else self.connector_class(**connector_kws)
 
@@ -120,7 +115,7 @@ class AnnotatorInterface(param.Parameterized):
         super().__init__(spec=spec, connector=connector, **params)
         self._region = {}
         self._last_region = None
-
+        self.annotation_table = AnnotationTable()
         self.annotation_table.register_annotator(self)
         self.annotation_table.add_schema_to_conn(self.connector)
 
@@ -174,7 +169,7 @@ class AnnotatorInterface(param.Parameterized):
     def refresh(self, clear=False):
         "Method to update display state of the annotator and optionally clear stale visual state"
 
-    def set_annotation_table(self, annotation_table): # FIXME! Won't work anymore, set_connector??
+    def set_annotation_table(self, annotation_table) -> None: # FIXME! Won't work anymore, set_connector??
         self._region = {}
         self.annotation_table = annotation_table
         self.annotation_table.register_annotator(self)

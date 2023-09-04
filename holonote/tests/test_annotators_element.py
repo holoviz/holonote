@@ -5,7 +5,7 @@ import holoviews as hv
 bk_renderer = hv.renderer("bokeh")
 
 
-def _get_element(annotator, kdims=None):
+def _get_element(annotator, kdims=None) -> hv.Element:
     if kdims is None:
         kdims = next(iter(annotator._elements.keys()))
     kdims = (kdims,) if isinstance(kdims, str) else tuple(kdims)
