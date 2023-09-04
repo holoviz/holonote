@@ -417,7 +417,7 @@ class AnnotationTable(param.Parameterized):
 
     def add_schema_to_conn(self, conn: Connector) -> None:
         field_dtypes = {col: str for col in conn.fields} # FIXME - generalize
-        all_region_types = [an.region_types for an in self._annotators.values()]
+        all_region_types = [{v["region"] for v in an.spec.values()} for an in self._annotators.values()]
         all_kdim_dtypes = [{k: v["type"] for k, v in an.spec.items()} for an in self._annotators.values()]
         schema = conn.generate_schema(conn.primary_key, all_region_types, all_kdim_dtypes, field_dtypes)
         conn.add_schema(schema)

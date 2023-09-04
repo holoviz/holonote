@@ -29,7 +29,6 @@ def annotator_range1d(conn_sqlite_uuid) -> Annotator:
     anno = Annotator(
         {"TIME": np.datetime64},
         fields=["description"],
-        region_types=["Range"],
         connector=conn_sqlite_uuid,
     )
     return anno
@@ -40,7 +39,6 @@ def annotator_point1d(conn_sqlite_uuid) -> Annotator:
     anno = Annotator(
         {"TIME": (np.datetime64, "single")},
         fields=["description"],
-        region_types=["Point"],
         connector=conn_sqlite_uuid,
     )
     return anno
@@ -51,7 +49,6 @@ def annotator_range2d(conn_sqlite_uuid) -> Annotator:
     anno = Annotator(
         {"x": float, "y": float},
         fields=["description"],
-        region_types=["Range"],
         connector=conn_sqlite_uuid,
     )
     return anno
@@ -62,7 +59,6 @@ def annotator_point2d(conn_sqlite_uuid) -> Annotator:
     anno = Annotator(
         {"x": (float, "single"), "y": (float, "single")},
         fields=["description"],
-        region_types=["Point"],
         connector=conn_sqlite_uuid,
     )
     return anno
@@ -73,7 +69,7 @@ def multiple_region_annotator(conn_sqlite_uuid) -> Annotator:
     return Annotator(
         {"TIME": np.datetime64},
         fields=["description"],
-        region_types=["Point", "Range"],
+        # region_types=["Point", "Range"],
         connector=conn_sqlite_uuid,
     )
 
@@ -83,7 +79,6 @@ def multiple_annotators(conn_sqlite_uuid) -> Annotator:
     return Annotator(
         {"TIME": np.datetime64, "x": float, "y": float},
         fields=["description"],
-        region_types=["Range"],
         connector=conn_sqlite_uuid,
     )
 

@@ -106,9 +106,6 @@ class AnnotatorInterface(param.Parameterized):
 
     annotation_table = param.ClassSelector(class_=AnnotationTable, allow_None=False)
 
-    region_types = param.ListSelector(default=['Range'], objects=['Range', 'Point'], doc="""
-       Enabled region types for the current Annotator.""")
-
     connector_class = SQLiteDB
 
     def __init__(self, spec, *, init=True, **params):
@@ -129,11 +126,6 @@ class AnnotatorInterface(param.Parameterized):
 
         if init:
             self.load()
-
-    # @property
-    # def region_types(self) -> list[str]:
-    #     # LEGACY: This is a temporary property
-    #     return [v["region"].capitalize() for v in self.spec.values()]
 
     @classmethod
     def clean_spec(self, input_spec: dict[str, Any]) -> SpecDict:
@@ -342,17 +334,12 @@ class AnnotatorInterface(param.Parameterized):
         self.annotation_table.define_fields(fields_df, index_mapping)
 
     def define_ranges(self, startx, endx, starty=None, endy=None, dims=None):
-        if 'Range' not in self.region_types:
-            raise ValueError('Range region types not enabled')
         if dims is None:
             raise ValueError('Please specify dimension annotated by defined ranges')
 
         self.annotation_table.define_ranges(dims, startx, endx, starty, endy)
 
     def define_points(self, posx, posy=None, dims=None):
-        if 'Point' not in self.region_types:
-            raise ValueError('Point region types not enabled')
-
         if dims is None:
             raise ValueError('Please specify dimension annotated by defined ranges')
         self.annotation_table.define_points(dims, posx, posy=posy)
@@ -412,28 +399,25 @@ class AnnotatorElement(param.Parameterized):
 
         # TODO: Don't want this circular reference
         self.anno = annotator
-
+        self._set_region_types()
         self._element = self._make_empty_element()
+
+    def _set_region_types(self) -> None:
+        self.region_types = "-".join([self.anno.spec[k]['region'] for k in self.kdims])
 
     @property
     def element(self):
         return self.overlay()
 
     @property
-    def region_type(self):
-        ...
-
-    @property
     def edit_tools(self)-> list[Tool]:
         tools = []
-        if 'Range' in self.anno.region_types and len(self.kdims)==1:
+        if self.region_types == "range":
             tools.append(BoxSelectTool(dimensions="width"))
-        elif 'Range' in self.anno.region_types and len(self.kdims)==2:
+        elif self.region_types == "range-range":
             tools.append(BoxSelectTool())
-
-        if 'Point' in self.anno.region_types:
+        elif self.region_types == 'single':
             tools.append('tap')
-
         return tools
 
     @classmethod
@@ -486,13 +470,13 @@ class AnnotatorElement(param.Parameterized):
     def _filter_stream_values(self, bounds, x, y, geometry):
         if not self._editable_enabled:
             return (None, None, None, None)
-        if 'Range' not in self.anno.region_types:
+        if "range" not in self.region_types:
             bounds = None
 
         # If selection enabled, tap stream used for selection not for creating point regions
-        if 'Point' in self.anno.region_types and self.selection_enabled:
+        if 'single' in self.region_types and self.selection_enabled:
             x, y = None, None
-        elif 'Point' not in self.anno.region_types:
+        elif 'single' not in self.region_types:
             x, y = None, None
 
         return bounds, x, y, geometry
