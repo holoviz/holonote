@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import holoviews as hv
-import numpy as np
 import pandas as pd
 import param
 from bokeh.models.tools import BoxSelectTool, HoverTool, Tool
+from holoviews.core import datetime_types
 
 from .connector import Connector, SQLiteDB
 from .table import AnnotationTable
@@ -605,7 +605,7 @@ class AnnotatorElement(param.Parameterized):
         region_tooltips = []
         region_formatters = {}
         for direction, kdim in zip(['x','y'], self.anno.kdim_dtypes.keys()):
-            if self.anno.kdim_dtypes[kdim] is np.datetime64:
+            if isinstance(self.anno.spec[kdim]["type"], datetime_types):
                 region_tooltips.append((f'start {kdim}', f'@{direction}0{{%F}}'))
                 region_tooltips.append((f'end {kdim}', f'@{direction}1{{%F}}'))
                 region_formatters[f'@{direction}0'] = 'datetime'
