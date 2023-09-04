@@ -44,17 +44,13 @@ class Indicator:
     @classmethod
     def points_1d(cls, region_df, field_df, invert_axes=False):
         "Vectorizes point regions to VLines. Note does not support hover info"
-        el = hv.VLines(list(region_df["value"]))
-        el._annotation_type = "indicator"
-        return el
+        return hv.VLines(list(region_df["value"]))
 
     @classmethod
     def points_2d(cls, region_df, field_df, invert_axes=False):
         "Vectorizes point regions to VLines * HLines. Note does not support hover info"
-        el = (hv.VLines([el[0] for el in region_df["value"]])
+        return (hv.VLines([el[0] for el in region_df["value"]])
               * hv.HLines([el[1] for el in region_df["value"]]))
-        el._annotation_type = "indicator"
-        return el
 
     @classmethod
     def ranges_2d(cls, region_df, field_df, invert_axes=False):
@@ -90,9 +86,7 @@ class Indicator:
             rect_data.append(coords + mdata_tuple + (id_val,))
 
         index_col_name = ['id'] if field_df.index.name is None else [field_df.index.name]
-        el = hv.Rectangles(rect_data, vdims=list(field_df.columns)+index_col_name) # kdims?
-        el._annotation_type = "indicator"
-        return el
+        return hv.Rectangles(rect_data, vdims=list(field_df.columns)+index_col_name) # kdims?
 
 
 
@@ -504,7 +498,7 @@ class AnnotatorElement(param.Parameterized):
         return bounds, x, y, geometry
 
 
-    def _make_selection_editor(self):
+    def _make_selection_editor(self) -> hv.DynamicMap:
         def inner(bounds, x, y, geometry):
             bounds, x, y, geometry = self._filter_stream_values(bounds, x, y, geometry)
 
@@ -523,6 +517,7 @@ class AnnotatorElement(param.Parameterized):
             }
 
             if bbox is not None:
+                # self.anno.set_regions will give recursion error
                 self.anno._set_regions(**bbox)
 
             if None not in [x,y]:
@@ -534,8 +529,6 @@ class AnnotatorElement(param.Parameterized):
                 else:
                     raise ValueError('Only 1d and 2d supported for Points')
 
-            for el in region_element.values():
-                el._annotation_type = "selector"
             return region_element
 
         return hv.DynamicMap(inner, streams=self._edit_streams)

@@ -4,6 +4,7 @@ from typing import Iterator
 
 import holoviews as hv
 import numpy as np
+import pandas as pd
 import pytest
 
 from holonote.annotate import Annotator, SQLiteDB, UUIDHexStringKey
@@ -115,5 +116,12 @@ def multiple_fields_annotator(conn_sqlite_uuid) -> Annotator:
 
 
 @pytest.fixture()
+def element_range1d() -> hv.Image:
+    time = pd.date_range("2020-01-01", "2020-01-10", freq="D").to_numpy()
+    return hv.Curve(time, kdims=["TIME"])
+
+@pytest.fixture()
 def element_range2d() -> hv.Image:
-    return hv.Image(np.arange(10)[:, np.newaxis] * np.arange(10), kdims=["x", "y"])
+    x = np.arange(10)
+    xy = x[:, np.newaxis] * x
+    return hv.Image(xy, kdims=["x", "y"])

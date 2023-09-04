@@ -1,52 +1,91 @@
 from __future__ import annotations
 
 import holoviews as hv
-import numpy as np
 
-hv.extension("bokeh")
+bk_renderer = hv.renderer("bokeh")
 
 
-def get_data(
-    annotation_element, annotations_type: str, element_type: hv.Element
-)-> list[str | int | float] | None:
-    hv.renderer("bokeh").get_plot(annotation_element)
-    es = []
-    for e in annotation_element.last.values():
-        if not getattr(e, "_annotation_type", None) == annotations_type:
-            continue
-        if element_type is not None and not isinstance(e, element_type):
-            continue
-        es.append(e)
+def _get_element(annotator, kdims=None):
+    if kdims is None:
+        kdims = next(iter(annotator._elements.keys()))
+    kdims = (kdims,) if isinstance(kdims, str) else tuple(kdims)
+    element = annotator._elements[kdims]
+    return element
 
-    if len(es) == 1:
-        data = es[0].data
-        if data.empty:
-            return None
-        else:
-            return data.values.ravel().tolist()
-    else:
-        raise ValueError(
-            f"Only as single type of {annotations_type!r} can be returned, not {len(es)}."
-        )
 
-def test_set_regions_rectangles(annotator_range2d, element_range2d) -> None:
-    annotator = annotator_range2d
-    element = element_range2d
-    anno_el = annotator * element
+def get_region_editor_data(
+    annotator,
+    element_type,
+    kdims=None,
+):
+    el = _get_element(annotator, kdims).region_editor()
+    for e in el.last.traverse():
+        if isinstance(e, element_type):
+            return e.data
+
+
+def get_indicators_data(annotator, element_type, kdims=None):
+    return _get_element(annotator, kdims).static_indicators.data
+
+
+def test_set_regions_range1d(annotator_range1d, element_range1d) -> None:
+    annotator = annotator_range1d
+    element = element_range1d
+    annotator_element = annotator * element
+    bk_renderer.get_plot(annotator_element)
 
     # No regions has been set.
-    assert get_data(anno_el, "selector", hv.Rectangles) is None
+    output = get_region_editor_data(annotator, hv.VSpan)
+    expected = [None, None]
+    assert output == expected
 
     # Setting regions
-    annotator.set_regions(x=(-0.25, 0.25), y=(-0.25, 0.25))
-    output = get_data(anno_el, "selector", hv.Rectangles)
-    expected = [-0.25, -0.25, 0.25, 0.25]
-    np.testing.assert_allclose(output, expected)
+    annotator.set_regions(TIME=(-0.25, 0.25))
+    output = get_region_editor_data(annotator, hv.VSpan)
+    expected = [-0.25, 0.25]
+    assert output == expected
 
     # Adding annotation and remove selection regions.
     annotator.add_annotation(description="Test")
-    assert get_data(anno_el, "selector", hv.Rectangles) is None
-    output = get_data(anno_el, "indicator", hv.Rectangles)
+    output = get_region_editor_data(annotator, hv.VSpan)
+    expected = [None, None]
+    assert output == expected
+
+    output = get_indicators_data(annotator, hv.Rectangles)
+    output1 = output.loc[0, ["x0", "x1"]].tolist()
+    expected1 = [-0.25, 0.25]
+
+    assert output1 == expected1
+    output2 = output.iloc[0, 4]
+    expected2 = "Test"
+    assert output2 == expected2
+
+
+def test_set_regions_range2d(annotator_range2d, element_range2d) -> None:
+    annotator = annotator_range2d
+    element = element_range2d
+    annotator_element = annotator * element
+    bk_renderer.get_plot(annotator_element)
+
+    # No regions has been set.
+    output = get_region_editor_data(annotator, hv.Rectangles)
+    assert output.empty
+
+    # Setting regions
+    annotator.set_regions(x=(-0.25, 0.25), y=(-0.25, 0.25))
+    output = get_region_editor_data(annotator, hv.Rectangles).iloc[0].to_list()
     expected = [-0.25, -0.25, 0.25, 0.25]
-    np.testing.assert_allclose(output[:4], expected)
-    assert output[4] == "Test"
+    assert output == expected
+
+    # Adding annotation and remove selection regions.
+    annotator.add_annotation(description="Test")
+    output = get_region_editor_data(annotator, hv.Rectangles)
+    assert output.empty
+
+    output = get_indicators_data(annotator, hv.Rectangles)
+    output1 = output.iloc[0, :4].tolist()
+    expected1 = [-0.25, -0.25, 0.25, 0.25]
+    assert output1 == expected1
+    output2 = output.iloc[0, 4]
+    expected2 = "Test"
+    assert output2 == expected2
