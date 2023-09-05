@@ -755,6 +755,9 @@ class Annotator(AnnotatorInterface):
         return AnnotatorElement._infer_kdim_dtypes(element)
 
     def _create_annotation_element(self, element_key: tuple[str, ...]) -> AnnotatorElement:
+        for key in element_key:
+            if key not in self.spec:
+                raise ValueError(f"Dimension {key!r} not in spec")
         return AnnotatorElement(self, kdims=list(element_key))
 
     def get_element(self, kdims: tuple[str, ...] | str) -> AnnotatorElement:
