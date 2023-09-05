@@ -348,8 +348,8 @@ class AnnotatorInterface(param.Parameterized):
         for r in data.itertuples(index=index):
             regions = {
                 k: tuple([getattr(r, a) for a in kwargs[k]])
-                if isinstance(kwargs[k], tuple)
-                else getattr(r, k)
+                if isinstance(kwargs.get(k, k), tuple)
+                else getattr(r, kwargs.get(k, k))
                 for k in r_keys
             }
             fields = {k: getattr(r, k) for k in f_keys}
