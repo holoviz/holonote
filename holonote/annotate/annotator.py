@@ -294,7 +294,7 @@ class AnnotatorInterface(param.Parameterized):
 
         self.set_regions(**regions)
 
-    def add_annotation(self, **fields):  #   Rename box to range.
+    def _add_annotation(self, **fields):
         # Primary key specification is optional
         if self.connector.primary_key.field_name not in fields:
             index_val = self.connector.primary_key(self.connector,
@@ -308,6 +308,9 @@ class AnnotatorInterface(param.Parameterized):
                                      'Call add_annotation directly from the associated connector.')
             self.annotation_table.add_annotation(self._region, spec=self.spec, **fields)
             self._last_region = self._region.copy()
+
+    def add_annotation(self, **fields):
+        self._add_annotation(**fields)
 
     def update_annotation_region(self, index):
         self.annotation_table.update_annotation_region(index)
@@ -353,10 +356,11 @@ class AnnotatorInterface(param.Parameterized):
             if index:
                 fields[pk.field_name] = pk.cast(r.Index)
 
-            self.set_regions(**regions)
-            self.add_annotation(**fields)
+            self._set_regions(**regions)
+            self._add_annotation(**fields)
 
     def define_fields(self, fields_df, preserve_index=False):
+        print("define_fields is legacy use define_annotations instead")
         if not preserve_index:
             indices = [self.connector.primary_key(self.connector) for el in range(len(fields_df))]
             index_mapping = {old:new for old, new in zip(fields_df.index, indices)}
@@ -367,12 +371,14 @@ class AnnotatorInterface(param.Parameterized):
         self.annotation_table.define_fields(fields_df, index_mapping)
 
     def define_ranges(self, startx, endx, starty=None, endy=None, dims=None):
+        print("define_ranges is legacy use define_annotations instead")
         if dims is None:
             raise ValueError('Please specify dimension annotated by defined ranges')
 
         self.annotation_table.define_ranges(dims, startx, endx, starty, endy)
 
     def define_points(self, posx, posy=None, dims=None):
+        print("define_points is legacy use define_annotations instead")
         if dims is None:
             raise ValueError('Please specify dimension annotated by defined ranges')
         self.annotation_table.define_points(dims, posx, posy=posy)
@@ -839,6 +845,10 @@ class Annotator(AnnotatorInterface):
             dims = list(self.spec)
         super().define_points(posx, posy=posy, dims=dims)
         self.refresh()
+
+    def define_annotations(self, data: pd.DataFrame, **kwargs) -> None:
+        super().define_annotations(data, **kwargs)
+        self.refresh(clear=True)
 
     def revert_to_snapshot(self):
         super().revert_to_snapshot()
