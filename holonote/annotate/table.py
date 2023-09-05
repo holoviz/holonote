@@ -391,6 +391,7 @@ class AnnotationTable(param.Parameterized):
         # Load fields dataframe
         fields_df = df[fields].copy()
         self.define_fields(fields_df, {ind:ind for ind in fields_df.index})
+        # Replace: self._field_df = pd.concat([self._field_df, fields_df])
 
         # Load region dataframe
         if df.empty:
