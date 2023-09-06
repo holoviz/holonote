@@ -612,7 +612,12 @@ class AnnotatorElement(param.Parameterized):
         region_style = Indicator.region_style(edit_range_style, edit_point_style)
 
         layers = []
-        layers.append(self._element.opts(tools=self.edit_tools, active_tools=["box_select"]))
+        active_tools = []
+        if "range" in self.region_types:
+             active_tools += ["box_select"]
+        elif "single" in self.region_types:
+            active_tools += ["tap"]
+        layers.append(self._element.opts(tools=self.edit_tools, active_tools=active_tools))
 
         if indicators:
             layers.append(self.indicators().opts(*indicator_style))
