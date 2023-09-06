@@ -627,12 +627,11 @@ class AnnotatorElement(param.Parameterized):
 
     def _build_hover_tool(self):
         # FIXME: Not generalized yet - assuming range
-        # extra_cols = [(col, '@{%s}' % col.replace(' ','_')) for col in self.annotation_table._field_df.columns]
-        extra_cols = []
+        extra_cols = [(col, '@{%s}' % col.replace(' ','_')) for col in self.annotator.fields]
         region_tooltips = []
         region_formatters = {}
         for direction, kdim in zip(['x','y'], self.kdims):
-            if isinstance(self.annotator.spec[kdim]["type"], datetime_types):
+            if issubclass(self.annotator.spec[kdim]["type"], datetime_types):
                 region_tooltips.append((f'start {kdim}', f'@{direction}0{{%F}}'))
                 region_tooltips.append((f'end {kdim}', f'@{direction}1{{%F}}'))
                 region_formatters[f'@{direction}0'] = 'datetime'
