@@ -337,8 +337,10 @@ class AnnotationTable(param.Parameterized):
         all_columns = list(data.columns)
         dims = columns or all_columns
         for dim in dims:
-            region = regions[dim]
-            if region == "range":
+            region = regions.get(dim)
+            if region is None:
+                continue
+            elif region == "range":
                 na_mask = data[dim].isnull()
                 data.loc[na_mask, dim] = data.loc[na_mask, dim].apply(lambda *x: (None, None))
                 data[[f"start[{dim}]", f"end[{dim}]"]] = list(data[dim])
