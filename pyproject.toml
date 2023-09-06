@@ -33,6 +33,11 @@ scripts.update = "pre-commit autoupdate"
 
 [tool.pytest.ini_options]
 addopts = "-vv"
+filterwarnings = [
+    "error",
+    # 2023-09: Ignore Bokeh UserWarning, which needs to be fixed in HoloViews
+    "ignore:found multiple competing values for:UserWarning:holoviews.plotting.bokeh.plot",
+]
 
 [tool.ruff]
 target-version = "py38"
