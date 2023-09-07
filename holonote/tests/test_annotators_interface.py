@@ -84,3 +84,21 @@ def test_define_annotations_range2d(annotator_range2d, define_kwargs):
         assert (fdf.index == ["0", "1", "2"]).all()
     else:
         assert (fdf.index != ["0", "1", "2"]).all()
+
+
+def test_delete_selected_annotation(annotator_range2d):
+    annotator = annotator_range2d
+    annotator.set_regions(x=(0, 1))
+    annotator.add_annotation(description="Ann0", uuid="0")
+
+    annotator.selected_indices = ["0"]
+    assert annotator.selected_indices == ["0"]
+    assert annotator.selected_index == "0"
+
+    annotator.delete_annotation("0")
+    assert not annotator.selected_indices
+    assert annotator.selected_index is None
+
+    msg = "Annotation with index '0' does not exist"
+    with pytest.raises(ValueError, match=msg):
+        annotator.delete_annotation("0")

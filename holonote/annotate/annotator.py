@@ -321,7 +321,13 @@ class AnnotatorInterface(param.Parameterized):
 
 
     def delete_annotation(self, index):
-        self.annotation_table.delete_annotation(index)
+        try:
+            self.annotation_table.delete_annotation(index)
+        except KeyError:
+            raise ValueError(f"Annotation with index {index!r} does not exist.") from None
+
+        if index in self.selected_indices:
+            self.selected_indices.remove(index)
 
     # Defining initial annotations
 
@@ -809,9 +815,12 @@ class Annotator(AnnotatorInterface):
         super().update_annotation_fields(index, **fields)
         self.refresh()
 
+    def delete_annotation(self, index):
+        super().delete_annotation(index)
+        self.refresh()
 
-    def delete_annotation(self, *indices):
-        if len(indices)==0:
+    def delete_annotations(self, *indices):
+        if not indices:
             raise ValueError('At least one index must be specified to delete annotations')
         for index in indices:
             super().delete_annotation(index)
