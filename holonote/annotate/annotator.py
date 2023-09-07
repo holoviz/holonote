@@ -193,7 +193,7 @@ class AnnotatorInterface(param.Parameterized):
     def _get_range_indices_by_position(self, **inputs) -> list[Any]:
         df = self.annotation_table._region_df
         ranges = df[df['region']=='range']
-        if df.empty:
+        if ranges.empty:
             return []
 
         for i, (k, v) in enumerate(inputs.items()):
@@ -202,7 +202,7 @@ class AnnotatorInterface(param.Parameterized):
             if i == 0:
                 ids = set(dim[mask]._id)
             else:
-                ids = ids & set(dim[mask]._id)
+                ids &= set(dim[mask]._id)
         return list(ids)
 
     def get_indices_by_position(self, **inputs) -> list[Any]:
