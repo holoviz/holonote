@@ -37,6 +37,9 @@ filterwarnings = [
     "error",
     # 2023-09: Ignore Bokeh UserWarning, which needs to be fixed in HoloViews
     "ignore:found multiple competing values for:UserWarning:holoviews.plotting.bokeh.plot",
+    # 2023-09: Wrong warning, when a timedelta is compared to another scalar.
+    # Fixed in newer versions of Numpy: https://github.com/numpy/numpy/issues/10095
+    "ignore:elementwise comparison failed:DeprecationWarning:bokeh.core.property.bases",
 ]
 
 [tool.ruff]
