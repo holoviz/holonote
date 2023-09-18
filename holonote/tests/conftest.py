@@ -95,7 +95,7 @@ def multiple_fields_annotator(conn_sqlite_uuid) -> Annotator:
 
 
 @pytest.fixture()
-def element_range1d() -> hv.Image:
+def element_range1d() -> hv.Curve:
     time = pd.date_range("2020-01-01", "2020-01-10", freq="D").to_numpy()
     return hv.Curve(time, kdims=["TIME"])
 
