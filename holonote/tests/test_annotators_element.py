@@ -143,3 +143,27 @@ def test_set_regions_multiple(multiple_annotators, element_range1d, element_rang
     output2 = output.iloc[0, 4]
     expected2 = "Test"
     assert output2 == expected2
+
+
+def test_editable_enabled(annotator_range1d, element_range1d):
+    annotator_range1d * element_range1d
+
+    annotator_range1d.editable_enabled = False
+    for element in annotator_range1d._elements.values():
+        assert not element.editable_enabled
+
+    annotator_range1d.editable_enabled = True
+    for element in annotator_range1d._elements.values():
+        assert element.editable_enabled
+
+
+def test_selection_enabled(annotator_range1d, element_range1d):
+    annotator_range1d * element_range1d
+
+    annotator_range1d.selection_enabled = False
+    for element in annotator_range1d._elements.values():
+        assert not element.selection_enabled
+
+    annotator_range1d.selection_enabled = True
+    for element in annotator_range1d._elements.values():
+        assert element.selection_enabled
