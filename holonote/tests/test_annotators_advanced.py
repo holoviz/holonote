@@ -8,6 +8,7 @@ import pytest
 from holonote.annotate import Annotator, SQLiteDB
 
 
+@pytest.mark.skip("Not supported having multiple region types for same dimension")
 def test_multipoint_range_commit_insertion(multiple_region_annotator):
     descriptions = ['A point insertion', 'A range insertion']
     timestamp = np.datetime64('2022-06-06')
@@ -45,12 +46,24 @@ def test_infer_kdim_dtype_curve():
 
 
 def test_multiplot_add_annotation(multiple_annotators):
-    multiple_annotators["annotation1d"].set_range(np.datetime64('2005-02-13'), np.datetime64('2005-02-16'))
-    multiple_annotators["annotation2d"].set_range(-0.25, 0.25, -0.1, 0.1)
-    multiple_annotators["annotation1d"].add_annotation(description='Multi-plot annotation')
-    multiple_annotators["annotation2d"].add_annotation(description='Multi-plot annotation')
-    multiple_annotators["annotation1d"].commit()
-    multiple_annotators["annotation2d"].commit()
+    start_time, end_time = np.datetime64('2005-02-13'), np.datetime64('2005-02-16')
+    multiple_annotators.set_regions(TIME=(start_time, end_time))
+    multiple_annotators.set_regions(x=(-0.25, 0.25), y=(-0.1, 0.1))
+    multiple_annotators.add_annotation(description='Multi-plot annotation', uuid="A")
+    multiple_annotators.commit()
+
+    d = {
+        "start[TIME]": {"A": start_time},
+        "end[TIME]": {"A": end_time},
+        "start[x]": {"A": -0.25},
+        "end[x]": {"A": 0.25},
+        "start[y]": {"A": -0.1},
+        "end[y]": {"A": 0.1},
+        "description": {"A": "Multi-plot annotation"},
+    }
+    expected = pd.DataFrame(d)
+    expected.index.name = "uuid"
+    pd.testing.assert_frame_equal(multiple_annotators.df, expected)
 
 
 class TestAnnotatorMultipleStringFields:
@@ -86,12 +99,26 @@ class TestAnnotatorMultipleStringFields:
         pd.testing.assert_frame_equal(sql_df, df)
 
 
-    def test_commit_update(self, multiple_fields_annotator):
+    def test_commit_update_set_range(self, multiple_fields_annotator):
         start1, end1  = np.datetime64('2022-06-06'), np.datetime64('2022-06-08')
         start2, end2  = np.datetime64('2023-06-06'), np.datetime64('2023-06-08')
         multiple_fields_annotator.set_range(start1, end1)
         multiple_fields_annotator.add_annotation(field1='Field 1.1', field2='Field 1.2')
         multiple_fields_annotator.set_range(start2, end2)
+        multiple_fields_annotator.add_annotation(field1='Field 2.1', field2='Field 2.2')
+        multiple_fields_annotator.commit(return_commits=True)
+        multiple_fields_annotator.update_annotation_fields(multiple_fields_annotator.df.index[0], field1='NEW Field 1.1')
+        multiple_fields_annotator.commit(return_commits=True)
+        sql_df = multiple_fields_annotator.connector.load_dataframe()
+        assert set(sql_df['field1']) == {'NEW Field 1.1', 'Field 2.1'}
+
+
+    def test_commit_update_set_region(self, multiple_fields_annotator):
+        start1, end1  = np.datetime64('2022-06-06'), np.datetime64('2022-06-08')
+        start2, end2  = np.datetime64('2023-06-06'), np.datetime64('2023-06-08')
+        multiple_fields_annotator.set_regions(TIME=(start1, end1))
+        multiple_fields_annotator.add_annotation(field1='Field 1.1', field2='Field 1.2')
+        multiple_fields_annotator.set_regions(TIME=(start2, end2))
         multiple_fields_annotator.add_annotation(field1='Field 2.1', field2='Field 2.2')
         multiple_fields_annotator.commit(return_commits=True)
         multiple_fields_annotator.update_annotation_fields(multiple_fields_annotator.df.index[0], field1='NEW Field 1.1')
