@@ -138,9 +138,9 @@ class AnnotatorInterface(param.Parameterized):
             # Point
             "B1": (np.float64, "point"),
             "B2": {"type": np.float64, "region": "point"},
-            # Multi
-            ("C1", "D1"): {"type": np.float64, "region": "multi"},
-            ("C2", "D2"): (np.float64, "multi"),
+            # Geometry
+            ("C1", "D1"): {"type": np.float64, "region": "geometry"},
+            ("C2", "D2"): (np.float64, "geometry"),
         }
         """
 
@@ -153,10 +153,10 @@ class AnnotatorInterface(param.Parameterized):
             else:
                 v = {"type": v, "region": "range"}
 
-            if v["region"] not in ["range", "point", "multi"]:
-                raise ValueError("Region type must be range, point, or multi.")
-            if v["region"] == "multi" and not isinstance(k, tuple):
-                raise ValueError("Multi region dimension must be a tuple.")
+            if v["region"] not in ["range", "point", "geometry"]:
+                raise ValueError("Region type must be range, point, or geometry.")
+            if v["region"] == "geometry" and not isinstance(k, tuple):
+                raise ValueError("Geometry region dimension must be a tuple.")
             new_spec[k] = v
 
         return new_spec
