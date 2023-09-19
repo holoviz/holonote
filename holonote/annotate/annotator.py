@@ -497,8 +497,6 @@ class AnnotationDisplay(param.Parameterized):
     @selection_enabled.setter
     def selection_enabled(self, enabled: bool) -> None:
         self._selection_enabled = enabled
-        if not enabled:
-            self.select_by_index()
 
     @property
     def editable_enabled(self) -> bool:
@@ -759,6 +757,9 @@ class Annotator(AnnotatorInterface):
             **params,
         )
 
+        self._selection_enabled = True
+        self._editable_enabled = True
+
     @classmethod
     def _infer_kdim_dtypes(self, element: hv.Element) -> dict:
         # Remove?
@@ -873,3 +874,24 @@ class Annotator(AnnotatorInterface):
     def set_regions(self, **items):
         super().set_regions(**items)
         self.refresh()
+
+    @property
+    def selection_enabled(self) -> bool:
+        return self._selection_enabled
+
+    @selection_enabled.setter
+    def selection_enabled(self, enabled: bool) -> None:
+        for v in self._elements.values():
+            v.selection_enabled = enabled
+
+        if not enabled:
+            self.select_by_index()
+
+    @property
+    def editable_enabled(self) -> bool:
+        return self._editable_enabled
+
+    @editable_enabled.setter
+    def editable_enabled(self, enabled: bool) -> None:
+        for v in self._elements.values():
+            v.editable_enabled = enabled
