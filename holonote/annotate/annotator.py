@@ -408,7 +408,7 @@ class AnnotatorInterface(param.Parameterized):
             return commits
 
 
-class AnnotatorElement(param.Parameterized):
+class AnnotationDisplay(param.Parameterized):
     rect_min = param.Number(default=-1000, doc="Temporary parameter until vectorized element fully supported")
 
     rect_max = param.Number(default=1050, doc="Temporary parameter until vectorized element fully supported")
@@ -762,15 +762,15 @@ class Annotator(AnnotatorInterface):
     @classmethod
     def _infer_kdim_dtypes(self, element: hv.Element) -> dict:
         # Remove?
-        return AnnotatorElement._infer_kdim_dtypes(element)
+        return AnnotationDisplay._infer_kdim_dtypes(element)
 
-    def _create_annotation_element(self, element_key: tuple[str, ...]) -> AnnotatorElement:
+    def _create_annotation_element(self, element_key: tuple[str, ...]) -> AnnotationDisplay:
         for key in element_key:
             if key not in self.spec:
                 raise ValueError(f"Dimension {key!r} not in spec")
-        return AnnotatorElement(self, kdims=list(element_key))
+        return AnnotationDisplay(self, kdims=list(element_key))
 
-    def get_element(self, kdims: tuple[str, ...] | str) -> AnnotatorElement:
+    def get_element(self, kdims: tuple[str, ...] | str) -> AnnotationDisplay:
         element_key = (kdims,) if isinstance(kdims, str) else tuple(map(str, kdims))
         if element_key not in self._elements:
             self._elements[element_key] = self._create_annotation_element(element_key)
