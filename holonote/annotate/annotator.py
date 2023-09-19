@@ -113,7 +113,7 @@ class AnnotatorInterface(param.Parameterized):
         connector_kws = {'fields': params.get('fields')} if 'fields' in params else {}
         connector = params.pop('connector') if 'connector' in params else self.connector_class(**connector_kws)
 
-        spec = self.clean_spec(spec)
+        spec = self.normalize_spec(spec)
 
         super().__init__(spec=spec, connector=connector, **params)
         self._region = {}
@@ -126,8 +126,8 @@ class AnnotatorInterface(param.Parameterized):
             self.load()
 
     @classmethod
-    def clean_spec(self, input_spec: dict[str, Any]) -> SpecDict:
-        """ Convert spec to a DataFrame with columns: type, region
+    def normalize_spec(self, input_spec: dict[str, Any]) -> SpecDict:
+        """ Normalize the spec to conform to SpecDict format
 
         Accepted input spec formats:
         spec = {
