@@ -6,12 +6,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-# TODO:
-
-# * (after refactor) annotators -> annotator, connectors -> connector [ ]
-# TESTS
-# Schema error (needs file or connect in memory??)
-# .snapshot() and .revert_to_snapshot()
+from holonote.annotate import Annotator
 
 
 class TestBasicRange1DAnnotator:
@@ -452,3 +447,18 @@ class TestBasicPoint2DAnnotator:
         annotator_point2d.define_fields(data1[['description']])
         with pytest.raises(KeyError, match=str(mismatched)):
             annotator_point2d.define_points(data2['xs'], data2['ys'])
+
+
+@pytest.mark.parametrize('fields', (["test"], ["test1", "test2"]))
+def test_connector_use_annotator_fields(conn_sqlite_uuid, fields):
+    annotator = Annotator({"TIME": float}, connector=conn_sqlite_uuid, fields=fields)
+
+    assert annotator.fields == fields
+    assert annotator.connector.fields == fields
+
+
+def test_connector_use_annotator_fields_default(conn_sqlite_uuid):
+    annotator = Annotator({"TIME": float}, connector=conn_sqlite_uuid)
+
+    assert annotator.fields == ["description"]
+    assert annotator.connector.fields == ["description"]

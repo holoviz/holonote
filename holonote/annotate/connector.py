@@ -144,8 +144,7 @@ class Connector(param.Parameterized):
 
     commit_hook = param.Parameter(default=None, doc='Callback, applies default schema if None')
 
-    fields = param.List(default=['description'], doc='''
-      List of column names for domain-specific fields''')
+    fields = param.List(default=None, doc='List of column names for domain-specific fields')
 
     transforms = param.Dict(default={'insert':lambda x: x,
                                      'update':lambda x: x ,

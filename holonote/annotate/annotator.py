@@ -116,6 +116,8 @@ class AnnotatorInterface(param.Parameterized):
         spec = self.normalize_spec(spec)
 
         super().__init__(spec=spec, connector=connector, **params)
+        if connector.fields is None:
+            connector.fields = self.fields
         self._region = {}
         self._last_region = None
         self.annotation_table = AnnotationTable()
