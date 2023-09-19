@@ -135,9 +135,9 @@ class AnnotatorInterface(param.Parameterized):
             "A1": (np.float64, "range"),
             "A2": {"type": np.float64, "region": "range"},
             "A3": np.float64,  # Special case
-            # Single
-            "B1": (np.float64, "single"),
-            "B2": {"type": np.float64, "region": "single"},
+            # Point
+            "B1": (np.float64, "point"),
+            "B2": {"type": np.float64, "region": "point"},
             # Multi
             ("C1", "D1"): {"type": np.float64, "region": "multi"},
             ("C2", "D2"): (np.float64, "multi"),
@@ -153,8 +153,8 @@ class AnnotatorInterface(param.Parameterized):
             else:
                 v = {"type": v, "region": "range"}
 
-            if v["region"] not in ["range", "single", "multi"]:
-                raise ValueError("Region type must be range, single, or multi.")
+            if v["region"] not in ["range", "point", "multi"]:
+                raise ValueError("Region type must be range, point, or multi.")
             if v["region"] == "multi" and not isinstance(k, tuple):
                 raise ValueError("Multi region dimension must be a tuple.")
             new_spec[k] = v
@@ -271,23 +271,23 @@ class AnnotatorInterface(param.Parameterized):
         if posy is None:
             if len(kdims) != 1:
                 raise ValueError('Only one key dimension is allowed in spec.')
-            if (r := self.spec[kdims[0]]['region']) != 'single':
+            if (r := self.spec[kdims[0]]['region']) != 'point':
                 raise ValueError(
-                    "Only 'single' region allowed for 'set_point', "
+                    "Only 'point' region allowed for 'set_point', "
                     f"{kdims[0]!r} is {r!r}."
                 )
             regions = {kdims[0]: posx}
         else:
             if len(kdims) != 2:
                 raise ValueError('Only two key dimensions is allowed in spec.')
-            if (r := self.spec[kdims[0]]['region']) != 'single':
+            if (r := self.spec[kdims[0]]['region']) != 'point':
                 raise ValueError(
-                    "Only 'single' region allowed for 'set_point', "
+                    "Only 'point' region allowed for 'set_point', "
                     f"{kdims[0]!r} is {r!r}."
                 )
-            if (r := self.spec[kdims[1]]['region']) != 'single':
+            if (r := self.spec[kdims[1]]['region']) != 'point':
                 raise ValueError(
-                    "Only 'single' region allowed for 'set_point', "
+                    "Only 'point' region allowed for 'set_point', "
                     f"{kdims[1]!r} is {r!r}."
                 )
             regions = {kdims[0]: posx, kdims[1]: posy}
@@ -460,7 +460,7 @@ class AnnotatorElement(param.Parameterized):
             tools.append(BoxSelectTool(dimensions="width"))
         elif self.region_types == "range-range":
             tools.append(BoxSelectTool())
-        elif self.region_types == 'single':
+        elif self.region_types == 'point':
             tools.append('tap')
         return tools
 
@@ -518,9 +518,9 @@ class AnnotatorElement(param.Parameterized):
             bounds = None
 
         # If selection enabled, tap stream used for selection not for creating point regions
-        if 'single' in self.region_types and self.selection_enabled:
+        if 'point' in self.region_types and self.selection_enabled:
             x, y = None, None
-        elif 'single' not in self.region_types:
+        elif 'point' not in self.region_types:
             x, y = None, None
 
         return bounds, x, y, geometry
@@ -621,7 +621,7 @@ class AnnotatorElement(param.Parameterized):
         active_tools = []
         if "range" in self.region_types:
              active_tools += ["box_select"]
-        elif "single" in self.region_types:
+        elif "point" in self.region_types:
             active_tools += ["tap"]
         layers.append(self._element.opts(tools=self.edit_tools, active_tools=active_tools))
 
@@ -673,7 +673,7 @@ class AnnotatorElement(param.Parameterized):
         invert_axes = False  # Not yet handled
         if len(self.kdims) == 1:
             dim_mask = self.annotator.annotation_table._mask1D(self.kdims)
-            points_df = self.annotator.annotation_table._filter(dim_mask, "single")
+            points_df = self.annotator.annotation_table._filter(dim_mask, "point")
             ranges_df = self.annotator.annotation_table._filter(dim_mask, "range")
             if len(points_df) == 0:
                 return self._range_indicators(ranges_df, '1d', invert_axes=invert_axes)
