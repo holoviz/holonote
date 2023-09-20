@@ -71,24 +71,25 @@ class Indicator:
 
     @classmethod
     def _range_indicators(cls, region_df, field_df, dimensionality, invert_axes=False, extra_params=None):
-        rect_data = []
+        # TODO: Clean this up VSpans/HSpans/VLines/HLines
+        data = region_df.merge(field_df, left_on="_id", right_index=True)
+        index_col_name = 'id' if field_df.index.name is None else field_df.index.name
 
-        mdata_vals = ([None] * len(region_df['_id'])
-                      if len(field_df.columns)==0 else field_df.to_dict('records'))
-        for id_val, value, mdata in zip(region_df['_id'], region_df["value"], mdata_vals):
-            if dimensionality=='1d':
-                coords = (value[0], extra_params['rect_min'], value[1], extra_params['rect_max'])
-            else:
-                coords = (value[0], value[2], value[1], value[3]) # LBRT format
+        values = pd.DataFrame.from_records(data["value"])
+        id_vals = data["_id"].rename({"_id": index_col_name})
+        mdata_vals = data[field_df.columns]
 
-            if None in coords: continue
+        # TODO: Add check for none in values
 
-            mdata_tuple =  () if len(field_df.columns)==0 else tuple(mdata.values())
-            rect_data.append(coords + mdata_tuple + (id_val,))
+        if dimensionality=='1d':
+            coords = values[[0, 0, 1, 1]].copy()
+            coords.iloc[:, 1] = extra_params["rect_min"]
+            coords.iloc[:, 3] = extra_params["rect_max"]
+        else:
+            coords = values[[0, 2, 1, 3]] # LBRT format
 
-        index_col_name = ['id'] if field_df.index.name is None else [field_df.index.name]
-        return hv.Rectangles(rect_data, vdims=list(field_df.columns)+index_col_name) # kdims?
-
+        rect_data = list(pd.concat([coords, mdata_vals, id_vals], axis=1).itertuples(index=False))
+        return hv.Rectangles(rect_data, vdims=[*field_df.columns, index_col_name]) # kdims?
 
 
 class AnnotatorInterface(param.Parameterized):
