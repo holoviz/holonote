@@ -72,14 +72,17 @@ class Indicator:
     @classmethod
     def _range_indicators(cls, region_df, field_df, dimensionality, invert_axes=False, extra_params=None):
         # TODO: Clean this up VSpans/HSpans/VLines/HLines
-        data = region_df.merge(field_df, left_on="_id", right_index=True)
         index_col_name = 'id' if field_df.index.name is None else field_df.index.name
 
+        if region_df.empty:
+            return hv.Rectangles([], vdims=[*field_df.columns, index_col_name])
+
+        data = region_df.merge(field_df, left_on="_id", right_index=True)
         values = pd.DataFrame.from_records(data["value"])
         id_vals = data["_id"].rename({"_id": index_col_name})
         mdata_vals = data[field_df.columns]
 
-        # TODO: Add check for none in values
+        # TODO: Add check for None, (None, None), or (None, None, None, None) in values?
 
         if dimensionality=='1d':
             coords = values[[0, 0, 1, 1]].copy()
