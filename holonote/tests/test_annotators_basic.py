@@ -462,3 +462,9 @@ def test_connector_use_annotator_fields_default(conn_sqlite_uuid):
 
     assert annotator.fields == ["description"]
     assert annotator.connector.fields == ["description"]
+
+
+def test_fields_with_spaces(conn_sqlite_uuid):
+    fields = ["A Field with space"]
+    annotator = Annotator({"A": float, "B": float}, fields=fields, connector=conn_sqlite_uuid)
+    assert annotator.annotation_table._field_df.columns == fields
