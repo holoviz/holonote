@@ -22,6 +22,7 @@ class PanelWidgets:
 
     def __init__(self, annotator: Annotator, field_values: dict[str, Any] | None=None):
         self.annotator = annotator
+        self.annotator.snapshot()
         self._widget_mode_group = pn.widgets.RadioButtonGroup(
             name="Mode", options=["+", "-", "✏"], width=90
         )
@@ -141,7 +142,7 @@ class PanelWidgets:
 
     def _set_standard_callbacks(self):
         self._widget_apply_button.on_click(self._callback_apply)
-        # self._widget_revert_button.on_click(self._callback_revert)
+        self._widget_revert_button.on_click(lambda event: self.annotator.revert_to_snapshot())
         self._widget_commit_button.on_click(self._callback_commit)
         self.annotator.param.watch(self._watcher_selected_indices, "selected_indices")
         self._widget_mode_group.param.watch(self._watcher_mode_group, "value")
