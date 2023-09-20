@@ -312,8 +312,9 @@ class SQLiteDB(Connector):
 
     def create_table(self, column_schema=None):
         column_schema = column_schema if column_schema else self.column_schema
-        column_spec = ',\n'.join([f'{name} {spec}'
-                                  for name, spec in column_schema.items()])
+        column_spec = ',\n'.join(
+            [f'"{name}" {spec}' for name, spec in column_schema.items()]
+        )
         create_table_sql = f'CREATE TABLE IF NOT EXISTS {self.table_name} (' + column_spec +  ');'
         self.cursor.execute(create_table_sql)
         self.con.commit()
