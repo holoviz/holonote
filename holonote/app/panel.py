@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import datetime as dt
 from typing import TYPE_CHECKING, Any
 
@@ -89,10 +90,9 @@ class PanelWidgets:
         for widget_name, default in self._fields_values.items():
             if isinstance(default, param.Parameter):
                 default = default.default
-            try:
+            with contextlib.suppress(Exception):
+                # TODO: Fix when lists (for categories, not the same as the default!)
                 self._fields_widgets[widget_name].value = default
-            except Exception:
-                pass  # TODO: Fix when lists (for categories, not the same as the default!)
 
     def _callback_apply(self, event):
         selected_ind = (
@@ -111,9 +111,8 @@ class PanelWidgets:
                 self.annotator.update_annotation_fields(
                     selected_ind, **fields_values
                 )  # TODO: Handle only changed
-        elif self._widget_mode_group.value == "-":
-            if selected_ind is not None:
-                self.annotator.delete_annotation(selected_ind)
+        elif self._widget_mode_group.value == "-" and selected_ind is not None:
+            self.annotator.delete_annotation(selected_ind)
 
     def _callback_commit(self, event):
         self.annotator.commit()

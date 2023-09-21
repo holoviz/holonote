@@ -49,9 +49,11 @@ class AnnotationTable(param.Parameterized):
             fields = []
 
         if [connector, primary_key_name] == [None,None]:
-            raise ValueError('Either a connector instance must be supplied or the primary key name supplied')
+            msg = "Either a connector instance must be supplied or the primary key name supplied"
+            raise ValueError(msg)
         if len(fields) < 1:
-            raise ValueError('More than one field column is required')
+            msg = "More than one field column is required"
+            raise ValueError(msg)
         primary_key_name = primary_key_name if primary_key_name else connector.primary_key.field_name
 
         if fields_df:
@@ -93,7 +95,8 @@ class AnnotationTable(param.Parameterized):
     def revert_to_snapshot(self):
         "Clears outstanding changes and used to implement an basic undo system."
         if self._field_df_snapshot is None:
-            raise Exception('Call snapshot method before calling revert_to_snapshot')
+            msg = "Call snapshot method before calling revert_to_snapshot"
+            raise Exception(msg)
         self._field_df = self._field_df_snapshot
         self._region_df = self._region_df_snapshot
         self.clear_edits()
@@ -139,7 +142,8 @@ class AnnotationTable(param.Parameterized):
         region_inds = set(self._region_df['_id'].unique())
         unassigned_inds = fields_inds - region_inds
         if unassigned_inds:
-            raise ValueError(f'Following annotations have no associated region: {unassigned_inds}')
+            msg = f"Following annotations have no associated region: {unassigned_inds}"
+            raise ValueError(msg)
 
         commits = []
         for edit in self._edits:
@@ -209,10 +213,11 @@ class AnnotationTable(param.Parameterized):
 
     def _add_annotation_fields(self, index_value, fields=None):
 
-        index_name_set = set() if self._field_df.index.name is None else set([self._field_df.index.name])
+        index_name_set = set() if self._field_df.index.name is None else {self._field_df.index.name}
         unknown_kwargs = set(fields.keys()) - set(self._field_df.columns)
         if unknown_kwargs - index_name_set:
-            raise KeyError(f'Unknown fields columns: {list(unknown_kwargs)}')
+            msg = f"Unknown fields columns: {list(unknown_kwargs)}"
+            raise KeyError(msg)
 
         new_fields = pd.DataFrame([dict(fields, **{self._field_df.index.name:index_value})])
         new_fields = new_fields.set_index(self._field_df.index.name)
@@ -220,7 +225,8 @@ class AnnotationTable(param.Parameterized):
 
     def delete_annotation(self, index):
         if index is None:
-            raise ValueError('Deletion index cannot be None')
+            msg = "Deletion index cannot be None"
+            raise ValueError(msg)
         self._region_df = self._region_df[self._region_df['_id'] != index] # Could match multiple rows
         self._field_df = self._field_df.drop(index, axis=0)
 
@@ -232,16 +238,18 @@ class AnnotationTable(param.Parameterized):
             self._field_df.loc[index, column] = value
 
         self._edits.append({'operation':'update', 'id':index,
-                            'fields' : [c for c in fields.keys()],
+                            'fields' : list(fields),
                             'region_fields' : []})
 
     # Methods to map into holoviews
 
     def _validate_index_to_fields(self, series):
         if series.index.name !=  self._field_df.index.name:
-            raise ValueError(f'Index name {series.index.name} does not match fields index name {self._field_df.index.name}')
+            msg = f"Index name {series.index.name} does not match fields index name {self._field_df.index.name}"
+            raise ValueError(msg)
         if series.index.dtype != self._field_df.index.dtype:
-            raise ValueError('Index dtype does not match fields index dtype')
+            msg = "Index dtype does not match fields index dtype"
+            raise ValueError(msg)
 
     def _assert_indices_match(self, *series):
         if all(s.index is series[0].index for s in series):
@@ -249,11 +257,13 @@ class AnnotationTable(param.Parameterized):
         else:
             index_names = [s.index.name for s in series]
             if not all(name == index_names[0] for name in index_names):
-                raise ValueError(f'Index names do not match: {index_names}')
+                msg = f"Index names do not match: {index_names}"
+                raise ValueError(msg)
             # TODO: Match dtypes
             match_values = all(all(s.index == series[0].index) for s in series)
             if not match_values:
-                raise ValueError('Indices do not match')
+                msg = "Indices do not match"
+                raise ValueError(msg)
 
         # for s in series:
         #     self._validate_index_to_fields(s)
@@ -276,9 +286,11 @@ class AnnotationTable(param.Parameterized):
         if isinstance(dims, str):
             dims = (dims,)
         if posy is None and len(dims)==2:
-            raise ValueError('Two dimensions declared but data for only one specified')
+            msg = "Two dimensions declared but data for only one specified"
+            raise ValueError(msg)
         if posy is not None and len(dims)==1:
-            raise ValueError('Only one dimensions declared but data for more than one specified.')
+            msg = "Only one dimensions declared but data for more than one specified."
+            raise ValueError(msg)
 
         if len(dims)==2:
             self._assert_indices_match(posx, posy)
@@ -286,7 +298,8 @@ class AnnotationTable(param.Parameterized):
         mismatches = [el for el in posx.index if self._index_mapping.get(el,el)
                       not in self._field_df.index]
         if any(mismatches):
-            raise KeyError(f'Keys {mismatches} do not match any fields entries')
+            msg = f"Keys {mismatches} do not match any fields entries"
+            raise KeyError(msg)
 
         dim2 = None if len(dims)==1 else dims[1]
         value = zip(posx, [None] * len(posx)) if len(dims)==1 else zip(posx, posy)
@@ -300,10 +313,12 @@ class AnnotationTable(param.Parameterized):
     def define_ranges(self, dims, startx, endx, starty=None, endy=None):
         if isinstance(dims, str):
             dims = (dims,)
-        if len(dims)==2 and any([el is None for el in [starty, endy]]):
-            raise ValueError('Two dimensions declared but insufficient data specified')
+        if len(dims)==2 and any(el is None for el in [starty, endy]):
+            msg = "Two dimensions declared but insufficient data specified"
+            raise ValueError(msg)
         if len(dims)==1 and (starty, endy) != (None, None):
-            raise ValueError('Only one dimensions declared but data for more than one specified.')
+            msg = "Only one dimensions declared but data for more than one specified."
+            raise ValueError(msg)
 
         if len(dims)==1:
             self._assert_indices_match(startx, endx)
@@ -313,7 +328,8 @@ class AnnotationTable(param.Parameterized):
         mismatches = [el for el in startx.index if self._index_mapping.get(el,el)
                       not in self._field_df.index]
         if any(mismatches):
-            raise KeyError(f'Keys {mismatches} do not match any fields entries')
+            msg = f"Keys {mismatches} do not match any fields entries"
+            raise KeyError(msg)
 
 
         dim2 = None if len(dims)==1 else dims[1]

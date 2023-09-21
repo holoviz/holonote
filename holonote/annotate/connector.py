@@ -174,7 +174,7 @@ class Connector(param.Parameterized):
     @classmethod
     def field_value_to_type(cls, value):
         if isinstance(value, list):
-            assert all([isinstance(el, str) for el in value]), 'Only string enums supported'
+            assert all(isinstance(el, str) for el in value), 'Only string enums supported'
             return str
         elif hasattr(value, 'dtype'):
             return  value.dtype
@@ -183,7 +183,8 @@ class Connector(param.Parameterized):
         elif isinstance(value, param.Parameter) and value.default is not None:
             return type(value.default)
         else:
-            raise Exception(f'Connector cannot handle type {type(value)!s}')
+            msg = f'Connector cannot handle type {type(value)!s}'
+            raise TypeError(msg)
 
     @classmethod
     def schema_from_field_values(cls, fields):
@@ -355,7 +356,7 @@ class SQLiteDB(Connector):
     def update_row(self, **updates): # updates as a dictionary OR remove posarg?
         assert self.primary_key.field_name in updates
         id_val = updates.pop(self.primary_key.field_name)
-        set_updates = ', '.join('\"' + k + '\"' + " = ?" for k in updates.keys())
+        set_updates = ', '.join('\"' + k + '\"' + " = ?" for k in updates)
         query = f"UPDATE {self.table_name} SET " + set_updates + f" WHERE \"{self.primary_key.field_name}\" = ?;"
         self.cursor.execute(query, [*updates.values(), id_val])
         self.con.commit()

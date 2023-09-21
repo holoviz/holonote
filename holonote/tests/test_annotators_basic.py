@@ -32,9 +32,9 @@ class TestBasicRange1DAnnotator:
         commits = annotator_range1d.commit(return_commits=True)
         assert len(commits)==1, 'Only one insertion commit made'
         kwargs = commits[0]['kwargs']
-        assert 'uuid' in kwargs.keys(), 'Expected uuid primary key in kwargs'
+        assert 'uuid' in kwargs, 'Expected uuid primary key in kwargs'
         kwargs.pop('uuid')
-        assert kwargs, dict(description='A test annotation!', start_TIME=start, end_TIME=end)
+        assert kwargs, {'description': 'A test annotation!', 'start_TIME': start, 'end_TIME': end}
 
     def test_range_commit_insertion(self, annotator_range1d):
         start, end  = np.datetime64('2022-06-06'), np.datetime64('2022-06-08')
@@ -65,12 +65,12 @@ class TestBasicRange1DAnnotator:
         annotator_range1d.add_annotation(description='Annotation 3')
         annotator_range1d.commit(return_commits=True)
         sql_df = annotator_range1d.connector.load_dataframe()
-        assert set(sql_df['description']) ==set(['Annotation 1', 'Annotation 2', 'Annotation 3'])
+        assert set(sql_df['description']) == {'Annotation 1', 'Annotation 2', 'Annotation 3'}
         deletion_index = sql_df.index[1]
         annotator_range1d.delete_annotation(deletion_index)
         annotator_range1d.commit(return_commits=True)
         sql_df = annotator_range1d.connector.load_dataframe()
-        assert set(sql_df['description']) == set(['Annotation 1', 'Annotation 3'])
+        assert set(sql_df['description']) == {'Annotation 1', 'Annotation 3'}
 
 
     def test_range_define_preserved_index_mismatch(self, annotator_range1d):
@@ -141,10 +141,10 @@ class TestBasicRange2DAnnotator:
         commits = annotator_range2d.commit(return_commits=True)
         assert len(commits)==1, 'Only one insertion commit made'
         kwargs = commits[0]['kwargs']
-        assert 'uuid' in kwargs.keys(), 'Expected uuid primary key in kwargs'
+        assert 'uuid' in kwargs, 'Expected uuid primary key in kwargs'
         kwargs.pop('uuid')
-        assert kwargs ==  dict(description='A test annotation!',
-                                      start_x=startx, end_x=endx, start_y=starty, end_y=endy)
+        assert kwargs ==  {'description': 'A test annotation!',
+                                      'start_x': startx, 'end_x': endx, 'start_y': starty, 'end_y': endy}
 
     def test_range_commit_insertion(self, annotator_range2d):
         startx, endx, starty, endy = -0.25, 0.25, -0.1, 0.1
@@ -177,12 +177,12 @@ class TestBasicRange2DAnnotator:
         annotator_range2d.add_annotation(description='Annotation 3')
         annotator_range2d.commit(return_commits=True)
         sql_df = annotator_range2d.connector.load_dataframe()
-        assert set(sql_df['description']) == set(['Annotation 1', 'Annotation 2', 'Annotation 3'])
+        assert set(sql_df['description']) == {'Annotation 1', 'Annotation 2', 'Annotation 3'}
         deletion_index = sql_df.index[1]
         annotator_range2d.delete_annotation(deletion_index)
         annotator_range2d.commit(return_commits=True)
         sql_df = annotator_range2d.connector.load_dataframe()
-        assert set(sql_df['description']) == set(['Annotation 1', 'Annotation 3'])
+        assert set(sql_df['description']) == {'Annotation 1', 'Annotation 3'}
 
 
     def test_range_define_preserved_index_mismatch(self, annotator_range2d):
@@ -262,9 +262,9 @@ class TestBasicPoint1DAnnotator:
         commits = annotator_point1d.commit(return_commits=True)
         assert len(commits)==1, 'Only one insertion commit made'
         kwargs = commits[0]['kwargs']
-        assert 'uuid' in kwargs.keys(), 'Expected uuid primary key in kwargs'
+        assert 'uuid' in kwargs, 'Expected uuid primary key in kwargs'
         kwargs.pop('uuid')
-        assert kwargs == dict(description='A test annotation!', point_TIME=timestamp)
+        assert kwargs == {'description': 'A test annotation!', 'point_TIME': timestamp}
 
     def test_point_commit_insertion(self, annotator_point1d):
         timestamp = np.datetime64('2022-06-06')
@@ -294,12 +294,12 @@ class TestBasicPoint1DAnnotator:
         annotator_point1d.add_annotation(description='Annotation 3')
         annotator_point1d.commit(return_commits=True)
         sql_df = annotator_point1d.connector.load_dataframe()
-        assert set(sql_df['description']) == set(['Annotation 1', 'Annotation 2', 'Annotation 3'])
+        assert set(sql_df['description']) == {'Annotation 1', 'Annotation 2', 'Annotation 3'}
         deletion_index = sql_df.index[1]
         annotator_point1d.delete_annotation(deletion_index)
         annotator_point1d.commit(return_commits=True)
         sql_df = annotator_point1d.connector.load_dataframe()
-        assert set(sql_df['description']) == set(['Annotation 1', 'Annotation 3'])
+        assert set(sql_df['description']) == {'Annotation 1', 'Annotation 3'}
 
     def test_point_define_preserved_index_mismatch(self, annotator_point1d):
         timestamps = [np.datetime64('2022-06-%.2d' % d) for d in  range(6,15, 4)]
@@ -366,9 +366,9 @@ class TestBasicPoint2DAnnotator:
         commits = annotator_point2d.commit(return_commits=True)
         assert len(commits)==1, 'Only one insertion commit made'
         kwargs = commits[0]['kwargs']
-        assert 'uuid' in kwargs.keys(), 'Expected uuid primary key in kwargs'
+        assert 'uuid' in kwargs, 'Expected uuid primary key in kwargs'
         kwargs.pop('uuid')
-        assert kwargs == dict(description='A test annotation!', point_x=x, point_y=y)
+        assert kwargs == {'description': 'A test annotation!', 'point_x': x, 'point_y': y}
 
     def test_point_commit_insertion(self, annotator_point2d):
         x, y = 0.5, 0.3
@@ -399,12 +399,12 @@ class TestBasicPoint2DAnnotator:
         annotator_point2d.add_annotation(description='Annotation 3')
         annotator_point2d.commit(return_commits=True)
         sql_df = annotator_point2d.connector.load_dataframe()
-        assert set(sql_df['description']) == set(['Annotation 1', 'Annotation 2', 'Annotation 3'])
+        assert set(sql_df['description']) == {'Annotation 1', 'Annotation 2', 'Annotation 3'}
         deletion_index = sql_df.index[1]
         annotator_point2d.delete_annotation(deletion_index)
         annotator_point2d.commit(return_commits=True)
         sql_df = annotator_point2d.connector.load_dataframe()
-        assert set(sql_df['description']) == set(['Annotation 1', 'Annotation 3'])
+        assert set(sql_df['description']) == {'Annotation 1', 'Annotation 3'}
 
     def test_point_define_preserved_index_mismatch(self, annotator_point2d):
         xs, ys  = [-0.1,-0.2,-0.3], [0.1,0.2,0.3]
@@ -449,7 +449,7 @@ class TestBasicPoint2DAnnotator:
             annotator_point2d.define_points(data2['xs'], data2['ys'])
 
 
-@pytest.mark.parametrize('fields', (["test"], ["test1", "test2"]))
+@pytest.mark.parametrize('fields', [["test"], ["test1", "test2"]])
 def test_connector_use_annotator_fields(conn_sqlite_uuid, fields):
     annotator = Annotator({"TIME": float}, connector=conn_sqlite_uuid, fields=fields)
 
