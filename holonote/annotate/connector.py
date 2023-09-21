@@ -3,17 +3,14 @@ from __future__ import annotations
 import datetime as dt
 import sqlite3
 import uuid
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 import param
 
-from holonote.annotate.typing import SpecDict
-
-try:
-    import sqlalchemy
-except ModuleNotFoundError:
-    sqlalchemy = None
+if TYPE_CHECKING:
+    from .typing import SpecDict
 
 
 class PrimaryKey(param.Parameterized):
