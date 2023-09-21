@@ -62,6 +62,7 @@ select = [
     "PLW",
     "PT",
     "RUF",
+    "SIM",
     "UP",
     "W",
 ]

@@ -523,9 +523,7 @@ class AnnotationDisplay(param.Parameterized):
             bounds = None
 
         # If selection enabled, tap stream used for selection not for creating point regions
-        if 'point' in self.region_types and self.selection_enabled:
-            x, y = None, None
-        elif 'point' not in self.region_types:
+        if ('point' in self.region_types and self.selection_enabled) or 'point' not in self.region_types:
             x, y = None, None
 
         return bounds, x, y, geometry

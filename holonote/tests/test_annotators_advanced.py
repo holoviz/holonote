@@ -75,7 +75,7 @@ class TestAnnotatorMultipleStringFields:
         commits = multiple_fields_annotator.commit(return_commits=True)
         kwargs = commits[0]['kwargs']
         assert len(commits)==1, 'Only one insertion commit made'
-        assert 'uuid' in kwargs.keys(), 'Expected uuid primary key in kwargs'
+        assert 'uuid' in kwargs, 'Expected uuid primary key in kwargs'
         kwargs.pop('uuid')
         assert kwargs == {"field1": 'A test field', "field2": 'Another test field', "start_TIME": start, "end_TIME": end}
 

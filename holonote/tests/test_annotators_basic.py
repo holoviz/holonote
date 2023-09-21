@@ -32,7 +32,7 @@ class TestBasicRange1DAnnotator:
         commits = annotator_range1d.commit(return_commits=True)
         assert len(commits)==1, 'Only one insertion commit made'
         kwargs = commits[0]['kwargs']
-        assert 'uuid' in kwargs.keys(), 'Expected uuid primary key in kwargs'
+        assert 'uuid' in kwargs, 'Expected uuid primary key in kwargs'
         kwargs.pop('uuid')
         assert kwargs, {'description': 'A test annotation!', 'start_TIME': start, 'end_TIME': end}
 
@@ -141,7 +141,7 @@ class TestBasicRange2DAnnotator:
         commits = annotator_range2d.commit(return_commits=True)
         assert len(commits)==1, 'Only one insertion commit made'
         kwargs = commits[0]['kwargs']
-        assert 'uuid' in kwargs.keys(), 'Expected uuid primary key in kwargs'
+        assert 'uuid' in kwargs, 'Expected uuid primary key in kwargs'
         kwargs.pop('uuid')
         assert kwargs ==  {'description': 'A test annotation!',
                                       'start_x': startx, 'end_x': endx, 'start_y': starty, 'end_y': endy}
@@ -262,7 +262,7 @@ class TestBasicPoint1DAnnotator:
         commits = annotator_point1d.commit(return_commits=True)
         assert len(commits)==1, 'Only one insertion commit made'
         kwargs = commits[0]['kwargs']
-        assert 'uuid' in kwargs.keys(), 'Expected uuid primary key in kwargs'
+        assert 'uuid' in kwargs, 'Expected uuid primary key in kwargs'
         kwargs.pop('uuid')
         assert kwargs == {'description': 'A test annotation!', 'point_TIME': timestamp}
 
@@ -366,7 +366,7 @@ class TestBasicPoint2DAnnotator:
         commits = annotator_point2d.commit(return_commits=True)
         assert len(commits)==1, 'Only one insertion commit made'
         kwargs = commits[0]['kwargs']
-        assert 'uuid' in kwargs.keys(), 'Expected uuid primary key in kwargs'
+        assert 'uuid' in kwargs, 'Expected uuid primary key in kwargs'
         kwargs.pop('uuid')
         assert kwargs == {'description': 'A test annotation!', 'point_x': x, 'point_y': y}
 

@@ -356,7 +356,7 @@ class SQLiteDB(Connector):
     def update_row(self, **updates): # updates as a dictionary OR remove posarg?
         assert self.primary_key.field_name in updates
         id_val = updates.pop(self.primary_key.field_name)
-        set_updates = ', '.join('\"' + k + '\"' + " = ?" for k in updates.keys())
+        set_updates = ', '.join('\"' + k + '\"' + " = ?" for k in updates)
         query = f"UPDATE {self.table_name} SET " + set_updates + f" WHERE \"{self.primary_key.field_name}\" = ?;"
         self.cursor.execute(query, [*updates.values(), id_val])
         self.con.commit()
