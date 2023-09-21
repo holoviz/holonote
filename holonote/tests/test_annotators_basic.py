@@ -449,7 +449,7 @@ class TestBasicPoint2DAnnotator:
             annotator_point2d.define_points(data2['xs'], data2['ys'])
 
 
-@pytest.mark.parametrize('fields', (["test"], ["test1", "test2"]))
+@pytest.mark.parametrize('fields', [["test"], ["test1", "test2"]])
 def test_connector_use_annotator_fields(conn_sqlite_uuid, fields):
     annotator = Annotator({"TIME": float}, connector=conn_sqlite_uuid, fields=fields)
 
