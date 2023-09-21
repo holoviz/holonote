@@ -183,7 +183,8 @@ class Connector(param.Parameterized):
         elif isinstance(value, param.Parameter) and value.default is not None:
             return type(value.default)
         else:
-            raise Exception(f'Connector cannot handle type {type(value)!s}')
+            msg = f'Connector cannot handle type {type(value)!s}'
+            raise TypeError(msg)
 
     @classmethod
     def schema_from_field_values(cls, fields):
