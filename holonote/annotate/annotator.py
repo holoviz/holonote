@@ -313,33 +313,6 @@ class AnnotatorInterface(param.Parameterized):
             self._set_regions(**regions)
             self._add_annotation(**fields)
 
-    def define_fields(self, fields_df, preserve_index=False):
-        print("define_fields is legacy use define_annotations instead")
-        if not preserve_index:
-            indices = [self.connector.primary_key(self.connector) for el in range(len(fields_df))]
-            index_mapping = dict(zip(fields_df.index, indices))
-            fields_df = fields_df.set_index(pd.Series(indices,
-                                                      name=self.connector.primary_key.field_name))
-        else:
-            index_mapping = {ind:ind for ind in fields_df.index}
-        self.annotation_table.define_fields(fields_df, index_mapping)
-
-    def define_ranges(self, startx, endx, starty=None, endy=None, dims=None):
-        print("define_ranges is legacy use define_annotations instead")
-        if dims is None:
-            msg = 'Please specify dimension annotated by defined ranges'
-            raise ValueError(msg)
-
-        self.annotation_table.define_ranges(dims, startx, endx, starty, endy)
-
-    def define_points(self, posx, posy=None, dims=None):
-        print("define_points is legacy use define_annotations instead")
-        if dims is None:
-            msg = 'Please specify dimension annotated by defined ranges'
-            raise ValueError(msg)
-        self.annotation_table.define_points(dims, posx, posy=posy)
-
-
     # Snapshotting and reverting
     @property
     def has_snapshot(self) -> bool:
@@ -791,28 +764,6 @@ class Annotator(AnnotatorInterface):
                 for ind in inds:
                     d[ind] = val
         super().select_by_index(*inds)
-        self.refresh()
-
-
-    def define_fields(self, fields_df, preserve_index=False):
-        """
-        If insert_index is True, the index values are inserted as primary key values
-        """
-        super().define_fields(fields_df, preserve_index=preserve_index)
-
-    def define_ranges(self, startx, endx, starty=None, endy=None, dims=None):
-        "Define ranges using element kdims as default dimensions."
-        if dims is None:
-            dims = list(self.spec)
-        super().define_ranges(startx, endx, starty=starty, endy=endy, dims=dims)
-        self.refresh()
-
-
-    def define_points(self, posx, posy=None, dims=None):
-        "Define points using element kdims as default dimensions."
-        if dims is None:
-            dims = list(self.spec)
-        super().define_points(posx, posy=posy, dims=dims)
         self.refresh()
 
     def define_annotations(self, data: pd.DataFrame, **kwargs) -> None:

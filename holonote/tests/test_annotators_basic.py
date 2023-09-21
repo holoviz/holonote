@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import uuid
-
 import numpy as np
 import pandas as pd
 import pytest
@@ -74,51 +72,6 @@ class TestBasicRange1DAnnotator:
         assert set(sql_df['description']) == {'Annotation 1', 'Annotation 3'}
 
 
-    def test_range_define_preserved_index_mismatch(self, annotator_range1d):
-        starts = [np.datetime64('2022-06-%.2d' % d) for d in  range(6,15, 4)]
-        ends = [np.datetime64('2022-06-%.2d' % (d+2)) for d in  range(6,15, 4)]
-        descriptions = ['Annotation %d' % d for d in [1,2,3]]
-        annotation_id = [uuid.uuid4().hex[:8] for d in [1,2,3]]
-
-        data = pd.DataFrame({'uuid':annotation_id, 'start':starts, 'end':ends, 'description':descriptions}).set_index('uuid')
-        annotator_range1d.define_fields(data[['description']], preserve_index=True)
-        annotator_range1d.define_ranges(data['start'].iloc[:2], data['end'].iloc[:2])
-        msg = f"Following annotations have no associated region: {{{annotation_id[2]!r}}}"
-        with pytest.raises(ValueError, match=msg):
-            annotator_range1d.commit(return_commits=True)
-
-    def test_range_define_auto_index_mismatch(self, annotator_range1d):
-        starts = [np.datetime64('2022-06-%.2d' % d) for d in  range(6,15, 4)]
-        ends = [np.datetime64('2022-06-%.2d' % (d+2)) for d in  range(6,15, 4)]
-        descriptions = ['Annotation %d' % d for d in [1,2,3]]
-        annotation_id = [uuid.uuid4().hex[:8] for d in [1,2,3]]
-
-        data = pd.DataFrame({'uuid':annotation_id, 'start':starts,
-                             'end':ends, 'description':descriptions}).set_index('uuid')
-        annotator_range1d.define_fields(data[['description']], preserve_index=False)
-        annotator_range1d.define_ranges(data['start'].iloc[:2], data['end'].iloc[:2])
-        with pytest.raises(ValueError,
-                           match="Following annotations have no associated region:"):
-            annotator_range1d.commit(return_commits=True)
-
-    def test_range_define_unassigned_indices(self, annotator_range1d):
-        starts = [np.datetime64('2022-06-%.2d' % d) for d in  range(6,15, 4)]
-        ends = [np.datetime64('2022-06-%.2d' % (d+2)) for d in  range(6,15, 4)]
-        descriptions = ['Annotation %d' % d for d in [1,2,3]]
-        annotation_id1 = [uuid.uuid4().hex[:8] for d in [1,2,3]]
-        mismatched = [uuid.uuid4().hex[:8] for d in [1,2]]
-        annotation_id2 = [*mismatched, annotation_id1[2]]
-
-        data1 = pd.DataFrame({'uuid':annotation_id1, 'start':starts,
-                              'end':ends, 'description':descriptions}).set_index('uuid')
-        data2 = pd.DataFrame({'uuid':annotation_id2, 'start':starts,
-                              'end':ends, 'description':descriptions}).set_index('uuid')
-
-        annotator_range1d.define_fields(data1[['description']])
-        with pytest.raises(KeyError, match=str(mismatched)):
-            annotator_range1d.define_ranges(data2['start'], data2['end'])
-
-
 class TestBasicRange2DAnnotator:
 
     @pytest.mark.skip("Need to add validation to set_regions")
@@ -187,59 +140,6 @@ class TestBasicRange2DAnnotator:
         assert set(sql_df['description']) == {'Annotation 1', 'Annotation 3'}
 
 
-    def test_range_define_preserved_index_mismatch(self, annotator_range2d):
-        xstarts, xends = [-0.3, -0.2, -0.1], [0.3, 0.2, 0.1]
-        ystarts, yends = [-0.35, -0.25, -0.15], [0.35, 0.25, 0.15]
-        descriptions = ['Annotation %d' % d for d in [1,2,3]]
-        annotation_id = [uuid.uuid4().hex[:8] for d in [1,2,3]]
-
-        data = pd.DataFrame({'uuid':annotation_id, 'xstart':xstarts, 'xend':xends,
-                             'ystart':ystarts, 'yend':yends,
-                             'description':descriptions}).set_index('uuid')
-        annotator_range2d.define_fields(data[['description']], preserve_index=True)
-        annotator_range2d.define_ranges(data['xstart'].iloc[:2], data['xend'].iloc[:2],
-                                     data['ystart'].iloc[:2], data['yend'].iloc[:2])
-
-        msg = f"Following annotations have no associated region: {{{annotation_id[2]!r}}}"
-        with pytest.raises(ValueError, match=msg):
-            annotator_range2d.commit(return_commits=True)
-
-    def test_range_define_auto_index_mismatch(self, annotator_range2d):
-        xstarts, xends = [-0.3, -0.2, -0.1], [0.3, 0.2, 0.1]
-        ystarts, yends = [-0.35, -0.25, -0.15], [0.35, 0.25, 0.15]
-        descriptions = ['Annotation %d' % d for d in [1,2,3]]
-        annotation_id = [uuid.uuid4().hex[:8] for d in [1,2,3]]
-        data = pd.DataFrame({'uuid':annotation_id, 'xstart':xstarts, 'xend':xends,
-                             'ystart':ystarts, 'yend':yends,
-                             'description':descriptions}).set_index('uuid')
-        annotator_range2d.define_fields(data[['description']], preserve_index=False)
-        annotator_range2d.define_ranges(data['xstart'].iloc[:2], data['xend'].iloc[:2],
-                                     data['ystart'].iloc[:2], data['yend'].iloc[:2])
-        msg = "Following annotations have no associated region:"
-        with pytest.raises(ValueError, match=msg):
-            annotator_range2d.commit(return_commits=True)
-
-    def test_range_define_unassigned_indices(self, annotator_range2d):
-        xstarts, xends = [-0.3, -0.2, -0.1], [0.3, 0.2, 0.1]
-        ystarts, yends = [-0.35, -0.25, -0.15], [0.35, 0.25, 0.15]
-        descriptions = ['Annotation %d' % d for d in [1,2,3]]
-        annotation_id1 = [uuid.uuid4().hex[:8] for d in [1,2,3]]
-        mismatched = [uuid.uuid4().hex[:8] for d in [1,2]]
-        annotation_id2 = [*mismatched, annotation_id1[2]]
-
-        data1 = pd.DataFrame({'uuid':annotation_id1, 'xstart':xstarts, 'xend':xends,
-                             'ystart':ystarts, 'yend':yends,
-                             'description':descriptions}).set_index('uuid')
-        data2 = pd.DataFrame({'uuid':annotation_id2, 'xstart':xstarts, 'xend':xends,
-                             'ystart':ystarts, 'yend':yends,
-                             'description':descriptions}).set_index('uuid')
-
-        annotator_range2d.define_fields(data1[['description']])
-        with pytest.raises(KeyError, match=str(mismatched)):
-            annotator_range2d.define_ranges(data2['xstart'], data2['xend'],
-                                         data2['ystart'], data2['yend'])
-
-
 class TestBasicPoint1DAnnotator:
 
     def test_insertion_edit_table_columns(self, annotator_point1d):
@@ -303,47 +203,6 @@ class TestBasicPoint1DAnnotator:
         annotator_point1d.commit(return_commits=True)
         sql_df = annotator_point1d.connector.load_dataframe()
         assert set(sql_df['description']) == {'Annotation 1', 'Annotation 3'}
-
-    def test_point_define_preserved_index_mismatch(self, annotator_point1d):
-        timestamps = [np.datetime64('2022-06-%.2d' % d) for d in  range(6,15, 4)]
-        descriptions = ['Annotation %d' % d for d in [1,2,3]]
-        annotation_id = [uuid.uuid4().hex[:8] for d in [1,2,3]]
-
-        data = pd.DataFrame({'uuid':annotation_id, 'timestamps':timestamps,
-                             'description':descriptions}).set_index('uuid')
-        annotator_point1d.define_fields(data[['description']], preserve_index=True)
-        annotator_point1d.define_points(data['timestamps'].iloc[:2])
-        msg = f"Following annotations have no associated region: {{{annotation_id[2]!r}}}"
-        with pytest.raises(ValueError, match=msg):
-            annotator_point1d.commit(return_commits=True)
-
-    def test_point_define_auto_index_mismatch(self, annotator_point1d):
-        timestamps = [np.datetime64('2022-06-%.2d' % d) for d in  range(6,15, 4)]
-        descriptions = ['Annotation %d' % d for d in [1,2,3]]
-        annotation_id = [uuid.uuid4().hex[:8] for d in [1,2,3]]
-
-        data = pd.DataFrame({'uuid':annotation_id, 'timestamps':timestamps,
-                             'description':descriptions}).set_index('uuid')
-        annotator_point1d.define_fields(data[['description']], preserve_index=False)
-        annotator_point1d.define_points(data['timestamps'].iloc[:2])
-        with pytest.raises(ValueError, match="Following annotations have no associated region:"):
-            annotator_point1d.commit(return_commits=True)
-
-    def test_point_define_unassigned_indices(self, annotator_point1d):
-        timestamps = [np.datetime64('2022-06-%.2d' % d) for d in  range(6,15, 4)]
-        descriptions = ['Annotation %d' % d for d in [1,2,3]]
-        annotation_id1 = [uuid.uuid4().hex[:8] for d in [1,2,3]]
-        mismatched = [uuid.uuid4().hex[:8] for d in [1,2]]
-        annotation_id2 = [*mismatched, annotation_id1[2]]
-
-        data1 = pd.DataFrame({'uuid':annotation_id1, 'timestamps':timestamps,
-                              'description':descriptions}).set_index('uuid')
-        data2 = pd.DataFrame({'uuid':annotation_id2, 'timestamps':timestamps,
-                              'description':descriptions}).set_index('uuid')
-
-        annotator_point1d.define_fields(data1[['description']])
-        with pytest.raises(KeyError, match=str(mismatched)):
-            annotator_point1d.define_points(data2['timestamps'])
 
 
 class TestBasicPoint2DAnnotator:
@@ -409,48 +268,6 @@ class TestBasicPoint2DAnnotator:
         annotator_point2d.commit(return_commits=True)
         sql_df = annotator_point2d.connector.load_dataframe()
         assert set(sql_df['description']) == {'Annotation 1', 'Annotation 3'}
-
-    def test_point_define_preserved_index_mismatch(self, annotator_point2d):
-        xs, ys  = [-0.1,-0.2,-0.3], [0.1,0.2,0.3]
-        descriptions = ['Annotation %d' % d for d in [1,2,3]]
-        annotation_id = [uuid.uuid4().hex[:8] for d in [1,2,3]]
-
-        data = pd.DataFrame({'uuid':annotation_id, 'xs':xs, 'ys':ys,
-                             'description':descriptions}).set_index('uuid')
-        annotator_point2d.define_fields(data[['description']], preserve_index=True)
-        annotator_point2d.define_points(data['xs'].iloc[:2], data['ys'].iloc[:2])
-        msg = f"Following annotations have no associated region: {{{annotation_id[2]!r}}}"
-        with pytest.raises(ValueError, match=msg):
-            annotator_point2d.commit(return_commits=True)
-
-    def test_point_define_auto_index_mismatch(self, annotator_point2d):
-        xs, ys  = [-0.1,-0.2,-0.3], [0.1,0.2,0.3]
-        descriptions = ['Annotation %d' % d for d in [1,2,3]]
-        annotation_id = [uuid.uuid4().hex[:8] for d in [1,2,3]]
-
-        data = pd.DataFrame({'uuid':annotation_id, 'xs':xs, 'ys':ys,
-                             'description':descriptions}).set_index('uuid')
-        annotator_point2d.define_fields(data[['description']], preserve_index=False)
-        annotator_point2d.define_points(data['xs'].iloc[:2], data['ys'].iloc[:2])
-        msg = "Following annotations have no associated region:"
-        with pytest.raises(ValueError, match=msg):
-            annotator_point2d.commit(return_commits=True)
-
-    def test_point_define_unassigned_indices(self, annotator_point2d):
-        xs, ys  = [-0.1,-0.2,-0.3], [0.1,0.2,0.3]
-        descriptions = ['Annotation %d' % d for d in [1,2,3]]
-        annotation_id1 = [uuid.uuid4().hex[:8] for d in [1,2,3]]
-        mismatched = [uuid.uuid4().hex[:8] for d in [1,2]]
-        annotation_id2 = [*mismatched, annotation_id1[2]]
-
-        data1 = pd.DataFrame({'uuid':annotation_id1, 'xs':xs, 'ys':ys,
-                              'description':descriptions}).set_index('uuid')
-        data2 = pd.DataFrame({'uuid':annotation_id2, 'xs':xs, 'ys':ys,
-                              'description':descriptions}).set_index('uuid')
-
-        annotator_point2d.define_fields(data1[['description']])
-        with pytest.raises(KeyError, match=str(mismatched)):
-            annotator_point2d.define_points(data2['xs'], data2['ys'])
 
 
 @pytest.mark.parametrize('fields', [["test"], ["test1", "test2"]])
