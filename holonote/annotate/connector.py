@@ -174,7 +174,7 @@ class Connector(param.Parameterized):
     @classmethod
     def field_value_to_type(cls, value):
         if isinstance(value, list):
-            assert all([isinstance(el, str) for el in value]), 'Only string enums supported'
+            assert all(isinstance(el, str) for el in value), 'Only string enums supported'
             return str
         elif hasattr(value, 'dtype'):
             return  value.dtype

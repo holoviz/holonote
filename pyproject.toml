@@ -47,6 +47,7 @@ target-version = "py38"
 
 select = [
     "B",
+    "C4",
     "E",
     "F",
     "FLY",

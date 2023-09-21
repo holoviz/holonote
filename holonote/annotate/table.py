@@ -209,7 +209,7 @@ class AnnotationTable(param.Parameterized):
 
     def _add_annotation_fields(self, index_value, fields=None):
 
-        index_name_set = set() if self._field_df.index.name is None else set([self._field_df.index.name])
+        index_name_set = set() if self._field_df.index.name is None else {self._field_df.index.name}
         unknown_kwargs = set(fields.keys()) - set(self._field_df.columns)
         if unknown_kwargs - index_name_set:
             raise KeyError(f'Unknown fields columns: {list(unknown_kwargs)}')
@@ -232,7 +232,7 @@ class AnnotationTable(param.Parameterized):
             self._field_df.loc[index, column] = value
 
         self._edits.append({'operation':'update', 'id':index,
-                            'fields' : [c for c in fields.keys()],
+                            'fields' : list(fields),
                             'region_fields' : []})
 
     # Methods to map into holoviews
@@ -300,7 +300,7 @@ class AnnotationTable(param.Parameterized):
     def define_ranges(self, dims, startx, endx, starty=None, endy=None):
         if isinstance(dims, str):
             dims = (dims,)
-        if len(dims)==2 and any([el is None for el in [starty, endy]]):
+        if len(dims)==2 and any(el is None for el in [starty, endy]):
             raise ValueError('Two dimensions declared but insufficient data specified')
         if len(dims)==1 and (starty, endy) != (None, None):
             raise ValueError('Only one dimensions declared but data for more than one specified.')

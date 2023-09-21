@@ -22,11 +22,11 @@ class Indicator:
     displayed (vectorized) HoloViews object.
     """
 
-    range_style = dict(color='red', alpha=0.4, apply_ranges=False)
+    range_style = {'color': 'red', 'alpha': 0.4, 'apply_ranges': False}
     point_style = {}
     indicator_highlight = {'alpha':(0.7,0.2)}
 
-    edit_range_style = dict(alpha=0.4, line_alpha=1, line_width=1, line_color='black')
+    edit_range_style = {'alpha': 0.4, 'line_alpha': 1, 'line_width': 1, 'line_color': 'black'}
     edit_point_style = {}
 
     @classmethod
@@ -375,7 +375,7 @@ class AnnotatorInterface(param.Parameterized):
         print("define_fields is legacy use define_annotations instead")
         if not preserve_index:
             indices = [self.connector.primary_key(self.connector) for el in range(len(fields_df))]
-            index_mapping = {old:new for old, new in zip(fields_df.index, indices)}
+            index_mapping = dict(zip(fields_df.index, indices))
             fields_df = fields_df.set_index(pd.Series(indices,
                                                       name=self.connector.primary_key.field_name))
         else:
