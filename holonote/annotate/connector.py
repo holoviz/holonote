@@ -8,6 +8,8 @@ import numpy as np
 import pandas as pd
 import param
 
+from holonote.annotate.typing import SpecDict
+
 try:
     import sqlalchemy
 except ModuleNotFoundError:
@@ -232,6 +234,12 @@ class Connector(param.Parameterized):
                             + f'Missing {region_type!r} region columns {missing_region_columns}. '
                             + msg_suffix)
 
+    def _create_column_schema(self, spec: SpecDict, fields: list[str]) -> None:
+        field_dtypes = {col: str for col in fields} # FIXME - generalize
+        all_region_types = [{v["region"] for v in spec.values()}]
+        all_kdim_dtypes = [{k: v["type"] for k, v in spec.items()} ]
+        schema = self.generate_schema(self.primary_key, all_region_types, all_kdim_dtypes, field_dtypes)
+        self.column_schema = schema
 
 class SQLiteDB(Connector):
     """
@@ -360,7 +368,3 @@ class SQLiteDB(Connector):
         query = f"UPDATE {self.table_name} SET " + set_updates + f" WHERE \"{self.primary_key.field_name}\" = ?;"
         self.cursor.execute(query, [*updates.values(), id_val])
         self.con.commit()
-
-    def add_schema(self, schema):
-        # TODO: Check if schema don't overwrite existing columns
-        self.column_schema = {**self.column_schema, **schema}

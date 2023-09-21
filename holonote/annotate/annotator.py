@@ -114,7 +114,7 @@ class AnnotatorInterface(param.Parameterized):
 
     connector_class = SQLiteDB
 
-    def __init__(self, spec, *, init=True, **params):
+    def __init__(self, spec, **params):
         connector_kws = {'fields': params.get('fields')} if 'fields' in params else {}
         connector = params.pop('connector') if 'connector' in params else self.connector_class(**connector_kws)
 
@@ -125,12 +125,11 @@ class AnnotatorInterface(param.Parameterized):
             connector.fields = self.fields
         self._region = {}
         self._last_region = None
-        self.annotation_table = AnnotationTable()
-        self.annotation_table.register_annotator(self)
-        self.annotation_table.add_schema_to_conn(self.connector)
 
-        if init:
-            self.load()
+        self.annotation_table = AnnotationTable()
+        self.connector._create_column_schema(self.spec, self.fields)
+        self.connector._initialize(self.connector.column_schema)
+        self.annotation_table.load(self.connector, fields=self.connector.fields, spec=self.spec)
 
     @classmethod
     def normalize_spec(self, input_spec: dict[str, Any]) -> SpecDict:
@@ -170,23 +169,12 @@ class AnnotatorInterface(param.Parameterized):
 
         return new_spec
 
-    def load(self):
-        self.connector._initialize(self.connector.column_schema)
-        self.annotation_table.load(self.connector, fields=self.connector.fields, spec=self.spec)
-
     @property
     def df(self):
         return self.annotation_table.dataframe
 
     def refresh(self, clear=False):
         "Method to update display state of the annotator and optionally clear stale visual state"
-
-    def set_annotation_table(self, annotation_table) -> None: # FIXME! Won't work anymore, set_connector??
-        self._region = {}
-        self.annotation_table = annotation_table
-        self.annotation_table.register_annotator(self)
-        self.annotation_table._update_index()
-        self.snapshot()
 
     # Selecting annotations
 
@@ -306,9 +294,6 @@ class AnnotatorInterface(param.Parameterized):
 
         # Don't do anything if self.region is an empty dict
         if self.region and self.region != self._last_region:
-            if len(self.annotation_table._annotators)>1:
-                msg = 'Multiple annotation instances attached to the connector: Call add_annotation directly from the associated connector.'
-                raise AssertionError(msg)
             self.annotation_table.add_annotation(self._region, spec=self.spec, **fields)
             self._last_region = self._region.copy()
 
@@ -316,8 +301,7 @@ class AnnotatorInterface(param.Parameterized):
         self._add_annotation(**fields)
 
     def update_annotation_region(self, index):
-        self.annotation_table.update_annotation_region(index)
-
+        self.annotation_table.update_annotation_region(self._region, index)
 
     def update_annotation_fields(self, index, **fields):
         self.annotation_table.update_annotation_fields(index, **fields)
