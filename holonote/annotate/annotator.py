@@ -241,62 +241,6 @@ class AnnotatorInterface(param.Parameterized):
         self._region = {}
         self._last_region = {}
 
-    def set_range(self, startx, endx, starty=None, endy=None):
-        print("set_range is legacy use set_regions instead")
-        if None in [starty, endy] and ([starty, endy] != [None, None]):
-            msg = 'Both starty and endy need to be non-None'
-            raise ValueError(msg)
-
-        value = (startx, endx) if starty is None else (startx, endx, starty, endy)
-        kdims = list(self.spec)
-        if len(value) == 2:
-            if len(kdims) != 1:
-                msg = 'Only one key dimension is allowed in spec.'
-                raise ValueError(msg)
-            if (r := self.spec[kdims[0]]['region']) != 'range':
-                msg = f"Only 'range' region allowed for 'set_range', {kdims[0]!r} is {r!r}."
-                raise ValueError(msg)
-            regions = {kdims[0]: value}
-        elif len(value) == 4:
-            if len(kdims) != 2:
-                msg = 'Only two key dimensions is allowed in spec.'
-                raise ValueError(msg)
-            if (r := self.spec[kdims[0]]['region']) != 'range':
-                msg = f"Only 'range' region allowed for 'set_range', {kdims[0]!r} is {r!r}."
-                raise ValueError(msg)
-            if (r := self.spec[kdims[1]]['region']) != 'range':
-                msg = f"Only 'range' region allowed for 'set_range', {kdims[1]!r} is {r!r}."
-                raise ValueError(msg)
-            regions = {kdims[0]: (value[0], value[1]), kdims[1]: (value[2], value[3])}
-
-        self.set_regions(**regions)
-
-    def set_point(self, posx, posy=None):
-        print("set_point is legacy use set_regions instead")
-
-        kdims = list(self.spec)
-        if posy is None:
-            if len(kdims) != 1:
-                msg = 'Only one key dimension is allowed in spec.'
-                raise ValueError(msg)
-            if (r := self.spec[kdims[0]]['region']) != 'point':
-                msg = f"Only 'point' region allowed for 'set_point', {kdims[0]!r} is {r!r}."
-                raise ValueError(msg)
-            regions = {kdims[0]: posx}
-        else:
-            if len(kdims) != 2:
-                msg = 'Only two key dimensions is allowed in spec.'
-                raise ValueError(msg)
-            if (r := self.spec[kdims[0]]['region']) != 'point':
-                msg = f"Only 'point' region allowed for 'set_point', {kdims[0]!r} is {r!r}."
-                raise ValueError(msg)
-            if (r := self.spec[kdims[1]]['region']) != 'point':
-                msg = f"Only 'point' region allowed for 'set_point', {kdims[1]!r} is {r!r}."
-                raise ValueError(msg)
-            regions = {kdims[0]: posx, kdims[1]: posy}
-
-        self.set_regions(**regions)
-
     def _add_annotation(self, **fields):
         # Primary key specification is optional
         if self.connector.primary_key.field_name not in fields:
