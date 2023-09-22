@@ -7,7 +7,6 @@ import holoviews as hv
 import pandas as pd
 import param
 from bokeh.models.tools import BoxSelectTool, HoverTool, Tool
-from holoviews.core import datetime_types
 
 from .connector import Connector, SQLiteDB
 from .table import AnnotationTable
@@ -32,15 +31,15 @@ class Indicator:
     @classmethod
     def indicator_style(cls, range_style, point_style, highlighters):
         return (hv.opts.Rectangles(**dict(range_style, **highlighters)),
-                hv.opts.VSpan(**dict(range_style, **highlighters)),
-                hv.opts.HSpan(**dict(range_style, **highlighters)))
+                hv.opts.VSpans(**dict(range_style, **highlighters)),
+                hv.opts.HSpans(**dict(range_style, **highlighters)))
 
 
     @classmethod
     def region_style(cls, edit_range_style, edit_point_style):
         return (hv.opts.Rectangles(**edit_range_style),
-                hv.opts.VSpan(**edit_range_style),
-                hv.opts.HSpan(**edit_range_style))
+                hv.opts.VSpans(**edit_range_style),
+                hv.opts.HSpans(**edit_range_style))
 
     @classmethod
     def points_1d(cls, region_df, field_df, invert_axes=False):
@@ -56,22 +55,42 @@ class Indicator:
     @classmethod
     def ranges_2d(cls, region_df, field_df, invert_axes=False):
         "Vectorizes an nd-overlay of range_2d rectangles."
-        return cls._range_indicators(region_df, field_df, "2d", invert_axes, {})
+        return cls._range_indicators(region_df, field_df, "2d", invert_axes)
 
     @classmethod
-    def ranges_1d(cls, region_df, field_df, invert_axes=False, extra_params=None):
+    def ranges_1d(cls, data, region_labels, fields_labels, invert_axes=False):
         """
         Vectorizes an nd-overlay of range_1d rectangles.
 
         NOTE: Should use VSpans once available!
         """
-        if extra_params is None:
-            msg = 'Extra parameters required until vectorized HSpans/VSpans supported'
-            raise Exception(msg)
-        return cls._range_indicators(region_df, field_df, "1d", invert_axes, extra_params)
+        if data.empty:
+            # TODO: Does not work with hover if data is datetime
+            element = hv.VSpans([], vdims=[*fields_labels, data.index.name])
+        else:
+            element = hv.VSpans(data.reset_index(), kdims=region_labels, vdims=[*fields_labels, data.index.name])
+        hover = cls._build_hover_tool(data)
+
+        return element.opts(tools=[hover])
 
     @classmethod
-    def _range_indicators(cls, region_df, field_df, dimensionality, invert_axes=False, extra_params=None):
+    def _build_hover_tool(self, data):
+        tooltips, formatters= [], {}
+        for dim in data.columns:
+            if data[dim].dtype.kind == "M":
+                tooltips.append((dim, f'@{{{dim}}}{{%F}}'))
+                formatters[f'@{{{dim}}}'] = 'datetime'
+            else:
+                tooltips.append((dim, f'@{{{dim}}}'))
+        return HoverTool(tooltips=tooltips, formatters=formatters)
+
+    @classmethod
+    def _get_labels(self, data, region_labels):
+        fields_labels = [c for c in  data.columns if c not in region_labels]
+        return fields_labels, data.index.name
+
+    @classmethod
+    def _range_indicators(cls, region_df, field_df, dimensionality, invert_axes=False):
         # TODO: Clean this up VSpans/HSpans/VLines/HLines
         index_col_name = 'id' if field_df.index.name is None else field_df.index.name
 
@@ -85,12 +104,7 @@ class Indicator:
 
         # TODO: Add check for None, (None, None), or (None, None, None, None) in values?
 
-        if dimensionality=='1d':
-            coords = values[[0, 0, 1, 1]].copy()
-            coords.iloc[:, 1] = extra_params["rect_min"]
-            coords.iloc[:, 3] = extra_params["rect_max"]
-        else:
-            coords = values[[0, 2, 1, 3]] # LBRT format
+        coords = values[[0, 2, 1, 3]] # LBRT format
 
         rect_data = list(pd.concat([coords, mdata_vals, id_vals], axis=1).itertuples(index=False))
         return hv.Rectangles(rect_data, vdims=[*field_df.columns, index_col_name]) # kdims?
@@ -176,7 +190,10 @@ class AnnotatorInterface(param.Parameterized):
 
     @property
     def df(self):
-        return self.annotation_table.dataframe
+        return self.annotation_table.get_dataframe()
+
+    def get_dataframe(self, kdims):
+        return self.annotation_table.get_dataframe(kdims)
 
     def refresh(self, clear=False):
         "Method to update display state of the annotator and optionally clear stale visual state"
@@ -415,9 +432,6 @@ class AnnotatorInterface(param.Parameterized):
 
 
 class AnnotationDisplay(param.Parameterized):
-    rect_min = param.Number(default=-1000, doc="Temporary parameter until vectorized element fully supported")
-
-    rect_max = param.Number(default=1050, doc="Temporary parameter until vectorized element fully supported")
 
     kdims = param.List(default=["x"], bounds=(1,3), constant=True, doc="Dimensions of the element")
 
@@ -635,82 +649,78 @@ class AnnotationDisplay(param.Parameterized):
             layers.append(self.region_editor().opts(*region_style))
         return hv.Overlay(layers).collate()
 
-    def _build_hover_tool(self):
-        # FIXME: Not generalized yet - assuming range
-        extra_cols = [(col, '@{%s}' % col.replace(' ','_')) for col in self.annotator.fields]
-        region_tooltips = []
-        region_formatters = {}
-        for direction, kdim in zip(['x','y'], self.kdims):
-            if issubclass(self.annotator.spec[kdim]["type"], datetime_types):
-                region_tooltips.append((f'start {kdim}', f'@{direction}0{{%F}}'))
-                region_tooltips.append((f'end {kdim}', f'@{direction}1{{%F}}'))
-                region_formatters[f'@{direction}0'] = 'datetime'
-                region_formatters[f'@{direction}1'] = 'datetime'
-            else:
-                region_tooltips.append((f'start {kdim}', f'@{direction}0'))
-                region_tooltips.append((f'end {kdim}', f'@{direction}1'))
+    # def _point_indicators(self, filtered_df, dimensionality, invert_axes=False):
+    #     if dimensionality == '1d':
+    #         return Indicator.points_1d(filtered_df, None, invert_axes=invert_axes)
+    #     else:
+    #         return Indicator.points_2d(filtered_df, None, invert_axes=invert_axes)
 
-        return HoverTool(tooltips=region_tooltips+extra_cols,
-                         formatters = region_formatters)
-
-
-    def _point_indicators(self, filtered_df, dimensionality, invert_axes=False):
-        if dimensionality == '1d':
-            return Indicator.points_1d(filtered_df, None, invert_axes=invert_axes)
-        else:
-            return Indicator.points_2d(filtered_df, None, invert_axes=invert_axes)
-
-    def _range_indicators(self, filtered_df, dimensionality, invert_axes=False):
-        fields_mask = self.annotator.annotation_table._field_df.index.isin(filtered_df['_id'])
-        field_df = self.annotator.annotation_table._field_df[fields_mask]  # Currently assuming 1-to-1
-        if dimensionality == '1d':
-            extra_params = {'rect_min':self.rect_min, 'rect_max':self.rect_max} # TODO: Remove extra_params!
-            vectorized = Indicator.ranges_1d(filtered_df, field_df, invert_axes=invert_axes,
-                                             extra_params=extra_params)
-        else:
-            vectorized = Indicator.ranges_2d(filtered_df, field_df, invert_axes=invert_axes)
-        return vectorized.opts(tools=[self._build_hover_tool()])
+    # def _range_indicators(self, filtered_df, dimensionality, invert_axes=False):
+    #     # fields_mask = self.annotator.annotation_table._field_df.index.isin(filtered_df['_id'])
+    #     # field_df = self.annotator.annotation_table._field_df[fields_mask]  # Currently assuming 1-to-1
+    #     if dimensionality == '1d':
+    #         vectorized = Indicator.ranges_1d(filtered_df, self.annotator.annotation_table._field_df, invert_axes=invert_axes)
+    #     else:
+    #         vectorized = Indicator.ranges_2d(filtered_df, self.annotator.annotation_table._field_df, invert_axes=invert_axes)
+    #     return vectorized.opts(tools=[self._build_hover_tool()])
 
 
     @property
     def static_indicators(self):
-        invert_axes = False  # Not yet handled
-        if len(self.kdims) == 1:
-            dim_mask = self.annotator.annotation_table._mask1D(self.kdims)
-            points_df = self.annotator.annotation_table._filter(dim_mask, "point")
-            ranges_df = self.annotator.annotation_table._filter(dim_mask, "range")
-            if len(points_df) == 0:
-                return self._range_indicators(ranges_df, '1d', invert_axes=invert_axes)
-            elif len(ranges_df) == 0:
-                return self._point_indicators(points_df, '1d', invert_axes=invert_axes)
-            else:
-                raise NotImplementedError  # FIXME: Both in overlay
+        data = self.annotator.get_dataframe(self.kdims)
+        region_labels = [k for k in data.columns if k not in self.annotator.fields]
 
-        if len(self.kdims) > 1:
+        indicator_kwargs = {
+            "data": data,
+            "region_labels": region_labels,
+            "fields_labels": self.annotator.fields,
+            "invert_axes": False  # Not yet handled,
+        }
 
-            # FIXME: SHH, Converting new region_df format into old format
-            df_dim = self.annotator.annotation_table._collapse_region_df(columns=self.kdims)
-            if df_dim.empty:
-                ranges_df = pd.DataFrame({"_id": [], "value": []})
-            else:
-                order = [
-                    f"start[{self.kdims[0]}]",
-                    f"end[{self.kdims[0]}]",
-                    f"start[{self.kdims[1]}]",
-                    f"end[{self.kdims[1]}]"
-                ]
-                df2 = df_dim.dropna(axis=0)
-                value = tuple(df2[order].values)
+        if self.region_types == "range":
+            indicator = Indicator.ranges_1d(**indicator_kwargs)
+        elif self.region_types == "range-range":
+            ...
+            # indicator = Indicator.ranges_2d(**indicator_kwargs)
 
-                # Convert to accepted format for further processing
-                ranges_df = pd.DataFrame({"_id": df2.index, "value": value})
-            points_df = [] # self.annotator.annotation_table._filter(dim_mask, "Point")
-            if len(points_df) == 0:
-                return self._range_indicators(ranges_df, '2d', invert_axes=invert_axes)
-            elif len(ranges_df) == 0:
-                return self._point_indicators(points_df, '2d', invert_axes=invert_axes)
-            else:
-                raise NotImplementedError  # FIXME: Both in overlay
+        return indicator
+
+        # if len(self.kdims) == 1:
+        #     dim_mask = self.annotator.annotation_table._mask1D(self.kdims)
+        #     points_df = self.annotator.annotation_table._filter(dim_mask, "point")
+        #     ranges_df = self.annotator.annotation_table._filter(dim_mask, "range")
+        #     if len(points_df) == 0:
+        #         return self._range_indicators(ranges_df, '1d', invert_axes=invert_axes)
+        #     elif len(ranges_df) == 0:
+        #         return self._point_indicators(points_df, '1d', invert_axes=invert_axes)
+        #     else:
+        #         raise NotImplementedError  # FIXME: Both in overlay
+
+        # if len(self.kdims) > 1:
+
+        #     # FIXME: SHH, Converting new region_df format into old format
+        #     df_dim = self.annotator.annotation_table._collapse_region_df(columns=self.kdims)
+        #     if df_dim.empty:
+        #         ranges_df = pd.DataFrame({"_id": [], "value": []})
+        #     else:
+        #         order = [
+        #             f"start[{self.kdims[0]}]",
+        #             f"end[{self.kdims[0]}]",
+        #             f"start[{self.kdims[1]}]",
+        #             f"end[{self.kdims[1]}]"
+        #         ]
+        #         df2 = df_dim.dropna(axis=0)
+        #         value = tuple(df2[order].values)
+
+        #         # Convert to accepted format for further processing
+        #         ranges_df = pd.DataFrame({"_id": df2.index, "value": value})
+        #     points_df = [] # self.annotator.annotation_table._filter(dim_mask, "Point")
+        #     if len(points_df) == 0:
+        #         return self._range_indicators(ranges_df, '2d', invert_axes=invert_axes)
+        #     elif len(ranges_df) == 0:
+        #         return self._point_indicators(points_df, '2d', invert_axes=invert_axes)
+        #     else:
+        #         raise NotImplementedError  # FIXME: Both in overlay
 
     def selected_dim_expr(self, selected_value, non_selected_value):
         self._selected_values.append(selected_value)

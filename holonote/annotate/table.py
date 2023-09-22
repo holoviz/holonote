@@ -369,10 +369,9 @@ class AnnotationTable(param.Parameterized):
         data.columns.name = None
         return data
 
-    @property
-    def dataframe(self) -> pd.DataFrame:
+    def get_dataframe(self, kdims=None) -> pd.DataFrame:
         field_df = self._field_df
-        region_df = self._collapse_region_df()
+        region_df = self._collapse_region_df(kdims)
 
         df = pd.merge(region_df, field_df, left_index=True, right_index=True)
         df.index.name = self._field_df.index.name
