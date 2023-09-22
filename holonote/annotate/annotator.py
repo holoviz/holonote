@@ -22,30 +22,45 @@ class Indicator:
     """
 
     range_style = {'color': 'red', 'alpha': 0.4, 'apply_ranges': False}
-    point_style = {}
+    point_style = {'color': 'red', 'alpha': 0.4, 'apply_ranges': False}
     indicator_highlight = {'alpha':(0.7,0.2)}
 
     edit_range_style = {'alpha': 0.4, 'line_alpha': 1, 'line_width': 1, 'line_color': 'black'}
-    edit_point_style = {}
+    edit_point_style = {'alpha': 0.4, 'line_alpha': 1, 'line_width': 1, 'line_color': 'black'}
 
     @classmethod
     def indicator_style(cls, range_style, point_style, highlighters):
-        return (hv.opts.Rectangles(**dict(range_style, **highlighters)),
-                hv.opts.VSpans(**dict(range_style, **highlighters)),
-                hv.opts.HSpans(**dict(range_style, **highlighters)))
+        return (
+            hv.opts.Rectangles(**dict(range_style, **highlighters)),
+            hv.opts.VSpans(**dict(range_style, **highlighters)),
+            hv.opts.HSpans(**dict(range_style, **highlighters)),
+            hv.opts.VLines(**dict(range_style, **highlighters)),
+            hv.opts.HLines(**dict(range_style, **highlighters)),
+        )
 
 
     @classmethod
     def region_style(cls, edit_range_style, edit_point_style):
-        return (hv.opts.Rectangles(**edit_range_style),
-                hv.opts.VSpans(**edit_range_style),
-                hv.opts.HSpans(**edit_range_style))
+        return (
+            hv.opts.Rectangles(**edit_range_style),
+            hv.opts.VSpans(**edit_range_style),
+            hv.opts.HSpans(**edit_range_style),
+            hv.opts.VLines(**edit_range_style),
+            hv.opts.HLines(**edit_range_style),
+        )
 
     @classmethod
-    def points_1d(cls, region_df, field_df, invert_axes=False):
+    def points_1d(cls, data, region_labels, fields_labels, invert_axes=False):
         "Vectorizes point regions to VLines. Note does not support hover info"
-        return hv.VLines(list(region_df["value"]))
+        vdims = [*fields_labels, data.index.name]
+        if data.empty:
+            # TODO: Does not work with hover if data is datetime
+            element = hv.VLines([], vdims=vdims)
+        else:
+            element = hv.VLines(data.reset_index(), kdims=region_labels, vdims=vdims)
+        hover = cls._build_hover_tool(data)
 
+        return element.opts(tools=[hover])
     @classmethod
     def points_2d(cls, region_df, field_df, invert_axes=False):
         "Vectorizes point regions to VLines * HLines. Note does not support hover info"
@@ -472,7 +487,7 @@ class AnnotationDisplay(param.Parameterized):
         elif self.region_types == "range-range":
             tools.append(BoxSelectTool())
         elif self.region_types == 'point':
-            tools.append('tap')
+            tools.append(BoxSelectTool(dimensions="width"))
         return tools
 
     @classmethod
@@ -524,12 +539,17 @@ class AnnotationDisplay(param.Parameterized):
     def _filter_stream_values(self, bounds, x, y, geometry):
         if not self._editable_enabled:
             return (None, None, None, None)
-        if "range" not in self.region_types:
+        if self.region_types == "point" and bounds:
+            x = (bounds[0] + bounds[2]) / 2
+            y = None
+            bounds = (x, 0, x, 0)
+        elif "range" not in self.region_types:
             bounds = None
 
         # If selection enabled, tap stream used for selection not for creating point regions
-        if ('point' in self.region_types and self.selection_enabled) or 'point' not in self.region_types:
-            x, y = None, None
+        # if ('point' in self.region_types and self.selection_enabled) or 'point' not in self.region_types:
+        #     x, y = None, None
+
 
         return bounds, x, y, geometry
 
@@ -556,8 +576,10 @@ class AnnotationDisplay(param.Parameterized):
                 # self.annotator.set_regions will give recursion error
                 self.annotator._set_regions(**bbox)
 
+            kdims = list(self.kdims)
+            if self.region_types == "point" and x is not None:
+                self.annotator._set_regions(**{kdims[0]: x})
             if None not in [x,y]:
-                kdims = list(self.kdims)
                 if len(kdims) == 1:
                     self.annotator._set_regions(**{kdims[0]: x})
                 elif len(kdims) == 2:
@@ -628,9 +650,9 @@ class AnnotationDisplay(param.Parameterized):
 
         layers = []
         active_tools = []
-        if "range" in self.region_types:
-             active_tools += ["box_select"]
-        elif "point" in self.region_types:
+        if "range" in self.region_types or self.region_types == "point":
+            active_tools += ["box_select"]
+        elif self.region_types == "point_point":
             active_tools += ["tap"]
         layers.append(self._element.opts(tools=self.edit_tools, active_tools=active_tools))
 
@@ -672,6 +694,8 @@ class AnnotationDisplay(param.Parameterized):
             indicator = Indicator.ranges_1d(**indicator_kwargs)
         elif self.region_types == "range-range":
             indicator = Indicator.ranges_2d(**indicator_kwargs)
+        elif self.region_types == "point":
+            indicator = Indicator.points_1d(**indicator_kwargs)
 
         return indicator
 
@@ -731,12 +755,15 @@ class AnnotationDisplay(param.Parameterized):
         if not region:
             return
 
-        if len(kdims) == 1:
+        if self.region_types == "range":
             value = region[kdims[0]]
             bounds = (value[0], 0, value[1], 1)
-        elif len(kdims) == 2:
+        elif self.region_types == "range_range":
             bounds = (region[kdims[0]][0], region[kdims[1]][0],
                       region[kdims[0]][1], region[kdims[1]][1])
+        elif self.region_types == "point":
+            value = region[kdims[0]]
+            bounds = (value, 0, value, 1)
         else:
             bounds = False
 
