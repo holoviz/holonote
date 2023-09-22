@@ -53,9 +53,20 @@ class Indicator:
               * hv.HLines([el[1] for el in region_df["value"]]))
 
     @classmethod
-    def ranges_2d(cls, region_df, field_df, invert_axes=False):
+    def ranges_2d(cls, data, region_labels, fields_labels, invert_axes=False):
         "Vectorizes an nd-overlay of range_2d rectangles."
-        return cls._range_indicators(region_df, field_df, "2d", invert_axes)
+        vdims = [*fields_labels, data.index.name]
+        if data.empty:
+            # TODO: Does not work with hover if data is datetime
+            element = hv.Rectangles([], vdims=vdims)
+            hover_map = {}
+        else:
+            kdims = [region_labels[i] for i in (0, 2, 1, 3)]  # LBRT format
+            element = hv.Rectangles(data.reset_index(), kdims=kdims, vdims=vdims)
+            hover_map = dict(zip(region_labels, ("left", "right", "bottom", "top")))
+        hover = cls._build_hover_tool(data, hover_map)
+
+        return element.opts(tools=[hover])
 
     @classmethod
     def ranges_1d(cls, data, region_labels, fields_labels, invert_axes=False):
@@ -64,50 +75,30 @@ class Indicator:
 
         NOTE: Should use VSpans once available!
         """
+        vdims = [*fields_labels, data.index.name]
         if data.empty:
             # TODO: Does not work with hover if data is datetime
-            element = hv.VSpans([], vdims=[*fields_labels, data.index.name])
+            element = hv.VSpans([], vdims=vdims)
         else:
-            element = hv.VSpans(data.reset_index(), kdims=region_labels, vdims=[*fields_labels, data.index.name])
+            element = hv.VSpans(data.reset_index(), kdims=region_labels, vdims=vdims)
         hover = cls._build_hover_tool(data)
 
         return element.opts(tools=[hover])
 
     @classmethod
-    def _build_hover_tool(self, data):
+    def _build_hover_tool(self, data, mapping=None):
+        if mapping is None:
+            mapping = {}
         tooltips, formatters= [], {}
         for dim in data.columns:
+            dim_name = mapping.get(dim, dim)
             if data[dim].dtype.kind == "M":
-                tooltips.append((dim, f'@{{{dim}}}{{%F}}'))
+                tooltips.append((dim, f'@{{{dim_name}}}{{%F}}'))
+                # TODO: Investigate for Rectangles if formatter key should be dim or dim_name
                 formatters[f'@{{{dim}}}'] = 'datetime'
             else:
-                tooltips.append((dim, f'@{{{dim}}}'))
+                tooltips.append((dim, f'@{{{dim_name}}}'))
         return HoverTool(tooltips=tooltips, formatters=formatters)
-
-    @classmethod
-    def _get_labels(self, data, region_labels):
-        fields_labels = [c for c in  data.columns if c not in region_labels]
-        return fields_labels, data.index.name
-
-    @classmethod
-    def _range_indicators(cls, region_df, field_df, dimensionality, invert_axes=False):
-        # TODO: Clean this up VSpans/HSpans/VLines/HLines
-        index_col_name = 'id' if field_df.index.name is None else field_df.index.name
-
-        if region_df.empty:
-            return hv.Rectangles([], vdims=[*field_df.columns, index_col_name])
-
-        data = region_df.merge(field_df, left_on="_id", right_index=True)
-        values = pd.DataFrame.from_records(data["value"])
-        id_vals = data["_id"].rename({"_id": index_col_name})
-        mdata_vals = data[field_df.columns]
-
-        # TODO: Add check for None, (None, None), or (None, None, None, None) in values?
-
-        coords = values[[0, 2, 1, 3]] # LBRT format
-
-        rect_data = list(pd.concat([coords, mdata_vals, id_vals], axis=1).itertuples(index=False))
-        return hv.Rectangles(rect_data, vdims=[*field_df.columns, index_col_name]) # kdims?
 
 
 class AnnotatorInterface(param.Parameterized):
@@ -680,8 +671,7 @@ class AnnotationDisplay(param.Parameterized):
         if self.region_types == "range":
             indicator = Indicator.ranges_1d(**indicator_kwargs)
         elif self.region_types == "range-range":
-            ...
-            # indicator = Indicator.ranges_2d(**indicator_kwargs)
+            indicator = Indicator.ranges_2d(**indicator_kwargs)
 
         return indicator
 
