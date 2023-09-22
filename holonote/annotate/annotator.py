@@ -237,12 +237,36 @@ class AnnotatorInterface(param.Parameterized):
                 ids &= set(dim[mask]._id)
         return list(ids)
 
+    def _get_point_indices_by_position(self, **inputs) -> list[Any]:
+        """
+        Simple algorithm for finding the closest point
+        annotation to the given position.
+        """
+
+        df = self.annotation_table._region_df
+        points = df[df['region']=='point']
+        if points.empty:
+            return []
+
+        for i, (k, v) in enumerate(inputs.items()):
+            dim = points[points["dim"] == k]
+            nearest = (dim["value"] - v).abs().argmin()
+            if i == 0:
+                ids = {dim.iloc[nearest]._id}
+            else:
+                ids &= {dim.iloc[nearest]._id}
+        return list(ids)
+
     def get_indices_by_position(self, **inputs) -> list[Any]:
         "Return primary key values matching given position in data space"
         # Lots TODO! 2 Dimensions, different annotation types etc.
-        range_matches = self._get_range_indices_by_position(**inputs)
-        event_matches = [] # TODO: Needs hit testing or similar for point events
-        return range_matches + event_matches
+        if "range" in self.region_types:
+            return self._get_range_indices_by_position(**inputs)
+        if self.region_types == "point":
+            return self._get_point_indices_by_position(**inputs)
+        else:
+            msg = f"{self.region_types} not implemented"
+            raise NotImplementedError(msg)
 
     @property
     def region(self):
