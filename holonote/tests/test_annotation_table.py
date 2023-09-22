@@ -29,7 +29,7 @@ def test_table_single_kdim() -> None:
     }
     expected = pd.DataFrame(d)
     expected.index.name = "id"
-    pd.testing.assert_frame_equal(table.dataframe, expected)
+    pd.testing.assert_frame_equal(table.get_dataframe(), expected)
 
 
 def test_table_multiple_kdim() -> None:
@@ -62,7 +62,7 @@ def test_table_multiple_kdim() -> None:
     }
     expected = pd.DataFrame(d)
     expected.index.name = "id"
-    pd.testing.assert_frame_equal(table.dataframe, expected)
+    pd.testing.assert_frame_equal(table.get_dataframe(), expected)
 
 
 def test_table_multiple_kdim_and_annotations() -> None:
@@ -97,4 +97,4 @@ def test_table_multiple_kdim_and_annotations() -> None:
     }
     expected = pd.DataFrame(d)
     expected.index.name = "id"
-    pd.testing.assert_frame_equal(table.dataframe, expected)
+    pd.testing.assert_frame_equal(table.get_dataframe(), expected)

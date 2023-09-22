@@ -1,9 +1,11 @@
 import numpy as np
 import pandas as pd
+import pytest
 
 from holonote.annotate.annotator import Indicator
 
 
+@pytest.mark.skip(reason="New implementation already have combined region_df and field_df")
 def test_range2d_id_matches() -> None:
     value = np.arange(8).reshape(2, 4)
     region_df = pd.DataFrame({"value": list(value), "_id": ["A", "B"]})
@@ -24,6 +26,7 @@ def test_range2d_id_matches() -> None:
     pd.testing.assert_frame_equal(output, expected)
 
 
+@pytest.mark.skip(reason="New implementation already have combined region_df and field_df")
 def test_range1d_id_matches() -> None:
     value = np.arange(4).reshape(2, 2)
     region_df = pd.DataFrame({"value": list(value), "_id": ["A", "B"]})
