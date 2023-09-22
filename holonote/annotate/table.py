@@ -411,6 +411,7 @@ class AnnotationTable(param.Parameterized):
 
         # Load region dataframe
         if df.empty:
+            # should use spec for extra columns and dtype of them
             self._region_df = pd.DataFrame(columns=self.columns)
             return
 
@@ -422,12 +423,17 @@ class AnnotationTable(param.Parameterized):
             else:
                 value = df[f"{region}_{kdim}"]
 
-            d = {"region": region, "dim": kdim, "value": value, "_id": list(df.index)}
-            data.append(pd.DataFrame(d))
+            subdata = pd.DataFrame(
+                {"region": region, "dim": kdim, "value": value, "_id": list(df.index)}
+            )
+            if region == "range":
+                empty_mask = subdata["value"] == (None, None)
+            else:
+                empty_mask = subdata["value"].isnull()
 
-        rdf = pd.concat(data, ignore_index=True)
-        empty_mask = (rdf.value == (None, None)) | rdf.value.isnull()
-        self._region_df = rdf[~empty_mask].copy()
+            data.append(subdata[~empty_mask])
+
+        self._region_df = pd.concat(data, ignore_index=True)
 
         self._update_index()
         self.clear_edits()
