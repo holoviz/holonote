@@ -373,7 +373,7 @@ class AnnotationTable(param.Parameterized):
         field_df = self._field_df
         region_df = self._collapse_region_df(kdims)
 
-        df = pd.merge(region_df, field_df, left_index=True, right_index=True)
+        df = region_df.merge(field_df, left_index=True, right_index=True, how="left")
         df.index.name = self._field_df.index.name
         df = df.reindex(field_df.index)
         return df
