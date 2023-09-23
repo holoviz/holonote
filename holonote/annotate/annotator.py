@@ -782,7 +782,7 @@ class AnnotationDisplay(param.Parameterized):
         if self.region_types == "range":
             value = region[kdims[0]]
             bounds = (value[0], 0, value[1], 1)
-        elif self.region_types == "range_range":
+        elif self.region_types == "range-range":
             bounds = (region[kdims[0]][0], region[kdims[1]][0],
                       region[kdims[0]][1], region[kdims[1]][1])
         elif self.region_types == "point":

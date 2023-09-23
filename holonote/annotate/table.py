@@ -411,7 +411,7 @@ class AnnotationTable(param.Parameterized):
 
         # Load region dataframe
         if df.empty:
-            # should use spec for extra columns and dtype of them
+            # TODO: should use spec for extra columns and dtype of them
             self._region_df = pd.DataFrame(columns=self.columns)
             return
 
