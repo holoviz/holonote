@@ -12,7 +12,7 @@ class SpecItem(TypedDict):
     The region specification is either "range", "point", or "geometry".
     """
     type: Callable
-    region: Literal["range"] | Literal["point"] | Literal["geometry"]
+    region: Literal["range", "point", "geometry"]
 
 
 SpecDict = dict[str, SpecItem]

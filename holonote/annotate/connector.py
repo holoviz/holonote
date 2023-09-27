@@ -169,6 +169,7 @@ class Connector(param.Parameterized):
         np.dtype('datetime64[ns]'): 'TIMESTAMP',
         np.dtype('<M8'):'TIMESTAMP',
         np.float64: 'REAL',
+        np.int64: 'INTEGER',
         }
 
     @classmethod

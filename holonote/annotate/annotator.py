@@ -26,7 +26,7 @@ class Indicator:
     indicator_highlight = {'alpha':(0.7,0.2)}
 
     edit_range_style = {'alpha': 0.4, 'line_alpha': 1, 'line_width': 1, 'line_color': 'black'}
-    edit_point_style = {'alpha': 0.4, 'line_alpha': 1, 'line_width': 1, 'line_color': 'black'}
+    edit_point_style = {'alpha': 0.4, 'line_alpha': 1, 'line_color': 'black'}
 
     @classmethod
     def indicator_style(cls, range_style, point_style, highlighters):
@@ -98,7 +98,7 @@ class Indicator:
         return element.opts(tools=[hover])
 
     @classmethod
-    def _build_hover_tool(self, data, mapping=None):
+    def _build_hover_tool(self, data, mapping=None) -> HoverTool:
         if mapping is None:
             mapping = {}
         tooltips, formatters= [], {}
