@@ -29,7 +29,7 @@ def test_table_single_kdim() -> None:
     }
     expected = pd.DataFrame(d)
     expected.index.name = "id"
-    pd.testing.assert_frame_equal(table.get_dataframe(), expected)
+    pd.testing.assert_frame_equal(table.get_dataframe(spec=spec), expected)
 
 
 def test_table_multiple_kdim() -> None:
@@ -57,12 +57,12 @@ def test_table_multiple_kdim() -> None:
     d = {
         "start[TIME]": {100: start},
         "end[TIME]": {100: end},
-        "point[x]": {100: 1},
+        "point[x]": {100: 1.},
         "test_description": {100: "A test"},
     }
     expected = pd.DataFrame(d)
     expected.index.name = "id"
-    pd.testing.assert_frame_equal(table.get_dataframe(), expected)
+    pd.testing.assert_frame_equal(table.get_dataframe(spec=spec), expected)
 
 
 def test_table_multiple_kdim_and_annotations() -> None:
@@ -92,9 +92,9 @@ def test_table_multiple_kdim_and_annotations() -> None:
     d = {
         "start[TIME]": {100: start, 101: pd.NaT},
         "end[TIME]": {100: end, 101: pd.NaT},
-        "point[x]": {100: 1, 101: 2},
+        "point[x]": {100: 1., 101: 2.},
         "test_description": {100: "101", 101: "102"},
     }
     expected = pd.DataFrame(d)
     expected.index.name = "id"
-    pd.testing.assert_frame_equal(table.get_dataframe(), expected)
+    pd.testing.assert_frame_equal(table.get_dataframe(spec=spec), expected)
