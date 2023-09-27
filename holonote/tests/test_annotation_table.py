@@ -98,3 +98,62 @@ def test_table_multiple_kdim_and_annotations() -> None:
     expected = pd.DataFrame(d)
     expected.index.name = "id"
     pd.testing.assert_frame_equal(table.get_dataframe(spec=spec), expected)
+
+
+def test_only_adding_one_dim_with_multiple_dimensions() -> None:
+    spec = {
+        "TIME": {"type": np.datetime64, "region": "range"},
+        "x": {"type": float, "region": "point"},
+    }
+    table = AnnotationTable()
+    table.load(primary_key_name="id", fields=["test_description"])
+
+    regions = {"x": 1}
+    table.add_annotation(regions, spec=spec, id=100, test_description="101")
+    regions = {"x": 2}
+    table.add_annotation(regions, spec=spec, id=101, test_description="102")
+
+    d = {
+        "region": {0: "point",  1: "point"},
+        "dim": {0: "x",  1: "x"},
+        "value": {0: 1., 1: 2.},
+        "_id": {0: 100,  1: 101},
+    }
+    expected = pd.DataFrame(d).astype({"_id": object, "value": object})
+    pd.testing.assert_frame_equal(table._region_df, expected)
+
+    d = {
+        "start[TIME]": {100: pd.NaT, 101: pd.NaT},
+        "end[TIME]": {100: pd.NaT, 101: pd.NaT},
+        "point[x]": {100: 1., 101: 2.},
+        "test_description": {100: "101", 101: "102"},
+    }
+    expected = pd.DataFrame(d)
+    expected.index.name = "id"
+    pd.testing.assert_frame_equal(table.get_dataframe(spec=spec), expected)
+
+
+def test_nodata_multiple_dimension() -> None:
+    spec = {
+        "TIME": {"type": np.datetime64, "region": "range"},
+        "x": {"type": float, "region": "point"},
+    }
+    table = AnnotationTable()
+    table.load(primary_key_name="id", fields=["test_description"])
+
+    assert table._region_df.empty
+    assert tuple(table._region_df.columns) == AnnotationTable.columns
+
+    d = {
+        "start[TIME]": [pd.NaT],
+        "end[TIME]": [pd.NaT],
+        "point[x]": [0.0],
+        "test_description": [""],
+    }
+    expected = pd.DataFrame(d).drop(index=0)
+    expected.index.name = "id"
+    output = table.get_dataframe(spec=spec)
+
+    assert output.empty
+    pd.testing.assert_series_equal(output.dtypes, expected.dtypes)
+    pd.testing.assert_index_equal(output.columns, expected.columns)
