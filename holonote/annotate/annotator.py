@@ -207,52 +207,6 @@ class AnnotatorInterface(param.Parameterized):
         "Convenience property returning a single selected index (the first one) or None"
         return self.selected_indices[0] if len(self.selected_indices) > 0 else None
 
-    def _get_range_indices_by_position(self, **inputs) -> list[Any]:
-        df = self.annotation_table._region_df
-        ranges = df[df['region']=='range']
-        if ranges.empty:
-            return []
-
-        for i, (k, v) in enumerate(inputs.items()):
-            dim = ranges[ranges["dim"] == k]
-            mask = dim["value"].apply(lambda d: d[0] <= v < d[1])  # noqa: B023
-            if i == 0:
-                ids = set(dim[mask]._id)
-            else:
-                ids &= set(dim[mask]._id)
-        return list(ids)
-
-    def _get_point_indices_by_position(self, **inputs) -> list[Any]:
-        """
-        Simple algorithm for finding the closest point
-        annotation to the given position.
-        """
-
-        df = self.annotation_table._region_df
-        points = df[df['region']=='point']
-        if points.empty:
-            return []
-
-        for i, (k, v) in enumerate(inputs.items()):
-            dim = points[points["dim"] == k]
-            nearest = (dim["value"] - v).abs().argmin()
-            if i == 0:
-                ids = {dim.iloc[nearest]._id}
-            else:
-                ids &= {dim.iloc[nearest]._id}
-        return list(ids)
-
-    def get_indices_by_position(self, **inputs) -> list[Any]:
-        "Return primary key values matching given position in data space"
-        # Lots TODO! 2 Dimensions, different annotation types etc.
-        if "range" in self.region_types:
-            return self._get_range_indices_by_position(**inputs)
-        if self.region_types == "point":
-            return self._get_point_indices_by_position(**inputs)
-        else:
-            msg = f"{self.region_types} not implemented"
-            raise NotImplementedError(msg)
-
     @property
     def region(self):
         return self._region
@@ -606,15 +560,64 @@ class AnnotationDisplay(param.Parameterized):
             self._region_editor = self._make_selection_editor()
         return self._region_editor
 
+    def _get_range_indices_by_position(self, **inputs) -> list[Any]:
+        df = self.static_indicators.data
+        if df.empty:
+            return []
+
+        # Because we reset_index in Indicators
+        id_col = df.columns[0]
+
+        for i, (k, v) in enumerate(inputs.items()):
+            mask = (df[f"start[{k}]"] <= v) & (v < df[f"end[{k}]"])
+            if i == 0:
+                ids = set(df[mask][id_col])
+            else:
+                ids &= set(df[mask][id_col])
+        return list(ids)
+
+    def _get_point_indices_by_position(self, **inputs) -> list[Any]:
+        """
+        Simple algorithm for finding the closest point
+        annotation to the given position.
+        """
+
+        df = self.static_indicators.data
+        if df.empty:
+            return []
+
+        # Because we reset_index in Indicators
+        id_col = df.columns[0]
+
+        for i, (k, v) in enumerate(inputs.items()):
+            nearest = (df[f"point[{k}]"] - v).abs().argmin()
+            if i == 0:
+                ids = {df.iloc[nearest][id_col]}
+            else:
+                ids &= {df.iloc[nearest][id_col]}
+        return list(ids)
+
+    def get_indices_by_position(self, **inputs) -> list[Any]:
+        "Return primary key values matching given position in data space"
+        # Lots TODO! 2 Dimensions, different annotation types etc.
+        if "range" in self.region_types:
+            return self._get_range_indices_by_position(**inputs)
+        elif "point" in self.region_types:
+            return self._get_point_indices_by_position(**inputs)
+        else:
+            msg = f"{self.region_types} not implemented"
+            raise NotImplementedError(msg)
+
     def register_tap_selector(self, element: hv.Element) -> hv.Element:
-        def tap_selector(x,y): # Tap tool must be enabled on the element
+        def tap_selector(x,y) -> None: # Tap tool must be enabled on the element
             # Only select the first
             inputs = {str(k): v for k, v in zip(self.kdims, (x, y))}
-            indices = self.annotator.get_indices_by_position(**inputs)
+            indices = self.get_indices_by_position(**inputs)
             if indices:
                 self.annotator.select_by_index(indices[0])
             else:
                 self.annotator.select_by_index()
+
         tap_stream = hv.streams.Tap(source=element, transient=True)
         tap_stream.add_subscriber(tap_selector)
         return element
@@ -661,7 +664,7 @@ class AnnotationDisplay(param.Parameterized):
         active_tools = []
         if "range" in self.region_types or self.region_types == "point":
             active_tools += ["box_select"]
-        elif self.region_types == "point_point":
+        elif self.region_types == "point-point":
             active_tools += ["tap"]
         layers.append(self._element.opts(tools=self.edit_tools, active_tools=active_tools))
 
