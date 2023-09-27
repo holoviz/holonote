@@ -54,13 +54,10 @@ class Indicator:
     def points_1d(cls, data, region_labels, fields_labels, invert_axes=False):
         "Vectorizes point regions to VLines. Note does not support hover info"
         vdims = [*fields_labels, data.index.name]
-        if data.empty:
-            element = hv.VLines([], vdims=vdims)
-        else:
-            element = hv.VLines(data.reset_index(), kdims=region_labels, vdims=vdims)
+        element = hv.VLines(data.reset_index(), kdims=region_labels, vdims=vdims)
         hover = cls._build_hover_tool(data)
-
         return element.opts(tools=[hover])
+
     @classmethod
     def points_2d(cls, region_df, field_df, invert_axes=False):
         "Vectorizes point regions to VLines * HLines. Note does not support hover info"
@@ -70,16 +67,11 @@ class Indicator:
     @classmethod
     def ranges_2d(cls, data, region_labels, fields_labels, invert_axes=False):
         "Vectorizes an nd-overlay of range_2d rectangles."
+        kdims = [region_labels[i] for i in (0, 2, 1, 3)]  # LBRT format
         vdims = [*fields_labels, data.index.name]
-        if data.empty:
-            element = hv.Rectangles([], vdims=vdims)
-            hover_map = {}
-        else:
-            kdims = [region_labels[i] for i in (0, 2, 1, 3)]  # LBRT format
-            element = hv.Rectangles(data.reset_index(), kdims=kdims, vdims=vdims)
-            hover_map = dict(zip(region_labels, ("left", "right", "bottom", "top")))
-        hover = cls._build_hover_tool(data, hover_map)
-
+        element = hv.Rectangles(data.reset_index(), kdims=kdims, vdims=vdims)
+        cds_map = dict(zip(region_labels, ("left", "right", "bottom", "top")))
+        hover = cls._build_hover_tool(data, cds_map)
         return element.opts(tools=[hover])
 
     @classmethod
@@ -90,27 +82,22 @@ class Indicator:
         NOTE: Should use VSpans once available!
         """
         vdims = [*fields_labels, data.index.name]
-        if data.empty:
-            element = hv.VSpans([], vdims=vdims)
-        else:
-            element = hv.VSpans(data.reset_index(), kdims=region_labels, vdims=vdims)
+        element = hv.VSpans(data.reset_index(), kdims=region_labels, vdims=vdims)
         hover = cls._build_hover_tool(data)
-
         return element.opts(tools=[hover])
 
     @classmethod
-    def _build_hover_tool(self, data, mapping=None) -> HoverTool:
-        if mapping is None:
-            mapping = {}
+    def _build_hover_tool(self, data, cds_map=None) -> HoverTool:
+        if cds_map is None:
+            cds_map = {}
         tooltips, formatters= [], {}
         for dim in data.columns:
-            dim_name = mapping.get(dim, dim)
+            cds_name = cds_map.get(dim, dim)
             if data[dim].dtype.kind == "M":
-                tooltips.append((dim, f'@{{{dim_name}}}{{%F}}'))
-                # TODO: Investigate for Rectangles if formatter key should be dim or dim_name
-                formatters[f'@{{{dim}}}'] = 'datetime'
+                tooltips.append((dim, f'@{{{cds_name}}}{{%F}}'))
+                formatters[f'@{{{cds_name}}}'] = 'datetime'
             else:
-                tooltips.append((dim, f'@{{{dim_name}}}'))
+                tooltips.append((dim, f'@{{{cds_name}}}'))
         return HoverTool(tooltips=tooltips, formatters=formatters)
 
 
