@@ -389,19 +389,6 @@ class AnnotationTable(param.Parameterized):
         df = df.reindex(field_df.index)
         return df
 
-    # def _filter(self, dim_mask, region_type):
-    #     region_mask = self._region_df["region"] == region_type
-    #     return self._region_df[region_mask & dim_mask]
-
-    # def _mask1D(self, kdims):
-    #     return self._region_df["dim"] == str(kdims[0])
-
-    # def _mask2D(self, kdims):
-    #     dim1_name, dim2_name = str(kdims[0]), str(kdims[1])
-    #     return np.logical_and(
-    #         self._region_df["dim1"] == dim1_name, self._region_df["dim2"] == dim2_name
-    #     )
-
     def load_annotation_table(self, conn: Connector, fields: list[str], spec: SpecDict) -> None:
         """Load the AnnotationTable region and field DataFrame from a connector.
 

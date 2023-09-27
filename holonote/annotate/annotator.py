@@ -680,22 +680,6 @@ class AnnotationDisplay(param.Parameterized):
             layers.append(self.region_editor().opts(*region_style))
         return hv.Overlay(layers).collate()
 
-    # def _point_indicators(self, filtered_df, dimensionality, invert_axes=False):
-    #     if dimensionality == '1d':
-    #         return Indicator.points_1d(filtered_df, None, invert_axes=invert_axes)
-    #     else:
-    #         return Indicator.points_2d(filtered_df, None, invert_axes=invert_axes)
-
-    # def _range_indicators(self, filtered_df, dimensionality, invert_axes=False):
-    #     # fields_mask = self.annotator.annotation_table._field_df.index.isin(filtered_df['_id'])
-    #     # field_df = self.annotator.annotation_table._field_df[fields_mask]  # Currently assuming 1-to-1
-    #     if dimensionality == '1d':
-    #         vectorized = Indicator.ranges_1d(filtered_df, self.annotator.annotation_table._field_df, invert_axes=invert_axes)
-    #     else:
-    #         vectorized = Indicator.ranges_2d(filtered_df, self.annotator.annotation_table._field_df, invert_axes=invert_axes)
-    #     return vectorized.opts(tools=[self._build_hover_tool()])
-
-
     @property
     def static_indicators(self):
         data = self.annotator.get_dataframe(self.kdims)
@@ -718,43 +702,6 @@ class AnnotationDisplay(param.Parameterized):
             indicator = Indicator.points_2d(**indicator_kwargs)
 
         return indicator
-
-        # if len(self.kdims) == 1:
-        #     dim_mask = self.annotator.annotation_table._mask1D(self.kdims)
-        #     points_df = self.annotator.annotation_table._filter(dim_mask, "point")
-        #     ranges_df = self.annotator.annotation_table._filter(dim_mask, "range")
-        #     if len(points_df) == 0:
-        #         return self._range_indicators(ranges_df, '1d', invert_axes=invert_axes)
-        #     elif len(ranges_df) == 0:
-        #         return self._point_indicators(points_df, '1d', invert_axes=invert_axes)
-        #     else:
-        #         raise NotImplementedError  # FIXME: Both in overlay
-
-        # if len(self.kdims) > 1:
-
-        #     # FIXME: SHH, Converting new region_df format into old format
-        #     df_dim = self.annotator.annotation_table._collapse_region_df(columns=self.kdims)
-        #     if df_dim.empty:
-        #         ranges_df = pd.DataFrame({"_id": [], "value": []})
-        #     else:
-        #         order = [
-        #             f"start[{self.kdims[0]}]",
-        #             f"end[{self.kdims[0]}]",
-        #             f"start[{self.kdims[1]}]",
-        #             f"end[{self.kdims[1]}]"
-        #         ]
-        #         df2 = df_dim.dropna(axis=0)
-        #         value = tuple(df2[order].values)
-
-        #         # Convert to accepted format for further processing
-        #         ranges_df = pd.DataFrame({"_id": df2.index, "value": value})
-        #     points_df = [] # self.annotator.annotation_table._filter(dim_mask, "Point")
-        #     if len(points_df) == 0:
-        #         return self._range_indicators(ranges_df, '2d', invert_axes=invert_axes)
-        #     elif len(ranges_df) == 0:
-        #         return self._point_indicators(points_df, '2d', invert_axes=invert_axes)
-        #     else:
-        #         raise NotImplementedError  # FIXME: Both in overlay
 
     def selected_dim_expr(self, selected_value, non_selected_value):
         self._selected_values.append(selected_value)
