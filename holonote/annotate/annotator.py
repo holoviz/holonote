@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import weakref
-from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
 import holoviews as hv
@@ -511,7 +510,8 @@ class AnnotationDisplay(param.Parameterized):
 
         # If selection enabled, tap stream used for selection not for creating point regions
         # if ('point' in self.region_types and self.selection_enabled) or 'point' not in self.region_types:
-        #     x, y = None, None
+        if 'point' not in self.region_types:
+            x, y = None, None
 
 
         return bounds, x, y, geometry
@@ -699,7 +699,7 @@ class AnnotationDisplay(param.Parameterized):
             "data": data,
             "region_labels": region_labels,
             "fields_labels": self.annotator.fields,
-            "invert_axes": False  # Not yet handled,
+            "invert_axes": False,  # Not yet handled
         }
 
         if self.region_types == "range":
@@ -769,8 +769,6 @@ class AnnotationDisplay(param.Parameterized):
 
         if self.region_types == "range":
             value = region[kdims[0]]
-            if not isinstance(value, Iterable):
-                return
             bounds = (value[0], 0, value[1], 1)
         elif self.region_types == "range-range":
             bounds = (region[kdims[0]][0], region[kdims[1]][0],
