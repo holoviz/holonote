@@ -54,7 +54,6 @@ class Indicator:
         "Vectorizes point regions to VLines. Note does not support hover info"
         vdims = [*fields_labels, data.index.name]
         if data.empty:
-            # TODO: Does not work with hover if data is datetime
             element = hv.VLines([], vdims=vdims)
         else:
             element = hv.VLines(data.reset_index(), kdims=region_labels, vdims=vdims)
@@ -72,7 +71,6 @@ class Indicator:
         "Vectorizes an nd-overlay of range_2d rectangles."
         vdims = [*fields_labels, data.index.name]
         if data.empty:
-            # TODO: Does not work with hover if data is datetime
             element = hv.Rectangles([], vdims=vdims)
             hover_map = {}
         else:
@@ -92,7 +90,6 @@ class Indicator:
         """
         vdims = [*fields_labels, data.index.name]
         if data.empty:
-            # TODO: Does not work with hover if data is datetime
             element = hv.VSpans([], vdims=vdims)
         else:
             element = hv.VSpans(data.reset_index(), kdims=region_labels, vdims=vdims)
@@ -196,10 +193,10 @@ class AnnotatorInterface(param.Parameterized):
 
     @property
     def df(self):
-        return self.annotation_table.get_dataframe()
+        return self.annotation_table.get_dataframe(spec=self.spec)
 
     def get_dataframe(self, kdims):
-        return self.annotation_table.get_dataframe(kdims)
+        return self.annotation_table.get_dataframe(kdims, spec=self.spec)
 
     def refresh(self, clear=False):
         "Method to update display state of the annotator and optionally clear stale visual state"

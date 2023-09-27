@@ -341,16 +341,28 @@ class AnnotationTable(param.Parameterized):
         self._region_df = pd.concat((self._region_df, additions), ignore_index=True)
         self._update_index()
 
-    def _collapse_region_df(self, columns: list[str] | None=None) -> pd.DataFrame:
-        # TODO: Move columns filtering to the top!
+    def _collapse_region_df(self, columns: list[str] | None=None, spec: SpecDict | None = None) -> pd.DataFrame:
+        # spec is only used if region_df is empty to get the correct column and  type
+
         regions = self._region_df.groupby("dim")["region"].first()
         data = self._region_df.pivot(index="_id", columns="dim", values="value")
-
-        if data.empty:
-            return data
-
         all_columns = list(data.columns)
         dims = columns or all_columns
+
+        if data.empty and spec:
+            columns, types = [], []
+            for dim in dims:
+                region = spec[dim]["region"]
+                if region == "range":
+                    columns.extend([f"start[{dim}]", f"end[{dim}]"])
+                    types.extend([spec[dim]["type"], spec[dim]["type"]])
+                else:
+                    columns.append(f"{region}[{dim}]")
+                    types.append(spec[dim]["type"])
+            return pd.DataFrame([[t() for t in types]], columns=columns).drop(index=0)
+        elif data.empty:
+            return data
+
         for dim in dims:
             region = regions.get(dim)
             if region is None:
@@ -368,9 +380,9 @@ class AnnotationTable(param.Parameterized):
         data.columns.name = None
         return data
 
-    def get_dataframe(self, kdims=None) -> pd.DataFrame:
+    def get_dataframe(self, kdims: list[str] | None=None, spec: SpecDict | None=None) -> pd.DataFrame:
         field_df = self._field_df
-        region_df = self._collapse_region_df(kdims)
+        region_df = self._collapse_region_df(kdims, spec)
 
         df = region_df.merge(field_df, left_index=True, right_index=True, how="left")
         df.index.name = self._field_df.index.name
@@ -411,7 +423,6 @@ class AnnotationTable(param.Parameterized):
 
         # Load region dataframe
         if df.empty:
-            # TODO: should use spec for extra columns and dtype of them
             self._region_df = pd.DataFrame(columns=self.columns)
             return
 
