@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import weakref
+from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
 import holoviews as hv
@@ -778,6 +779,8 @@ class AnnotationDisplay(param.Parameterized):
 
         if self.region_types == "range":
             value = region[kdims[0]]
+            if not isinstance(value, Iterable):
+                return
             bounds = (value[0], 0, value[1], 1)
         elif self.region_types == "range-range":
             bounds = (region[kdims[0]][0], region[kdims[1]][0],
