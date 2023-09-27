@@ -58,10 +58,14 @@ class Indicator:
         return element.opts(tools=[hover])
 
     @classmethod
-    def points_2d(cls, region_df, field_df, invert_axes=False):
+    def points_2d(cls, data, region_labels, fields_labels, invert_axes=False):
         "Vectorizes point regions to VLines * HLines. Note does not support hover info"
-        return (hv.VLines([el[0] for el in region_df["value"]])
-              * hv.HLines([el[1] for el in region_df["value"]]))
+        msg = '2D point regions not supported yet'
+        raise NotImplementedError(msg)
+        vdims = [*fields_labels, data.index.name]
+        element = hv.Points(data.reset_index(), kdims=region_labels, vdims=vdims)
+        hover = cls._build_hover_tool(data)
+        return element.opts(tools=[hover])
 
     @classmethod
     def ranges_2d(cls, data, region_labels, fields_labels, invert_axes=False):
@@ -450,6 +454,8 @@ class AnnotationDisplay(param.Parameterized):
             tools.append(BoxSelectTool())
         elif self.region_types == 'point':
             tools.append(BoxSelectTool(dimensions="width"))
+        elif self.region_types == 'point-point':
+            tools.append("tap")
         return tools
 
     @classmethod
@@ -708,6 +714,8 @@ class AnnotationDisplay(param.Parameterized):
             indicator = Indicator.ranges_2d(**indicator_kwargs)
         elif self.region_types == "point":
             indicator = Indicator.points_1d(**indicator_kwargs)
+        elif self.region_types == "point-point":
+            indicator = Indicator.points_2d(**indicator_kwargs)
 
         return indicator
 
