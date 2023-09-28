@@ -3,7 +3,6 @@ from __future__ import annotations
 import weakref
 from typing import TYPE_CHECKING, Any
 
-import numpy as np
 import pandas as pd
 import param
 
@@ -342,55 +341,61 @@ class AnnotationTable(param.Parameterized):
         self._region_df = pd.concat((self._region_df, additions), ignore_index=True)
         self._update_index()
 
-    def _collapse_region_df(self, columns: list[str] | None=None) -> pd.DataFrame:
-        # TODO: Move columns filtering to the top!
-        regions = self._region_df.groupby("dim")["region"].first()
-        data = self._region_df.pivot(index="_id", columns="dim", values="value")
+    def _empty_expanded_region_df(self, *, spec: SpecDict, dims: list[str] | None) -> pd.DataFrame:
+        invalid_dims = set(dims) - spec.keys()
+        if invalid_dims:
+            invalid_dims_str = ", ".join([f"{dim!r}" for dim in sorted(invalid_dims)])
+            msg = f"Dimension(s) {invalid_dims_str} not in the spec"
+            raise ValueError(msg)
 
-        if data.empty:
-            return data
-
-        all_columns = list(data.columns)
-        dims = columns or all_columns
+        columns, types = [], []
         for dim in dims:
-            region = regions.get(dim)
-            if region is None:
+            region = spec[dim]["region"]
+            dtype = spec[dim]["type"]()
+            if region == "range":
+                columns.extend([f"start[{dim}]", f"end[{dim}]"])
+                types.extend([dtype, dtype])
+            else:
+                columns.append(f"{region}[{dim}]")
+                types.append(dtype)
+
+        return pd.DataFrame([types], columns=columns).drop(index=0)
+
+    def _expand_region_df(self, *, spec: SpecDict, dims: list[str] | None=None) -> pd.DataFrame:
+        data = self._region_df.pivot(index="_id", columns="dim", values="value")
+        dims = list(dims or spec)
+
+        expanded = self._empty_expanded_region_df(spec=spec, dims=dims)
+        if data.empty:
+            return expanded
+
+        set_index = True
+        for dim in dims:
+            region = spec[dim]["region"]
+            if dim not in data.columns:
                 continue
             elif region == "range":
                 na_mask = data[dim].isnull()
                 data.loc[na_mask, dim] = data.loc[na_mask, dim].apply(lambda *x: (None, None))
-                data[[f"start[{dim}]", f"end[{dim}]"]] = list(data[dim])
+                expanded[[f"start[{dim}]", f"end[{dim}]"]] = list(data[dim])
             else:
-                data[f"{region}[{dim}]"] = data[dim].infer_objects()
+                dtype = expanded.dtypes[f"{region}[{dim}]"]
+                expanded[f"{region}[{dim}]"] = data[dim].astype(dtype)
 
-        # Clean up
-        data = data.drop(all_columns, axis=1)
-        data.index.name = None
-        data.columns.name = None
-        return data
+            if set_index:
+                expanded.index = data.index
+                set_index = False
 
-    @property
-    def dataframe(self) -> pd.DataFrame:
+        return expanded
+
+    def get_dataframe(self, *, spec: SpecDict | None=None, dims: list[str] | None=None) -> pd.DataFrame:
         field_df = self._field_df
-        region_df = self._collapse_region_df()
+        region_df = self._expand_region_df(spec=spec, dims=dims)
 
-        df = pd.merge(region_df, field_df, left_index=True, right_index=True)
+        df = region_df.merge(field_df, left_index=True, right_index=True, how="left")
         df.index.name = self._field_df.index.name
         df = df.reindex(field_df.index)
         return df
-
-    def _filter(self, dim_mask, region_type):
-        region_mask = self._region_df["region"] == region_type
-        return self._region_df[region_mask & dim_mask]
-
-    def _mask1D(self, kdims):
-        return self._region_df["dim"] == str(kdims[0])
-
-    def _mask2D(self, kdims):
-        dim1_name, dim2_name = str(kdims[0]), str(kdims[1])
-        return np.logical_and(
-            self._region_df["dim1"] == dim1_name, self._region_df["dim2"] == dim2_name
-        )
 
     def load_annotation_table(self, conn: Connector, fields: list[str], spec: SpecDict) -> None:
         """Load the AnnotationTable region and field DataFrame from a connector.
@@ -424,12 +429,17 @@ class AnnotationTable(param.Parameterized):
             else:
                 value = df[f"{region}_{kdim}"]
 
-            d = {"region": region, "dim": kdim, "value": value, "_id": list(df.index)}
-            data.append(pd.DataFrame(d))
+            subdata = pd.DataFrame(
+                {"region": region, "dim": kdim, "value": value, "_id": list(df.index)}
+            )
+            if region == "range":
+                empty_mask = subdata["value"] == (None, None)
+            else:
+                empty_mask = subdata["value"].isnull()
 
-        rdf = pd.concat(data, ignore_index=True)
-        empty_mask = (rdf.value == (None, None)) | rdf.value.isnull()
-        self._region_df = rdf[~empty_mask].copy()
+            data.append(subdata[~empty_mask])
+
+        self._region_df = pd.concat(data, ignore_index=True)
 
         self._update_index()
         self.clear_edits()
