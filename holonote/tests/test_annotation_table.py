@@ -226,3 +226,22 @@ def test_nodata_multiple_dimension_with_selected_dims(dim) -> None:
     assert output.empty
     pd.testing.assert_series_equal(output.dtypes, expected.dtypes)
     pd.testing.assert_index_equal(output.columns, expected.columns)
+
+
+def test_table_multiple_kdim_with_wrong_dims() -> None:
+    spec = {
+        "TIME": {"type": np.datetime64, "region": "range"},
+        "x": {"type": float, "region": "point"},
+    }
+    table = _init_table(spec)
+
+    msg = r"Dimension\(s\) 'bad1' not in the spec"
+    with pytest.raises(ValueError, match=msg):
+        table.get_dataframe(spec=spec, dims=["bad1"])
+
+    with pytest.raises(ValueError, match=msg):
+        table.get_dataframe(spec=spec, dims=["TIME", "bad1"])
+
+    msg = r"Dimension\(s\) 'bad1', 'bad2' not in the spec"
+    with pytest.raises(ValueError, match=msg):
+        table.get_dataframe(spec=spec, dims=["bad1", "bad2"])

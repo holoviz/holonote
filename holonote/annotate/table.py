@@ -342,6 +342,12 @@ class AnnotationTable(param.Parameterized):
         self._update_index()
 
     def _empty_expanded_region_df(self, *, spec: SpecDict, dims: list[str] | None) -> pd.DataFrame:
+        invalid_dims = set(dims) - spec.keys()
+        if invalid_dims:
+            invalid_dims_str = ", ".join([f"{dim!r}" for dim in invalid_dims])
+            msg = f"Dimension(s) {invalid_dims_str} not in the spec"
+            raise ValueError(msg)
+
         columns, types = [], []
         for dim in dims:
             region = spec[dim]["region"]
