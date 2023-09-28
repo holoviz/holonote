@@ -183,11 +183,11 @@ class AnnotatorInterface(param.Parameterized):
         self.annotation_table.load(self.connector, fields=self.connector.fields, spec=self.spec)
 
     @property
-    def df(self):
+    def df(self) -> pd.DataFrame:
         return self.annotation_table.get_dataframe(spec=self.spec)
 
-    def get_dataframe(self, kdims):
-        return self.annotation_table.get_dataframe(kdims, spec=self.spec)
+    def get_dataframe(self, dims) -> pd.DataFrame:
+        return self.annotation_table.get_dataframe(spec=self.spec, dims=dims)
 
     def refresh(self, clear=False):
         "Method to update display state of the annotator and optionally clear stale visual state"
@@ -605,7 +605,6 @@ class AnnotationDisplay(param.Parameterized):
 
     def get_indices_by_position(self, **inputs) -> list[Any]:
         "Return primary key values matching given position in data space"
-        # Lots TODO! 2 Dimensions, different annotation types etc.
         if "range" in self.region_types:
             return self._get_range_indices_by_position(**inputs)
         elif "point" in self.region_types:
@@ -682,7 +681,7 @@ class AnnotationDisplay(param.Parameterized):
 
     @property
     def static_indicators(self):
-        data = self.annotator.get_dataframe(self.kdims)
+        data = self.annotator.get_dataframe(dims=self.kdims)
         region_labels = [k for k in data.columns if k not in self.annotator.fields]
 
         indicator_kwargs = {

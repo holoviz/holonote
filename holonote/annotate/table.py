@@ -355,9 +355,9 @@ class AnnotationTable(param.Parameterized):
 
         return pd.DataFrame([types], columns=columns).drop(index=0)
 
-    def _expand_region_df(self, *, spec: SpecDict, columns: list[str] | None=None) -> pd.DataFrame:
+    def _expand_region_df(self, *, spec: SpecDict, dims: list[str] | None=None) -> pd.DataFrame:
         data = self._region_df.pivot(index="_id", columns="dim", values="value")
-        dims = list(columns or spec)
+        dims = list(dims or spec)
 
         expanded = self._empty_expanded_region_df(spec=spec, dims=dims)
         if data.empty:
@@ -382,9 +382,9 @@ class AnnotationTable(param.Parameterized):
 
         return expanded
 
-    def get_dataframe(self, kdims: list[str] | None=None, spec: SpecDict | None=None) -> pd.DataFrame:
+    def get_dataframe(self, *, spec: SpecDict | None=None, dims: list[str] | None=None) -> pd.DataFrame:
         field_df = self._field_df
-        region_df = self._expand_region_df(spec=spec, columns=kdims)
+        region_df = self._expand_region_df(spec=spec, dims=dims)
 
         df = region_df.merge(field_df, left_index=True, right_index=True, how="left")
         df.index.name = self._field_df.index.name
