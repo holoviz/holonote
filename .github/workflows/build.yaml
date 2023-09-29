@@ -23,17 +23,20 @@ jobs:
       run: hatch publish --user __token__ --auth ${{ secrets.pypi_password }}
   conda-build:
     runs-on: ubuntu-latest
-    needs: [build]
     defaults:
       run:
         shell: bash -el {0}
     steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
     - uses: conda-incubator/setup-miniconda@v2
       with:
         python-version: "3.10"
-    - name: Install conda-build
+        channels: pyviz/label/dev,conda-forge
+    - name: Install conda-build and hatch
       run: |
-        conda install -y conda-build
-    - name: Create conda package
+        conda install -y conda-build hatch
+    - name: Build conda package
       run: |
-        bash scripts/conda-build.sh
+        bash ./scripts/build_conda.sh
