@@ -44,7 +44,7 @@ jobs:
         conda install -y conda-build hatch anaconda-client
     - name: Build conda package
       run: |
-        bash scripts/build_conda.sh
+        hatch run conda:build
     - name: Publish conda dev
       if: (github.event_name == 'release' && github.event.action == 'published' && (contains(steps.vars.outputs.tag, 'a') || contains(steps.vars.outputs.tag, 'b') || contains(steps.vars.outputs.tag, 'rc')))
       run: |

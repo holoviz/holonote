@@ -22,6 +22,10 @@ dependencies = ["holoviews >=1.18.0a1", "pandas <2.1"]
 version.source = "vcs"
 build.hooks.vcs.version-file = "holonote/_version.py"
 
+[tool.hatch.envs.conda]
+detached = true
+scripts.build = "bash scripts/build_conda.sh"
+
 [tool.hatch.envs.test]
 dependencies = ["pytest"]
 scripts.run = "python -m pytest holonote/tests"
