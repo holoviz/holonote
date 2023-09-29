@@ -240,106 +240,11 @@ class AnnotationTable(param.Parameterized):
                             'fields' : list(fields),
                             'region_fields' : []})
 
-    # Methods to map into holoviews
-
-    def _validate_index_to_fields(self, series):
-        if series.index.name !=  self._field_df.index.name:
-            msg = f"Index name {series.index.name} does not match fields index name {self._field_df.index.name}"
-            raise ValueError(msg)
-        if series.index.dtype != self._field_df.index.dtype:
-            msg = "Index dtype does not match fields index dtype"
-            raise ValueError(msg)
-
-    def _assert_indices_match(self, *series):
-        if all(s.index is series[0].index for s in series):
-            pass
-        else:
-            index_names = [s.index.name for s in series]
-            if not all(name == index_names[0] for name in index_names):
-                msg = f"Index names do not match: {index_names}"
-                raise ValueError(msg)
-            # TODO: Match dtypes
-            match_values = all(all(s.index == series[0].index) for s in series)
-            if not match_values:
-                msg = "Indices do not match"
-                raise ValueError(msg)
-
-        # for s in series:
-        #     self._validate_index_to_fields(s)
-
-
     def define_fields(self, fields_df, index_mapping):
         # Need a staging area to hold everything till initialized
         self._index_mapping.update(index_mapping)  # Rename _field_df
         self._field_df = pd.concat([self._field_df, fields_df])
         self._edits.append({'operation':'save', 'ids':list(fields_df.index)})
-
-    def define_points(self, dims, posx, posy=None):
-        """
-        Points in 1- or 2-dimensional space.
-
-        Both posx and posy expect a Series object with an index
-        corresponding to the fields_df supplied in the constructor (if
-        it was specified).
-        """
-        if isinstance(dims, str):
-            dims = (dims,)
-        if posy is None and len(dims)==2:
-            msg = "Two dimensions declared but data for only one specified"
-            raise ValueError(msg)
-        if posy is not None and len(dims)==1:
-            msg = "Only one dimensions declared but data for more than one specified."
-            raise ValueError(msg)
-
-        if len(dims)==2:
-            self._assert_indices_match(posx, posy)
-
-        mismatches = [el for el in posx.index if self._index_mapping.get(el,el)
-                      not in self._field_df.index]
-        if any(mismatches):
-            msg = f"Keys {mismatches} do not match any fields entries"
-            raise KeyError(msg)
-
-        dim2 = None if len(dims)==1 else dims[1]
-        value = zip(posx, [None] * len(posx)) if len(dims)==1 else zip(posx, posy)
-        additions = pd.DataFrame({"region_type":'Point',
-                                  "dim1":dims[0],
-                                  "dim2":dim2,
-                                  "value":value,
-                                  "_id":[self._index_mapping[ind] for ind in posx.index]})
-        self._region_df = pd.concat((self._region_df, additions), ignore_index=True)
-
-    def define_ranges(self, dims, startx, endx, starty=None, endy=None):
-        if isinstance(dims, str):
-            dims = (dims,)
-        if len(dims)==2 and any(el is None for el in [starty, endy]):
-            msg = "Two dimensions declared but insufficient data specified"
-            raise ValueError(msg)
-        if len(dims)==1 and (starty, endy) != (None, None):
-            msg = "Only one dimensions declared but data for more than one specified."
-            raise ValueError(msg)
-
-        if len(dims)==1:
-            self._assert_indices_match(startx, endx)
-        else:
-            self._assert_indices_match(startx, endx, starty, endy)
-
-        mismatches = [el for el in startx.index if self._index_mapping.get(el,el)
-                      not in self._field_df.index]
-        if any(mismatches):
-            msg = f"Keys {mismatches} do not match any fields entries"
-            raise KeyError(msg)
-
-
-        dim2 = None if len(dims)==1 else dims[1]
-        value = zip(startx, endx) if len(dims)==1 else zip(startx, endx, starty, endy)
-        additions = pd.DataFrame({"region_type":'Range',
-                                  "dim1":dims[0],
-                                  "dim2":dim2,
-                                  "value":value,
-                                  "_id":[self._index_mapping[ind] for ind in startx.index]})
-        self._region_df = pd.concat((self._region_df, additions), ignore_index=True)
-        self._update_index()
 
     def _empty_expanded_region_df(self, *, spec: SpecDict, dims: list[str] | None) -> pd.DataFrame:
         invalid_dims = set(dims) - spec.keys()

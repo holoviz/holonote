@@ -230,62 +230,6 @@ class AnnotatorInterface(param.Parameterized):
         self._region = {}
         self._last_region = {}
 
-    def set_range(self, startx, endx, starty=None, endy=None):
-        print("set_range is legacy use set_regions instead")
-        if None in [starty, endy] and ([starty, endy] != [None, None]):
-            msg = 'Both starty and endy need to be non-None'
-            raise ValueError(msg)
-
-        value = (startx, endx) if starty is None else (startx, endx, starty, endy)
-        kdims = list(self.spec)
-        if len(value) == 2:
-            if len(kdims) != 1:
-                msg = 'Only one key dimension is allowed in spec.'
-                raise ValueError(msg)
-            if (r := self.spec[kdims[0]]['region']) != 'range':
-                msg = f"Only 'range' region allowed for 'set_range', {kdims[0]!r} is {r!r}."
-                raise ValueError(msg)
-            regions = {kdims[0]: value}
-        elif len(value) == 4:
-            if len(kdims) != 2:
-                msg = 'Only two key dimensions is allowed in spec.'
-                raise ValueError(msg)
-            if (r := self.spec[kdims[0]]['region']) != 'range':
-                msg = f"Only 'range' region allowed for 'set_range', {kdims[0]!r} is {r!r}."
-                raise ValueError(msg)
-            if (r := self.spec[kdims[1]]['region']) != 'range':
-                msg = f"Only 'range' region allowed for 'set_range', {kdims[1]!r} is {r!r}."
-                raise ValueError(msg)
-            regions = {kdims[0]: (value[0], value[1]), kdims[1]: (value[2], value[3])}
-
-        self.set_regions(**regions)
-
-    def set_point(self, posx, posy=None):
-        print("set_point is legacy use set_regions instead")
-
-        kdims = list(self.spec)
-        if posy is None:
-            if len(kdims) != 1:
-                msg = 'Only one key dimension is allowed in spec.'
-                raise ValueError(msg)
-            if (r := self.spec[kdims[0]]['region']) != 'point':
-                msg = f"Only 'point' region allowed for 'set_point', {kdims[0]!r} is {r!r}."
-                raise ValueError(msg)
-            regions = {kdims[0]: posx}
-        else:
-            if len(kdims) != 2:
-                msg = 'Only two key dimensions is allowed in spec.'
-                raise ValueError(msg)
-            if (r := self.spec[kdims[0]]['region']) != 'point':
-                msg = f"Only 'point' region allowed for 'set_point', {kdims[0]!r} is {r!r}."
-                raise ValueError(msg)
-            if (r := self.spec[kdims[1]]['region']) != 'point':
-                msg = f"Only 'point' region allowed for 'set_point', {kdims[1]!r} is {r!r}."
-                raise ValueError(msg)
-            regions = {kdims[0]: posx, kdims[1]: posy}
-
-        self.set_regions(**regions)
-
     def _add_annotation(self, **fields):
         # Primary key specification is optional
         if self.connector.primary_key.field_name not in fields:
@@ -357,33 +301,6 @@ class AnnotatorInterface(param.Parameterized):
 
             self._set_regions(**regions)
             self._add_annotation(**fields)
-
-    def define_fields(self, fields_df, preserve_index=False):
-        print("define_fields is legacy use define_annotations instead")
-        if not preserve_index:
-            indices = [self.connector.primary_key(self.connector) for el in range(len(fields_df))]
-            index_mapping = dict(zip(fields_df.index, indices))
-            fields_df = fields_df.set_index(pd.Series(indices,
-                                                      name=self.connector.primary_key.field_name))
-        else:
-            index_mapping = {ind:ind for ind in fields_df.index}
-        self.annotation_table.define_fields(fields_df, index_mapping)
-
-    def define_ranges(self, startx, endx, starty=None, endy=None, dims=None):
-        print("define_ranges is legacy use define_annotations instead")
-        if dims is None:
-            msg = 'Please specify dimension annotated by defined ranges'
-            raise ValueError(msg)
-
-        self.annotation_table.define_ranges(dims, startx, endx, starty, endy)
-
-    def define_points(self, posx, posy=None, dims=None):
-        print("define_points is legacy use define_annotations instead")
-        if dims is None:
-            msg = 'Please specify dimension annotated by defined ranges'
-            raise ValueError(msg)
-        self.annotation_table.define_points(dims, posx, posy=posy)
-
 
     # Snapshotting and reverting
     @property
@@ -840,28 +757,6 @@ class Annotator(AnnotatorInterface):
                 for ind in inds:
                     d[ind] = val
         super().select_by_index(*inds)
-        self.refresh()
-
-
-    def define_fields(self, fields_df, preserve_index=False):
-        """
-        If insert_index is True, the index values are inserted as primary key values
-        """
-        super().define_fields(fields_df, preserve_index=preserve_index)
-
-    def define_ranges(self, startx, endx, starty=None, endy=None, dims=None):
-        "Define ranges using element kdims as default dimensions."
-        if dims is None:
-            dims = list(self.spec)
-        super().define_ranges(startx, endx, starty=starty, endy=endy, dims=dims)
-        self.refresh()
-
-
-    def define_points(self, posx, posy=None, dims=None):
-        "Define points using element kdims as default dimensions."
-        if dims is None:
-            dims = list(self.spec)
-        super().define_points(posx, posy=posy, dims=dims)
         self.refresh()
 
     def define_annotations(self, data: pd.DataFrame, **kwargs) -> None:
