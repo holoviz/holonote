@@ -6,5 +6,5 @@ git status
 
 hatch build --clean
 
-export VERSION="$(echo "$(ls dist/*.whl)" | cut -d- -f2)"
+export VERSION="$(hatch version)"
 conda build conda/recipe --no-test --no-anaconda-upload --no-verify

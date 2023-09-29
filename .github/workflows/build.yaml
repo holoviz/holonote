@@ -23,6 +23,8 @@ jobs:
       run: hatch publish --user __token__ --auth ${{ secrets.pypi_password }}
   conda-build:
     runs-on: ubuntu-latest
+    env:
+      CONDA_UPLOAD_TOKEN: ${{ secrets.CONDA_UPLOAD_TOKEN }}
     defaults:
       run:
         shell: bash -el {0}
@@ -36,7 +38,20 @@ jobs:
         channels: pyviz/label/dev,conda-forge
     - name: Install conda-build and hatch
       run: |
-        conda install -y conda-build hatch
+        conda install -y conda-build hatch anaconda-client
     - name: Build conda package
       run: |
-        bash ./scripts/build_conda.sh
+        bash scripts/build_conda.sh
+    - name: Publish
+      if: github.event_name == 'release' && github.event.action == 'published'
+      run: hatch publish --user __token__ --auth ${{ secrets.pypi_password }}
+    - name: conda dev upload
+      if: (github.event_name == 'release' && github.event.action == 'published' && (contains(steps.vars.outputs.tag, 'a') || contains(steps.vars.outputs.tag, 'b') || contains(steps.vars.outputs.tag, 'rc')))
+      run: |
+        FILE=$(VERSION=`hatch version` conda build --output conda/recipe)
+        anaconda --token $CONDA_UPLOAD_TOKEN upload --user pyviz --label=dev $FILE
+    - name: conda main upload
+      if: (github.event_name == 'release' && github.event.action == 'published' && !(contains(steps.vars.outputs.tag, 'a') || contains(steps.vars.outputs.tag, 'b') || contains(steps.vars.outputs.tag, 'rc')))
+      run: |
+        FILE=$(VERSION=`hatch version` conda build --output conda/recipe)
+        # anaconda --token $CONDA_UPLOAD_TOKEN upload --user pyviz --label=dev --label=main $FILE
