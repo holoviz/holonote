@@ -7,6 +7,7 @@ name = "holonote"
 readme = "README.md"
 description = "Annotate your data"
 requires-python = ">=3.9"
+license = { file = "LICENSE.txt" }
 keywords = ["annotation", "holoviews", "tools"]
 dynamic = ["version"]
 classifiers = [

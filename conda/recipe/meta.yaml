@@ -31,6 +31,6 @@ requirements:
     {% endfor %}
 
 about:
-  {# license: BSD-3-Clause #}
+  license: BSD-3-Clause
   summary: {{ data['project']['description'] }}
   description: {{ data['project']['readme'] }}
