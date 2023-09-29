@@ -17,8 +17,9 @@ classifiers = [
 ]
 dependencies = ["holoviews >=1.18.0a1", "pandas <2.1"]
 
-[tool.hatch.version]
-source = "vcs"
+[tool.hatch]
+version.source = "vcs"
+build.hooks.vcs.version-file = "holonote/_version.py"
 
 [tool.hatch.envs.test]
 dependencies = ["pytest"]
