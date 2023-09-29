@@ -6,17 +6,16 @@ build-backend = "hatchling.build"
 name = "holonote"
 readme = "README.md"
 description = "Annotate your data"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 keywords = ["annotation", "holoviews", "tools"]
 dynamic = ["version"]
 classifiers = [
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Operating System :: OS Independent",
 ]
-dependencies = ["holoviews", "pandas <2.1"]
+dependencies = ["holoviews >=1.18.0a1", "pandas <2.1"]
 
 [tool.hatch.version]
 source = "vcs"
@@ -24,7 +23,7 @@ source = "vcs"
 [tool.hatch.envs.test]
 dependencies = ["pytest"]
 scripts.run = "python -m pytest holonote/tests"
-matrix = [{ python = ["3.8", "3.9", "3.10", "3.11"] }]
+matrix = [{ python = ["3.9", "3.10", "3.11"] }]
 
 [tool.hatch.envs.fmt]
 dependencies = ["pre-commit"]
@@ -43,7 +42,7 @@ filterwarnings = [
 ]
 
 [tool.ruff]
-target-version = "py38"
+target-version = "py39"
 
 select = [
     "B",
