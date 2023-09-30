@@ -13,11 +13,6 @@ build:
   script:
      - {{ PYTHON }} -m pip install -vv holonote-{{ VERSION }}-py3-none-any.whl
 
-extra:
-  channels:
-    - pyviz/label/dev
-    - conda-forge
-
 requirements:
   host:
     - python {{ data['project']['requires-python']}}
