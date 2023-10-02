@@ -18,6 +18,13 @@ classifiers = [
 ]
 dependencies = ["holoviews >=1.18.0a1", "pandas <2.1"]
 
+[project.optional-dependencies]
+dev = [
+    "pre-commit",
+    "setuptools_scm",
+    "pytest",
+]
+
 [tool.hatch]
 version.source = "vcs"
 build.hooks.vcs.version-file = "holonote/_version.py"
@@ -32,7 +39,7 @@ scripts.run = "python -m pytest holonote/tests"
 matrix = [{ python = ["3.9", "3.10", "3.11"] }]
 
 [tool.hatch.envs.fmt]
-dependencies = ["pre-commit"]
+detached = true
 scripts.run = "pre-commit run --all"
 scripts.update = "pre-commit autoupdate"
 
