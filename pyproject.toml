@@ -7,6 +7,7 @@ name = "holonote"
 readme = "README.md"
 description = "Annotate your data"
 requires-python = ">=3.9"
+license = { file = "LICENSE.txt" }
 keywords = ["annotation", "holoviews", "tools"]
 dynamic = ["version"]
 classifiers = [
@@ -17,8 +18,20 @@ classifiers = [
 ]
 dependencies = ["holoviews >=1.18.0a1", "pandas <2.1"]
 
-[tool.hatch.version]
-source = "vcs"
+[project.optional-dependencies]
+dev = [
+    "pre-commit",
+    "setuptools_scm",
+    "pytest",
+]
+
+[tool.hatch]
+version.source = "vcs"
+build.hooks.vcs.version-file = "holonote/_version.py"
+
+[tool.hatch.envs.conda]
+detached = true
+scripts.build = "bash conda/build.sh"
 
 [tool.hatch.envs.test]
 dependencies = ["pytest"]
@@ -26,7 +39,7 @@ scripts.run = "python -m pytest holonote/tests"
 matrix = [{ python = ["3.9", "3.10", "3.11"] }]
 
 [tool.hatch.envs.fmt]
-dependencies = ["pre-commit"]
+detached = true
 scripts.run = "pre-commit run --all"
 scripts.update = "pre-commit autoupdate"
 
