@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import weakref
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
@@ -21,7 +20,7 @@ class AnnotationTable(param.Parameterized):
 
     index = param.List(default=[])
 
-    def __init__(self,  **params):
+    def __init__(self, **params):
         """
         Either specify annotation fields with filled field columns
         (via connector or dataframe) or declare the expected
@@ -37,8 +36,6 @@ class AnnotationTable(param.Parameterized):
 
         self._update_index()
         self._field_df_snapshot, self._region_df_snapshot = None, None
-
-        self._annotators = weakref.WeakValueDictionary()
 
     def load(self, connector=None, fields_df=None, primary_key_name=None, fields=None, spec=None):
         """
@@ -68,17 +65,7 @@ class AnnotationTable(param.Parameterized):
         self.clear_edits()
         self._update_index()
 
-    def register_annotator(self, annotator):
-        self._annotators[id(annotator)] = annotator
-
-
-    # FIXME: Multiple region updates
-    def update_annotation_region(self, index):
-        region = next(iter(self._annotators.values()))._region
-        if region == {}:
-            print('No new region selected. Skipping')
-            return
-
+    def update_annotation_region(self, region, index):
         value = region['value']
         mask = self._region_df[self._region_df._id == index]
         assert len(mask)==1, 'TODO: Handle multiple region updates for single index'
@@ -174,9 +161,7 @@ class AnnotationTable(param.Parameterized):
             kwargs = connector.transforms[operation](commit['kwargs'])
             getattr(connector,connector.operation_mapping[operation])(**kwargs)
 
-        for annotator in self._annotators.values():
-            annotator.annotation_table.clear_edits()
-
+        self.clear_edits()
         return commits
 
     def clear_edits(self, edit_type=None):
@@ -205,10 +190,6 @@ class AnnotationTable(param.Parameterized):
 
         self._edits.append({'operation':'insert', 'id':index_value})
         self._update_index()
-
-    # def refresh_annotators(self, clear=False):
-    #     for annotator in self._annotators.values():
-    #         annotator.refresh(clear=clear)
 
     def _add_annotation_fields(self, index_value, fields=None):
 
@@ -348,10 +329,3 @@ class AnnotationTable(param.Parameterized):
 
         self._update_index()
         self.clear_edits()
-
-    def add_schema_to_conn(self, conn: Connector) -> None:
-        field_dtypes = {col: str for col in conn.fields} # FIXME - generalize
-        all_region_types = [{v["region"] for v in an.spec.values()} for an in self._annotators.values()]
-        all_kdim_dtypes = [{k: v["type"] for k, v in an.spec.items()} for an in self._annotators.values()]
-        schema = conn.generate_schema(conn.primary_key, all_region_types, all_kdim_dtypes, field_dtypes)
-        conn.add_schema(schema)
