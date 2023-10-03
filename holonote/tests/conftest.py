@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Iterator
+import contextlib
+from collections.abc import Iterator
 
 import holoviews as hv
 import numpy as np
@@ -14,14 +15,10 @@ from holonote.annotate import Annotator, SQLiteDB, UUIDHexStringKey
 def conn_sqlite_uuid(tmp_path) -> Iterator[SQLiteDB]:
     conn = SQLiteDB(filename=str(tmp_path / "test.db"), primary_key=UUIDHexStringKey())
     yield conn
-    try:
+    with contextlib.suppress(Exception):
         conn.cursor.close()
-    except Exception:
-        pass
-    try:
+    with contextlib.suppress(Exception):
         conn.con.close()
-    except Exception:
-        pass
 
 
 @pytest.fixture()

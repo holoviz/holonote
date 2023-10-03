@@ -21,3 +21,37 @@ jobs:
     - name: Publish
       if: github.event_name == 'release' && github.event.action == 'published'
       run: hatch publish --user __token__ --auth ${{ secrets.pypi_password }}
+  conda-build:
+    runs-on: ubuntu-latest
+    env:
+      CONDA_UPLOAD_TOKEN: ${{ secrets.CONDA_UPLOAD_TOKEN }}
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    - name: Set output
+      id: vars
+      run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
+    - uses: conda-incubator/setup-miniconda@v2
+      with:
+        python-version: "3.10"
+        channels: pyviz/label/dev,conda-forge
+    - name: Install packages
+      run: |
+        conda install -y conda-build hatch anaconda-client
+    - name: Build conda package
+      run: |
+        hatch run conda:build
+    - name: Publish conda dev
+      if: (github.event_name == 'release' && github.event.action == 'published' && (contains(steps.vars.outputs.tag, 'a') || contains(steps.vars.outputs.tag, 'b') || contains(steps.vars.outputs.tag, 'rc')))
+      run: |
+        FILE="$CONDA_PREFIX/conda-bld/noarch/holonote-$(hatch version)-py_0.tar.bz2"
+        anaconda --token $CONDA_UPLOAD_TOKEN upload --user pyviz --label=dev $FILE
+    - name: Publish conda main
+      if: (github.event_name == 'release' && github.event.action == 'published' && !(contains(steps.vars.outputs.tag, 'a') || contains(steps.vars.outputs.tag, 'b') || contains(steps.vars.outputs.tag, 'rc')))
+      run: |
+        FILE="$CONDA_PREFIX/conda-bld/noarch/holonote-$(hatch version)-py_0.tar.bz2"
+        # anaconda --token $CONDA_UPLOAD_TOKEN upload --user pyviz --label=dev --label=main $FILE

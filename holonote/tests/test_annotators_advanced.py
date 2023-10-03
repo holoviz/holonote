@@ -70,21 +70,21 @@ class TestAnnotatorMultipleStringFields:
 
     def test_insertion_values(self, multiple_fields_annotator):
         start, end = np.datetime64('2022-06-06'), np.datetime64('2022-06-08')
-        multiple_fields_annotator.set_range(start, end)
+        multiple_fields_annotator.set_regions(TIME=(start, end))
         multiple_fields_annotator.add_annotation(field1='A test field', field2='Another test field')
         commits = multiple_fields_annotator.commit(return_commits=True)
         kwargs = commits[0]['kwargs']
         assert len(commits)==1, 'Only one insertion commit made'
-        assert 'uuid' in kwargs.keys(), 'Expected uuid primary key in kwargs'
+        assert 'uuid' in kwargs, 'Expected uuid primary key in kwargs'
         kwargs.pop('uuid')
-        assert kwargs == dict(field1='A test field', field2='Another test field', start_TIME=start, end_TIME=end)
+        assert kwargs == {"field1": 'A test field', "field2": 'Another test field', "start_TIME": start, "end_TIME": end}
 
 
     def test_commit_insertion(self, multiple_fields_annotator):
         start, end  = np.datetime64('2022-06-06'), np.datetime64('2022-06-08')
         field1 = 'A test field'
         field2 = 'Another test field'
-        multiple_fields_annotator.set_range(start, end)
+        multiple_fields_annotator.set_regions(TIME=(start, end))
         multiple_fields_annotator.add_annotation(field1=field1, field2=field2)
         multiple_fields_annotator.commit(return_commits=True)
 
@@ -102,9 +102,9 @@ class TestAnnotatorMultipleStringFields:
     def test_commit_update_set_range(self, multiple_fields_annotator):
         start1, end1  = np.datetime64('2022-06-06'), np.datetime64('2022-06-08')
         start2, end2  = np.datetime64('2023-06-06'), np.datetime64('2023-06-08')
-        multiple_fields_annotator.set_range(start1, end1)
+        multiple_fields_annotator.set_regions(TIME=(start1, end1))
         multiple_fields_annotator.add_annotation(field1='Field 1.1', field2='Field 1.2')
-        multiple_fields_annotator.set_range(start2, end2)
+        multiple_fields_annotator.set_regions(TIME=(start2, end2))
         multiple_fields_annotator.add_annotation(field1='Field 2.1', field2='Field 2.2')
         multiple_fields_annotator.commit(return_commits=True)
         multiple_fields_annotator.update_annotation_fields(multiple_fields_annotator.df.index[0], field1='NEW Field 1.1')
@@ -146,7 +146,7 @@ def test_reconnect(method, tmp_path):
     )
     times = pd.date_range("2022-06-09", "2022-06-13")
     for t1, t2 in zip(times[:-1], times[1:]):
-        a1.set_range(t1, t2)
+        a1.set_regions(TIME=(t1, t2))
         a1.add_annotation(description='A programmatically defined annotation')
     a1.commit(return_commits=True)
 
