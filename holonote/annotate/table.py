@@ -201,7 +201,10 @@ class AnnotationTable(param.Parameterized):
 
         new_fields = pd.DataFrame([dict(fields, **{self._field_df.index.name:index_value})])
         new_fields = new_fields.set_index(self._field_df.index.name)
-        self._field_df =   pd.concat((self._field_df, new_fields))
+        if self._field_df.empty:
+            self._field_df = new_fields
+        else:
+            self._field_df = pd.concat((self._field_df, new_fields))
 
     def delete_annotation(self, index):
         if index is None:
