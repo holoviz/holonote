@@ -42,7 +42,8 @@ jobs:
         auto-update-conda: true
     - name: Install packages
       run: |
-        conda install -y conda-build hatch anaconda-client
+        conda install -y conda-build anaconda-client
+        pipx install hatch  # not on defaults
     - name: Build conda package
       run: |
         hatch run conda:build
