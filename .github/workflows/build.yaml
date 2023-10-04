@@ -39,6 +39,7 @@ jobs:
       with:
         python-version: "3.10"
         channels: pyviz/label/dev,conda-forge
+        auto-update-conda: true
     - name: Install packages
       run: |
         conda install -y conda-build hatch anaconda-client
