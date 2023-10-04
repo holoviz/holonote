@@ -245,5 +245,3 @@ def test_table_multiple_kdim_with_wrong_dims() -> None:
     msg = r"Dimension\(s\) 'bad1', 'bad2' not in the spec"
     with pytest.raises(ValueError, match=msg):
         table.get_dataframe(spec=spec, dims=["bad1", "bad2"])
-
-    assert False  # noqa
