@@ -136,17 +136,18 @@ class AnnotatorInterface(param.Parameterized):
             msg = 'The values of fields and static_fields must not overlap'
             raise ValueError(msg)
         if self.connector.fields is None:
-            self.connector.fields = self._all_fields
+            self.connector.fields = self.all_fields
         self._region = {}
         self._last_region = None
 
         self.annotation_table = AnnotationTable()
-        self.connector._create_column_schema(self.spec, self._all_fields)
+        self.connector._create_column_schema(self.spec, self.all_fields)
         self.connector._initialize(self.connector.column_schema)
         self.annotation_table.load(self.connector, fields=self.connector.fields, spec=self.spec)
 
     @property
-    def _all_fields(self):
+    def all_fields(self) -> list:
+        """Return a list of all fields including static fields"""
         return [*self.fields, *self.static_fields]
 
     @classmethod
@@ -593,7 +594,7 @@ class AnnotationDisplay(param.Parameterized):
     @property
     def static_indicators(self):
         data = self.annotator.get_dataframe(dims=self.kdims)
-        fields_labels = self.annotator._all_fields
+        fields_labels = self.annotator.all_fields
         region_labels = [k for k in data.columns if k not in fields_labels]
 
         indicator_kwargs = {
