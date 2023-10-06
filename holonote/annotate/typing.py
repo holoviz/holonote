@@ -11,6 +11,7 @@ class SpecItem(TypedDict):
 
     The region specification is either "range", "point", or "geometry".
     """
+
     type: Callable
     region: Literal["range", "point", "geometry"]
 
