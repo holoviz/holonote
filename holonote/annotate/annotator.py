@@ -618,6 +618,9 @@ class AnnotationDisplay(param.Parameterized):
             indicator = Indicator.points_1d(**indicator_kwargs)
         elif self.region_types == "point-point":
             indicator = Indicator.points_2d(**indicator_kwargs)
+        else:
+            msg = f"{self.region_types} not implemented"
+            raise NotImplementedError(msg)
 
         return indicator
 
