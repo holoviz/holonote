@@ -238,20 +238,20 @@ class Connector(param.Parameterized):
     def _incompatible_schema_check(self, expected_keys, columns, fields, region_type):
         msg_prefix = (
             "Unable to read annotations that were stored with a "
-            "schema inconsistent with the current settings: "
+            "schema inconsistent with the current settings:"
         )
         msg_suffix = f"Columns found: {columns}"
 
         missing_field_columns = set(fields) - set(columns)
         if missing_field_columns:
-            raise Exception(msg_prefix + f'Missing field columns {missing_field_columns}. ' + msg_suffix)
+            msg = f"{msg_prefix} Missing field columns {missing_field_columns}. {msg_suffix}"
+            raise Exception(msg)
 
         non_field_columns = set(columns) - set(fields)
         missing_region_columns = set(expected_keys) - non_field_columns
         if missing_region_columns:
-            raise Exception(msg_prefix
-                            + f'Missing {region_type!r} region columns {missing_region_columns}. '
-                            + msg_suffix)
+            msg = f"{msg_prefix} Missing {region_type!r} region columns {missing_region_columns}. {msg_suffix}"
+            raise Exception(msg)
 
     def _create_column_schema(self, spec: SpecDict, fields: list[str]) -> None:
         field_dtypes = {col: str for col in fields}  # FIXME - generalize
@@ -393,7 +393,7 @@ class SQLiteDB(Connector):
     def update_row(self, **updates):  # updates as a dictionary OR remove posarg?
         assert self.primary_key.field_name in updates
         id_val = updates.pop(self.primary_key.field_name)
-        set_updates = ', '.join('\"' + k + '\"' + " = ?" for k in updates)
-        query = f"UPDATE {self.table_name} SET " + set_updates + f" WHERE \"{self.primary_key.field_name}\" = ?;"
+        set_updates = ", ".join('"' + k + '"' + " = ?" for k in updates)
+        query = f'UPDATE {self.table_name} SET {set_updates} WHERE "{self.primary_key.field_name}" = ?;'
         self.cursor.execute(query, [*updates.values(), id_val])
         self.con.commit()

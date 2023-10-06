@@ -117,8 +117,11 @@ class AnnotatorInterface(param.Parameterized):
 
     fields = param.List(default=["description"], doc="List of fields", constant=True)
 
-    static_fields = param.Dict(default={}, constant=True, doc="""
-        Dictionary with key and value which will be added to each commit""")
+    static_fields = param.Dict(
+        default={},
+        constant=True,
+        doc="Dictionary with key and value which will be added to each commit",
+    )
 
     connector = param.ClassSelector(class_=Connector, allow_None=False)
 
@@ -620,9 +623,12 @@ class AnnotationDisplay(param.Parameterized):
 
     def selected_dim_expr(self, selected_value, non_selected_value):
         self._selected_values.append(selected_value)
-        self._selected_options.append({i:selected_value for i in self.annotator.selected_indices})
-        index_name = ('id' if (self.annotator.annotation_table._field_df.index.name is None)
-                      else self.annotator.annotation_table._field_df.index.name)
+        self._selected_options.append({i: selected_value for i in self.annotator.selected_indices})
+        index_name = (
+            "id"
+            if self.annotator.annotation_table._field_df.index.name is None
+            else self.annotator.annotation_table._field_df.index.name
+        )
         return hv.dim(index_name).categorize(
             self._selected_options[-1], default=non_selected_value
         )
@@ -642,8 +648,12 @@ class AnnotationDisplay(param.Parameterized):
             value = region[kdims[0]]
             bounds = (value[0], 0, value[1], 1)
         elif self.region_types == "range-range":
-            bounds = (region[kdims[0]][0], region[kdims[1]][0],
-                      region[kdims[0]][1], region[kdims[1]][1])
+            bounds = (
+                region[kdims[0]][0],
+                region[kdims[1]][0],
+                region[kdims[0]][1],
+                region[kdims[1]][1],
+            )
         elif self.region_types == "point":
             value = region[kdims[0]]
             bounds = (value, 0, value, 1)
