@@ -126,17 +126,17 @@ class AnnotatorInterface(param.Parameterized):
     connector_class = SQLiteDB
 
     def __init__(self, spec, **params):
-        connector_kws = {'fields': params.get('fields')} if 'fields' in params else {}
-        connector = params.pop('connector') if 'connector' in params else self.connector_class(**connector_kws)
+        if "connector" not in params:
+            params["connector"] = self.connector_class()
 
         spec = self.normalize_spec(spec)
 
-        super().__init__(spec=spec, connector=connector, **params)
+        super().__init__(spec=spec, **params)
         if set(self.fields) & set(self.static_fields):
             msg = 'The values of fields and static_fields must not overlap'
             raise ValueError(msg)
-        if connector.fields is None:
-            connector.fields = self._all_fields
+        if self.connector.fields is None:
+            self.connector.fields = self._all_fields
         self._region = {}
         self._last_region = None
 
