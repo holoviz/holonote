@@ -21,6 +21,9 @@ repos:
       - id: ruff
         args: [holonote]
         files: holonote/
+      - id: ruff-format
+        args: [holonote]
+        files: holonote/
   - repo: https://github.com/hoxbro/clean_notebook
     rev: v0.1.11
     hooks:
