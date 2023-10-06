@@ -24,6 +24,10 @@ requirements:
     - {{ dep.lower() }}
     {% endfor %}
 
+test:
+  imports:
+    - holonote
+
 about:
   license: BSD-3-Clause
   summary: {{ data['project']['description'] }}
