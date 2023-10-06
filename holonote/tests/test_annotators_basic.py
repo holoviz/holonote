@@ -289,3 +289,29 @@ def test_fields_with_spaces(conn_sqlite_uuid):
     fields = ["A Field with space"]
     annotator = Annotator({"A": float, "B": float}, fields=fields, connector=conn_sqlite_uuid)
     assert annotator.annotation_table._field_df.columns == fields
+
+
+def test_static_fields(conn_sqlite_uuid):
+    static_fields = {"static": "1"}
+    annotator = Annotator({"TIME": float}, static_fields=static_fields, connector=conn_sqlite_uuid)
+
+    assert annotator.static_fields == static_fields
+    assert "static" in annotator.annotation_table._field_df.columns
+    assert "static" in annotator.df
+    assert annotator.connector.fields == ["description", "static"]
+
+    # Create new entry
+    start, end  = np.datetime64('2022-06-06'), np.datetime64('2022-06-08')
+    annotator.set_regions(TIME=(start, end))
+    annotator.add_annotation(description="test")
+    output = annotator.df
+    assert output["static"].iloc[0] == "1"
+    assert output["description"].iloc[0] == "test"
+    assert output.shape[0] == 1
+
+    # Update entry
+    annotator.update_annotation_fields(output.index[0], description="test2")
+    output = annotator.df
+    assert output["static"].iloc[0] == "1"
+    assert output["description"].iloc[0] == "test2"
+    assert output.shape[0] == 1
