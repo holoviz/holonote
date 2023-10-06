@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime as dt
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
@@ -244,7 +245,7 @@ class AnnotationTable(param.Parameterized):
         columns, types = [], []
         for dim in dims:
             region = spec[dim]["region"]
-            dtype = spec[dim]["type"]()
+            dtype = pd.NaT if isinstance(t := spec[dim]["type"], dt.date) else t()
             if region == "range":
                 columns.extend([f"start[{dim}]", f"end[{dim}]"])
                 types.extend([dtype, dtype])
