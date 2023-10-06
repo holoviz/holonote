@@ -118,26 +118,37 @@ class AnnotatorInterface(param.Parameterized):
 
     fields = param.List(default=["description"], doc="List of fields", constant=True)
 
+    static_fields = param.Dict(default={}, constant=True, doc="""
+        Dictionary with key and value which will be added to each commit""")
+
     connector = param.ClassSelector(class_=Connector, allow_None=False)
 
     connector_class = SQLiteDB
 
     def __init__(self, spec, **params):
-        connector_kws = {'fields': params.get('fields')} if 'fields' in params else {}
-        connector = params.pop('connector') if 'connector' in params else self.connector_class(**connector_kws)
+        if "connector" not in params:
+            params["connector"] = self.connector_class()
 
         spec = self.normalize_spec(spec)
 
-        super().__init__(spec=spec, connector=connector, **params)
-        if connector.fields is None:
-            connector.fields = self.fields
+        super().__init__(spec=spec, **params)
+        if set(self.fields) & set(self.static_fields):
+            msg = 'The values of fields and static_fields must not overlap'
+            raise ValueError(msg)
+        if self.connector.fields is None:
+            self.connector.fields = self.all_fields
         self._region = {}
         self._last_region = None
 
         self.annotation_table = AnnotationTable()
-        self.connector._create_column_schema(self.spec, self.fields)
+        self.connector._create_column_schema(self.spec, self.all_fields)
         self.connector._initialize(self.connector.column_schema)
         self.annotation_table.load(self.connector, fields=self.connector.fields, spec=self.spec)
+
+    @property
+    def all_fields(self) -> list:
+        """Return a list of all fields including static fields"""
+        return [*self.fields, *self.static_fields]
 
     @classmethod
     def normalize_spec(self, input_spec: dict[str, Any]) -> SpecDict:
@@ -227,7 +238,7 @@ class AnnotatorInterface(param.Parameterized):
 
         # Don't do anything if self.region is an empty dict
         if self.region and self.region != self._last_region:
-            self.annotation_table.add_annotation(self._region, spec=self.spec, **fields)
+            self.annotation_table.add_annotation(self._region, spec=self.spec, **fields, **self.static_fields)
             self._last_region = self._region.copy()
 
     def add_annotation(self, **fields):
@@ -237,7 +248,7 @@ class AnnotatorInterface(param.Parameterized):
         self.annotation_table.update_annotation_region(self._region, index)
 
     def update_annotation_fields(self, index, **fields):
-        self.annotation_table.update_annotation_fields(index, **fields)
+        self.annotation_table.update_annotation_fields(index, **fields, **self.static_fields)
 
 
     def delete_annotation(self, index):
@@ -583,12 +594,13 @@ class AnnotationDisplay(param.Parameterized):
     @property
     def static_indicators(self):
         data = self.annotator.get_dataframe(dims=self.kdims)
-        region_labels = [k for k in data.columns if k not in self.annotator.fields]
+        fields_labels = self.annotator.all_fields
+        region_labels = [k for k in data.columns if k not in fields_labels]
 
         indicator_kwargs = {
             "data": data,
             "region_labels": region_labels,
-            "fields_labels": self.annotator.fields,
+            "fields_labels": fields_labels,
             "invert_axes": False,  # Not yet handled
         }
 
