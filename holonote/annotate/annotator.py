@@ -690,7 +690,7 @@ class Annotator(AnnotatorInterface):
         The spec argument must be an element or a dictionary of kdim dtypes
         """
 
-        self._elements = {}
+        self._displays = {}
 
         super().__init__(
             spec if isinstance(spec, dict) else self._infer_kdim_dtypes(spec),
@@ -712,20 +712,23 @@ class Annotator(AnnotatorInterface):
                 raise ValueError(msg)
         return AnnotationDisplay(self, kdims=list(element_key))
 
-    def get_element(self, kdims: tuple[str, ...] | str) -> AnnotationDisplay:
-        element_key = (kdims,) if isinstance(kdims, str) else tuple(map(str, kdims))
-        if element_key not in self._elements:
-            self._elements[element_key] = self._create_annotation_element(element_key)
-        return self._elements[element_key]
+    def get_element(self, *kdims: str | hv.Dimension) -> hv.DynamicMap:
+        return self.get_display(*kdims).element
+
+    def get_display(self, *kdims: str | hv.Dimension) -> AnnotationDisplay:
+        element_key = tuple(map(str, kdims))
+        if element_key not in self._displays:
+            self._displays[element_key] = self._create_annotation_element(element_key)
+        return self._displays[element_key]
 
     def __mul__(self, other: hv.Element) -> hv.Overlay:
-        return other * self.get_element(other.kdims).element
+        return other * self.get_element(*other.kdims)
 
     def __rmul__(self, other: hv.Element) -> hv.Overlay:
         return self.__mul__(other)
 
     def refresh(self, clear=False) -> None:
-        for v in self._elements.values():
+        for v in self._displays.values():
             hv.streams.Stream.trigger([v._annotation_count_stream])
             if clear:
                 v.clear_indicated_region()
@@ -733,7 +736,7 @@ class Annotator(AnnotatorInterface):
 
     def set_annotation_table(self, annotation_table):
         self.select_by_index()
-        for v in self._elements.values():
+        for v in self._displays.values():
             v.select_by_index()
         self.clear_regions()
         super().set_annotation_table(annotation_table)
@@ -770,7 +773,7 @@ class Annotator(AnnotatorInterface):
     def select_by_index(self, *inds):
         "Set the selection state by the indices i.e. primary key values"
 
-        for v in self._elements.values():
+        for v in self._displays.values():
             if not v.selection_enabled:
                 inds = ()
 
@@ -799,7 +802,7 @@ class Annotator(AnnotatorInterface):
 
     @selection_enabled.setter
     def selection_enabled(self, enabled: bool) -> None:
-        for v in self._elements.values():
+        for v in self._displays.values():
             v.selection_enabled = enabled
 
         if not enabled:
@@ -811,5 +814,5 @@ class Annotator(AnnotatorInterface):
 
     @editable_enabled.setter
     def editable_enabled(self, enabled: bool) -> None:
-        for v in self._elements.values():
+        for v in self._displays.values():
             v.editable_enabled = enabled
