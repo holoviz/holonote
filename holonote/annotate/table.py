@@ -16,6 +16,7 @@ class AnnotationTable(param.Parameterized):
     to declare annotations and commit edits back to the original data
     source such as a database.
     """
+
     columns = ("region", "dim", "value", "_id")
 
     index = param.List(default=[])
@@ -44,16 +45,18 @@ class AnnotationTable(param.Parameterized):
         if fields is None:
             fields = []
 
-        if [connector, primary_key_name] == [None,None]:
+        if [connector, primary_key_name] == [None, None]:
             msg = "Either a connector instance must be supplied or the primary key name supplied"
             raise ValueError(msg)
         if len(fields) < 1:
             msg = "More than one field column is required"
             raise ValueError(msg)
-        primary_key_name = primary_key_name if primary_key_name else connector.primary_key.field_name
+        primary_key_name = (
+            primary_key_name if primary_key_name else connector.primary_key.field_name
+        )
 
         if fields_df:
-            fields_df = fields_df[fields].copy() # Primary key/index for annotations
+            fields_df = fields_df[fields].copy()  # Primary key/index for annotations
             self._field_df = fields_df
         elif connector:
             self.load_annotation_table(connector, fields, spec)
@@ -66,13 +69,13 @@ class AnnotationTable(param.Parameterized):
         self._update_index()
 
     def update_annotation_region(self, region, index):
-        value = region['value']
+        value = region["value"]
         mask = self._region_df[self._region_df._id == index]
-        assert len(mask)==1, 'TODO: Handle multiple region updates for single index'
-        self._region_df.at[mask.index.values[0], 'value'] = value
-        self._edits.append({'operation':'update', 'id':index,
-                            'fields': None,
-                            'region_fields':[]})
+        assert len(mask) == 1, "TODO: Handle multiple region updates for single index"
+        self._region_df.at[mask.index.values[0], "value"] = value
+        self._edits.append(
+            {"operation": "update", "id": index, "fields": None, "region_fields": []}
+        )
 
     @property
     def has_snapshot(self) -> bool:
@@ -87,11 +90,9 @@ class AnnotationTable(param.Parameterized):
         self._region_df = self._region_df_snapshot
         self.clear_edits()
 
-
     def snapshot(self):
         "Saves a snapshot. Expected to only be used after a syncing commit"
         self._field_df_snapshot, self._region_df_snapshot = self._snapshot()
-
 
     def _snapshot(self):
         return self._field_df.copy(), self._region_df.copy()
@@ -104,13 +105,13 @@ class AnnotationTable(param.Parameterized):
         self.index = list(self._field_df.index)
 
     def _expand_commit_by_id(self, id_val, fields=None, region_fields=None):
-        kwargs = self._field_df.loc[[id_val]].to_dict('records')[0]
+        kwargs = self._field_df.loc[[id_val]].to_dict("records")[0]
         if fields:
-            kwargs = {k:v for k,v in kwargs.items() if k in fields}
+            kwargs = {k: v for k, v in kwargs.items() if k in fields}
         kwargs[self._field_df.index.name] = id_val
         if region_fields == []:
             return kwargs
-        items = self._region_df[self._region_df['_id'] == id_val]
+        items = self._region_df[self._region_df["_id"] == id_val]
         for i in items.itertuples(index=False):
             if i.region == "range":
                 kwargs[f"start_{i.dim}"] = i.value[0]
@@ -120,12 +121,12 @@ class AnnotationTable(param.Parameterized):
         return kwargs
 
     def _expand_save_commits(self, ids):
-        return {'field_list':[self._expand_commit_by_id(id_val) for id_val in ids]}
+        return {"field_list": [self._expand_commit_by_id(id_val) for id_val in ids]}
 
     def _create_commits(self):
         "Expands out the commit history into commit operations"
         fields_inds = set(self._field_df.index)
-        region_inds = set(self._region_df['_id'].unique())
+        region_inds = set(self._region_df["_id"].unique())
         unassigned_inds = fields_inds - region_inds
         if unassigned_inds:
             msg = f"Following annotations have no associated region: {unassigned_inds}"
@@ -133,33 +134,33 @@ class AnnotationTable(param.Parameterized):
 
         commits = []
         for edit in self._edits:
-            operation = edit['operation']
-            if operation == 'insert':
+            operation = edit["operation"]
+            if operation == "insert":
                 # May be missing due to earlier deletion operation - nothing to do
-                if edit['id'] not in self._field_df.index:
+                if edit["id"] not in self._field_df.index:
                     continue
-                kwargs = self._expand_commit_by_id(edit['id'])
+                kwargs = self._expand_commit_by_id(edit["id"])
 
-            elif operation == 'delete':
-                kwargs = {'id_val': edit['id']}
-            elif operation == 'update':
-                if edit['id'] not in self._field_df.index:
+            elif operation == "delete":
+                kwargs = {"id_val": edit["id"]}
+            elif operation == "update":
+                if edit["id"] not in self._field_df.index:
                     continue
-                kwargs = self._expand_commit_by_id(edit['id'],
-                                                   fields=edit['fields'],
-                                                   region_fields=edit['region_fields'])
-            elif operation == 'save':
-                kwargs = self._expand_save_commits(edit['ids'])
-            commits.append({'operation':operation, 'kwargs':kwargs})
+                kwargs = self._expand_commit_by_id(
+                    edit["id"], fields=edit["fields"], region_fields=edit["region_fields"]
+                )
+            elif operation == "save":
+                kwargs = self._expand_save_commits(edit["ids"])
+            commits.append({"operation": operation, "kwargs": kwargs})
 
         return commits
 
     def commits(self, connector):
         commits = self._create_commits()
         for commit in commits:
-            operation = commit['operation']
-            kwargs = connector.transforms[operation](commit['kwargs'])
-            getattr(connector,connector.operation_mapping[operation])(**kwargs)
+            operation = commit["operation"]
+            kwargs = connector.transforms[operation](commit["kwargs"])
+            getattr(connector, connector.operation_mapping[operation])(**kwargs)
 
         self.clear_edits()
         return commits
@@ -188,18 +189,19 @@ class AnnotationTable(param.Parameterized):
 
         self._region_df = pd.concat((self._region_df, *data), ignore_index=True)
 
-        self._edits.append({'operation':'insert', 'id':index_value})
+        self._edits.append({"operation": "insert", "id": index_value})
         self._update_index()
 
     def _add_annotation_fields(self, index_value, fields=None):
-
-        index_name_set = set() if self._field_df.index.name is None else {self._field_df.index.name}
+        index_name_set = (
+            set() if self._field_df.index.name is None else {self._field_df.index.name}
+        )
         unknown_kwargs = set(fields.keys()) - set(self._field_df.columns)
         if unknown_kwargs - index_name_set:
             msg = f"Unknown fields columns: {list(unknown_kwargs)}"
             raise KeyError(msg)
 
-        new_fields = pd.DataFrame([dict(fields, **{self._field_df.index.name:index_value})])
+        new_fields = pd.DataFrame([dict(fields, **{self._field_df.index.name: index_value})])
         new_fields = new_fields.set_index(self._field_df.index.name)
         if self._field_df.empty:
             self._field_df = new_fields
@@ -210,25 +212,27 @@ class AnnotationTable(param.Parameterized):
         if index is None:
             msg = "Deletion index cannot be None"
             raise ValueError(msg)
-        self._region_df = self._region_df[self._region_df['_id'] != index] # Could match multiple rows
+        self._region_df = self._region_df[
+            self._region_df["_id"] != index
+        ]  # Could match multiple rows
         self._field_df = self._field_df.drop(index, axis=0)
 
-        self._edits.append({'operation':'delete', 'id':index})
+        self._edits.append({"operation": "delete", "id": index})
         self._update_index()
 
     def update_annotation_fields(self, index, **fields):
         for column, value in fields.items():
             self._field_df.loc[index, column] = value
 
-        self._edits.append({'operation':'update', 'id':index,
-                            'fields' : list(fields),
-                            'region_fields' : []})
+        self._edits.append(
+            {"operation": "update", "id": index, "fields": list(fields), "region_fields": []}
+        )
 
     def define_fields(self, fields_df, index_mapping):
         # Need a staging area to hold everything till initialized
         self._index_mapping.update(index_mapping)  # Rename _field_df
         self._field_df = pd.concat([self._field_df, fields_df])
-        self._edits.append({'operation':'save', 'ids':list(fields_df.index)})
+        self._edits.append({"operation": "save", "ids": list(fields_df.index)})
 
     def _empty_expanded_region_df(self, *, spec: SpecDict, dims: list[str] | None) -> pd.DataFrame:
         invalid_dims = set(dims) - spec.keys()
@@ -250,7 +254,7 @@ class AnnotationTable(param.Parameterized):
 
         return pd.DataFrame([types], columns=columns).drop(index=0)
 
-    def _expand_region_df(self, *, spec: SpecDict, dims: list[str] | None=None) -> pd.DataFrame:
+    def _expand_region_df(self, *, spec: SpecDict, dims: list[str] | None = None) -> pd.DataFrame:
         data = self._region_df.pivot(index="_id", columns="dim", values="value")
         dims = list(dims or spec)
 
@@ -277,7 +281,9 @@ class AnnotationTable(param.Parameterized):
 
         return expanded
 
-    def get_dataframe(self, *, spec: SpecDict | None=None, dims: list[str] | None=None) -> pd.DataFrame:
+    def get_dataframe(
+        self, *, spec: SpecDict | None = None, dims: list[str] | None = None
+    ) -> pd.DataFrame:
         field_df = self._field_df
         region_df = self._expand_region_df(spec=spec, dims=dims)
 
@@ -298,11 +304,11 @@ class AnnotationTable(param.Parameterized):
         spec : SpecDict
             Dictionary of region specifications
         """
-        df = conn.transforms['load'](conn.load_dataframe())
+        df = conn.transforms["load"](conn.load_dataframe())
 
         # Load fields dataframe
         fields_df = df[fields].copy()
-        self.define_fields(fields_df, {ind:ind for ind in fields_df.index})
+        self.define_fields(fields_df, {ind: ind for ind in fields_df.index})
         # Replace: self._field_df = pd.concat([self._field_df, fields_df])
 
         # Load region dataframe

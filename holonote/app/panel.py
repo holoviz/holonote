@@ -21,7 +21,7 @@ class PanelWidgets:
         float: pn.widgets.FloatSlider,
     }
 
-    def __init__(self, annotator: Annotator, field_values: dict[str, Any] | None=None):
+    def __init__(self, annotator: Annotator, field_values: dict[str, Any] | None = None):
         self.annotator = annotator
         self.annotator.snapshot()
         self._widget_mode_group = pn.widgets.RadioButtonGroup(
@@ -34,9 +34,7 @@ class PanelWidgets:
         if field_values is None:
             self._fields_values = {k: "" for k in self.annotator.fields}
         else:
-            self._fields_values = {
-                k: field_values.get(k, "") for k in self.annotator.fields
-            }
+            self._fields_values = {k: field_values.get(k, "") for k in self.annotator.fields}
         self._fields_widgets = self._create_fields_widgets(self._fields_values)
 
         self._set_standard_callbacks()
@@ -56,9 +54,7 @@ class PanelWidgets:
         fields_widgets = {}
         for widget_name, default in fields_values.items():
             if isinstance(default, param.Parameter):
-                parameterized = type(
-                    "widgets", (param.Parameterized,), {widget_name: default}
-                )
+                parameterized = type("widgets", (param.Parameterized,), {widget_name: default})
                 pane = pn.Param(parameterized)
                 fields_widgets[widget_name] = pane.layout[1]
             elif isinstance(default, list):
@@ -72,9 +68,7 @@ class PanelWidgets:
                         value=default, placeholder=widget_name, name=widget_name
                     )
                 else:
-                    fields_widgets[widget_name] = widget_type(
-                        value=default, name=widget_name
-                    )
+                    fields_widgets[widget_name] = widget_type(value=default, name=widget_name)
         return fields_widgets
 
     @property
