@@ -5,12 +5,11 @@ import holoviews as hv
 bk_renderer = hv.renderer("bokeh")
 
 
-def _get_element(annotator, kdims=None) -> hv.Element:
+def _get_display(annotator, kdims=None) -> hv.Element:
     if kdims is None:
-        kdims = next(iter(annotator._elements.keys()))
+        kdims = next(iter(annotator._displays))
     kdims = (kdims,) if isinstance(kdims, str) else tuple(kdims)
-    element = annotator._elements[kdims]
-    return element
+    return annotator.get_display(*kdims)
 
 
 def get_region_editor_data(
@@ -18,14 +17,14 @@ def get_region_editor_data(
     element_type,
     kdims=None,
 ):
-    el = _get_element(annotator, kdims).region_editor()
+    el = _get_display(annotator, kdims).region_editor()
     for e in el.last.traverse():
         if isinstance(e, element_type):
             return e.data
 
 
 def get_indicators_data(annotator, element_type, kdims=None):
-    return _get_element(annotator, kdims).static_indicators.data
+    return _get_display(annotator, kdims).static_indicators.data
 
 
 def test_set_regions_range1d(annotator_range1d, element_range1d) -> None:
@@ -149,21 +148,21 @@ def test_editable_enabled(annotator_range1d, element_range1d):
     annotator_range1d * element_range1d
 
     annotator_range1d.editable_enabled = False
-    for element in annotator_range1d._elements.values():
-        assert not element.editable_enabled
+    for display in annotator_range1d._displays.values():
+        assert not display.editable_enabled
 
     annotator_range1d.editable_enabled = True
-    for element in annotator_range1d._elements.values():
-        assert element.editable_enabled
+    for display in annotator_range1d._displays.values():
+        assert display.editable_enabled
 
 
 def test_selection_enabled(annotator_range1d, element_range1d):
     annotator_range1d * element_range1d
 
     annotator_range1d.selection_enabled = False
-    for element in annotator_range1d._elements.values():
-        assert not element.selection_enabled
+    for display in annotator_range1d._displays.values():
+        assert not display.selection_enabled
 
     annotator_range1d.selection_enabled = True
-    for element in annotator_range1d._elements.values():
-        assert element.selection_enabled
+    for display in annotator_range1d._displays.values():
+        assert display.selection_enabled
