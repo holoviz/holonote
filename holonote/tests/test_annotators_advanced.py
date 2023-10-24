@@ -204,3 +204,18 @@ def test_define_annotations_multiple_without_without_all_fields(conn_sqlite_uuid
     data["description"] = (None,) * 5
 
     annotator.define_annotations(pd.DataFrame(data), TIME=("start_number", "end_number"))
+
+
+def test_define_annotations_with_different_field(conn_sqlite_uuid) -> None:
+    annotator = Annotator({"TIME": float}, fields=["description"], connector=conn_sqlite_uuid)
+    data = {
+        "category": ["A", "B", "A", "C", "B"],
+        "start_number": [1, 6, 11, 16, 21],
+        "end_number": [5, 10, 15, 20, 25],
+    }
+    annotator.define_annotations(
+        pd.DataFrame(data), TIME=("start_number", "end_number"), description="category"
+    )
+    assert (annotator.df["description"] == data["category"]).all()
+
+

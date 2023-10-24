@@ -280,7 +280,7 @@ class AnnotatorInterface(param.Parameterized):
         # kwargs = dict(A=("start", "end"), index=True)
 
         index = kwargs.pop("index", False)
-        f_keys = set(self.fields) & set(data.columns)
+        f_keys = (set(self.fields) & kwargs.keys()) | (set(self.fields) & set(data.columns))
         r_keys = (kwargs.keys() - f_keys) | (set(self.spec) & set(data.columns))
         pk = self.connector.primary_key
 
@@ -294,7 +294,7 @@ class AnnotatorInterface(param.Parameterized):
                 else getattr(r, kwargs.get(k, k))
                 for k in r_keys
             }
-            fields = {k: getattr(r, k) for k in f_keys}
+            fields = {k: getattr(r, kwargs.get(k, k)) for k in f_keys}
             if index:
                 fields[pk.field_name] = pk.cast(r.Index)
 
