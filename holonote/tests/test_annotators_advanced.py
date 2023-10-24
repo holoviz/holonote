@@ -156,7 +156,6 @@ def test_reconnect(method, tmp_path):
     a1 = Annotator(
         spec={"TIME": np.datetime64},
         fields=["description"],
-        region_types=["Range"],
         connector=conn1,
     )
     times = pd.date_range("2022-06-09", "2022-06-13")
@@ -174,7 +173,6 @@ def test_reconnect(method, tmp_path):
     a2 = Annotator(
         spec={"TIME": np.datetime64},
         fields=["description"],
-        region_types=["Range"],
         connector=conn2,
     )
     a2_df = a2.df.copy()
