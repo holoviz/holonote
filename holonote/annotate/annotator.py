@@ -8,6 +8,7 @@ import pandas as pd
 import param
 from bokeh.models.tools import BoxSelectTool, HoverTool, Tool
 
+from .._warnings import warn
 from .connector import Connector, SQLiteDB
 from .table import AnnotationTable
 
@@ -284,6 +285,15 @@ class AnnotatorInterface(param.Parameterized):
         r_keys = (kwargs.keys() - f_keys) | (set(self.spec) & set(data.columns))
         pk = self.connector.primary_key
 
+        for k, v in kwargs.items():
+            if k == v:
+                continue
+            if v in set(self.fields) & set(data.columns):
+                msg = (
+                    f"Input {v!r} has overlapping name with a field or spec. "
+                    "This can give weird behavior. Consider renaming the input."
+                )
+                warn(msg)
         # assert len(set(data.columns) - f_keys - r_keys) == 0
 
         # Vectorize the conversion?

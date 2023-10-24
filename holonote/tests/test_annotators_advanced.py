@@ -219,3 +219,20 @@ def test_define_annotations_with_different_field(conn_sqlite_uuid) -> None:
     assert (annotator.df["description"] == data["category"]).all()
 
 
+def test_define_annotations_with_multiple_field_warn(conn_sqlite_uuid) -> None:
+    annotator = Annotator(
+        {"TIME": float}, fields=["description", "category"], connector=conn_sqlite_uuid
+    )
+    data = {
+        "category": ["A", "B", "A", "C", "B"],
+        "start_number": [1, 6, 11, 16, 21],
+        "end_number": [5, 10, 15, 20, 25],
+    }
+
+    # Description set to use category will give a warning,
+    # which raises an error in the testsuite
+    msg = "Input 'category' has overlapping name with a field or spec"
+    with pytest.raises(UserWarning, match=msg):
+        annotator.define_annotations(
+            pd.DataFrame(data), TIME=("start_number", "end_number"), description="category"
+        )
