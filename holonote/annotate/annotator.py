@@ -281,14 +281,15 @@ class AnnotatorInterface(param.Parameterized):
         # kwargs = dict(A=("start", "end"), index=True)
 
         index = kwargs.pop("index", False)
-        f_keys = (set(self.fields) & kwargs.keys()) | (set(self.fields) & set(data.columns))
+        field_data = set(self.fields) & set(data.columns)
+        f_keys = (set(self.fields) & kwargs.keys()) | field_data
         r_keys = (kwargs.keys() - f_keys) | (set(self.spec) & set(data.columns))
         pk = self.connector.primary_key
 
         for k, v in kwargs.items():
             if k == v:
                 continue
-            if v in set(self.fields) & set(data.columns):
+            if v in field_data:
                 msg = (
                     f"Input {v!r} has overlapping name with a field or spec. "
                     "This can give weird behavior. Consider renaming the input."
