@@ -194,16 +194,16 @@ class AnnotationTable(param.Parameterized):
         self._update_index()
 
     def _add_annotation_fields(self, index_value, fields=None):
-        index_name_set = (
-            set() if self._field_df.index.name is None else {self._field_df.index.name}
-        )
+        index_name = self._field_df.index.name
+        index_name_set = set() if index_name is None else {index_name}
         unknown_kwargs = set(fields.keys()) - set(self._field_df.columns)
         if unknown_kwargs - index_name_set:
-            msg = f"Unknown fields columns: {list(unknown_kwargs)}"
+            unknown_str = ", ".join([f"{k!r}" for k in sorted(unknown_kwargs)])
+            msg = f"Unknown fields columns: {unknown_str}"
             raise KeyError(msg)
 
-        new_fields = pd.DataFrame([dict(fields, **{self._field_df.index.name: index_value})])
-        new_fields = new_fields.set_index(self._field_df.index.name)
+        new_fields = pd.DataFrame([dict(fields, **{index_name: index_value})])
+        new_fields = new_fields.set_index(index_name)
         if self._field_df.empty:
             self._field_df = new_fields
         else:
