@@ -8,6 +8,7 @@ import pandas as pd
 import param
 from bokeh.models.tools import BoxSelectTool, HoverTool, Tool
 
+from .._warnings import warn
 from .connector import Connector, SQLiteDB
 from .table import AnnotationTable
 
@@ -280,10 +281,20 @@ class AnnotatorInterface(param.Parameterized):
         # kwargs = dict(A=("start", "end"), index=True)
 
         index = kwargs.pop("index", False)
-        f_keys = set(self.fields) & set(data.columns)
+        field_data = set(self.fields) & set(data.columns)
+        f_keys = (set(self.fields) & kwargs.keys()) | field_data
         r_keys = (kwargs.keys() - f_keys) | (set(self.spec) & set(data.columns))
         pk = self.connector.primary_key
 
+        for k, v in kwargs.items():
+            if k == v:
+                continue
+            if v in field_data:
+                msg = (
+                    f"Input {v!r} has overlapping name with a field or spec. "
+                    "This can give weird behavior. Consider renaming the input."
+                )
+                warn(msg)
         # assert len(set(data.columns) - f_keys - r_keys) == 0
 
         # Vectorize the conversion?
@@ -294,7 +305,7 @@ class AnnotatorInterface(param.Parameterized):
                 else getattr(r, kwargs.get(k, k))
                 for k in r_keys
             }
-            fields = {k: getattr(r, k) for k in f_keys}
+            fields = {k: getattr(r, kwargs.get(k, k)) for k in f_keys}
             if index:
                 fields[pk.field_name] = pk.cast(r.Index)
 
@@ -618,6 +629,9 @@ class AnnotationDisplay(param.Parameterized):
             indicator = Indicator.points_1d(**indicator_kwargs)
         elif self.region_types == "point-point":
             indicator = Indicator.points_2d(**indicator_kwargs)
+        else:
+            msg = f"{self.region_types} not implemented"
+            raise NotImplementedError(msg)
 
         return indicator
 

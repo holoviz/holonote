@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import datetime as dt
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -327,3 +329,12 @@ def test_static_fields(conn_sqlite_uuid):
     assert output["static"].iloc[0] == "1"
     assert output["description"].iloc[0] == "test2"
     assert output.shape[0] == 1
+
+
+@pytest.mark.parametrize("dtype", [dt.datetime, dt.date])
+def test_spec_datetime_date(conn_sqlite_uuid, dtype):
+    annotator = Annotator(spec={"time": dtype}, connector=conn_sqlite_uuid)
+
+    output = annotator.df.dtypes
+    assert output["start[time]"] == np.dtype("datetime64[ns]")
+    assert output["end[time]"] == np.dtype("datetime64[ns]")

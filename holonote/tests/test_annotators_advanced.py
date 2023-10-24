@@ -156,7 +156,6 @@ def test_reconnect(method, tmp_path):
     a1 = Annotator(
         spec={"TIME": np.datetime64},
         fields=["description"],
-        region_types=["Range"],
         connector=conn1,
     )
     times = pd.date_range("2022-06-09", "2022-06-13")
@@ -174,7 +173,6 @@ def test_reconnect(method, tmp_path):
     a2 = Annotator(
         spec={"TIME": np.datetime64},
         fields=["description"],
-        region_types=["Range"],
         connector=conn2,
     )
     a2_df = a2.df.copy()
@@ -184,3 +182,55 @@ def test_reconnect(method, tmp_path):
     pd.testing.assert_frame_equal(a1_df, a2_df)
     pd.testing.assert_frame_equal(a1_region, a2_region)
     pd.testing.assert_frame_equal(a1_field, a2_field)
+
+
+def test_define_annotations_multiple_without_without_all_fields(conn_sqlite_uuid) -> None:
+    annotator = Annotator(
+        {"TIME": float}, fields=["description", "category"], connector=conn_sqlite_uuid
+    )
+
+    # Sample data without description field
+    data = {
+        "category": ["A", "B", "A", "C", "B"],
+        "start_number": [1, 6, 11, 16, 21],
+        "end_number": [5, 10, 15, 20, 25],
+    }
+
+    annotator.define_annotations(pd.DataFrame(data), TIME=("start_number", "end_number"))
+
+    # Add description field
+    data["description"] = (None,) * 5
+
+    annotator.define_annotations(pd.DataFrame(data), TIME=("start_number", "end_number"))
+
+
+def test_define_annotations_with_different_field(conn_sqlite_uuid) -> None:
+    annotator = Annotator({"TIME": float}, fields=["description"], connector=conn_sqlite_uuid)
+    data = {
+        "category": ["A", "B", "A", "C", "B"],
+        "start_number": [1, 6, 11, 16, 21],
+        "end_number": [5, 10, 15, 20, 25],
+    }
+    annotator.define_annotations(
+        pd.DataFrame(data), TIME=("start_number", "end_number"), description="category"
+    )
+    assert (annotator.df["description"] == data["category"]).all()
+
+
+def test_define_annotations_with_multiple_field_warn(conn_sqlite_uuid) -> None:
+    annotator = Annotator(
+        {"TIME": float}, fields=["description", "category"], connector=conn_sqlite_uuid
+    )
+    data = {
+        "category": ["A", "B", "A", "C", "B"],
+        "start_number": [1, 6, 11, 16, 21],
+        "end_number": [5, 10, 15, 20, 25],
+    }
+
+    # Description set to use category will give a warning,
+    # which raises an error in the testsuite
+    msg = "Input 'category' has overlapping name with a field or spec"
+    with pytest.raises(UserWarning, match=msg):
+        annotator.define_annotations(
+            pd.DataFrame(data), TIME=("start_number", "end_number"), description="category"
+        )
