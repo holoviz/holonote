@@ -205,7 +205,7 @@ class AnnotationTable(param.Parameterized):
         new_fields = pd.DataFrame([dict(fields, **{index_name: index_value})])
         new_fields = new_fields.set_index(index_name)
         if self._field_df.empty:
-            self._field_df = new_fields
+            self._field_df[new_fields.columns] = new_fields
         else:
             self._field_df = pd.concat((self._field_df, new_fields))
 

@@ -184,3 +184,23 @@ def test_reconnect(method, tmp_path):
     pd.testing.assert_frame_equal(a1_df, a2_df)
     pd.testing.assert_frame_equal(a1_region, a2_region)
     pd.testing.assert_frame_equal(a1_field, a2_field)
+
+
+def test_define_annotations_multiple_without_without_all_fields(conn_sqlite_uuid) -> None:
+    annotator = Annotator(
+        {"TIME": float}, fields=["description", "category"], connector=conn_sqlite_uuid
+    )
+
+    # Sample data without description field
+    data = {
+        "category": ["A", "B", "A", "C", "B"],
+        "start_number": [1, 6, 11, 16, 21],
+        "end_number": [5, 10, 15, 20, 25],
+    }
+
+    annotator.define_annotations(pd.DataFrame(data), TIME=("start_number", "end_number"))
+
+    # Add description field
+    data["description"] = (None,) * 5
+
+    annotator.define_annotations(pd.DataFrame(data), TIME=("start_number", "end_number"))
