@@ -245,7 +245,7 @@ class AnnotationTable(param.Parameterized):
         columns, types = [], []
         for dim in dims:
             region = spec[dim]["region"]
-            dtype = pd.NaT if isinstance(t := spec[dim]["type"], dt.date) else t()
+            dtype = pd.NaT if issubclass(t := spec[dim]["type"], dt.date) else t()
             if region == "range":
                 columns.extend([f"start[{dim}]", f"end[{dim}]"])
                 types.extend([dtype, dtype])
