@@ -17,12 +17,14 @@ if TYPE_CHECKING:
 
 
 class Style:
-    range_style = {"color": "red", "alpha": 0.4, "apply_ranges": False}
-    point_style = {"color": "red", "alpha": 0.4, "apply_ranges": False}
+    range_style = {"alpha": 0.4, "apply_ranges": False, "show_legend": False}
+    point_style = {"alpha": 0.4, "apply_ranges": False, "show_legend": False}
     indicator_highlight = {"alpha": (0.7, 0.2)}
 
     edit_range_style = {"alpha": 0.4, "line_alpha": 1, "line_width": 1, "line_color": "black"}
     edit_point_style = {"alpha": 0.4, "line_alpha": 1, "line_color": "black"}
+
+    groupby = None
 
     def indicator(self, range_style, point_style, highlighters):
         return (
@@ -50,7 +52,9 @@ class Indicator:
     """
 
     @classmethod
-    def points_1d(cls, data, region_labels, fields_labels, invert_axes=False):
+    def points_1d(
+        cls, data, region_labels, fields_labels, invert_axes=False, groupby: str | None = None
+    ):
         "Vectorizes point regions to VLines. Note does not support hover info"
         vdims = [*fields_labels, data.index.name]
         element = hv.VLines(data.reset_index(), kdims=region_labels, vdims=vdims)
@@ -58,7 +62,9 @@ class Indicator:
         return element.opts(tools=[hover])
 
     @classmethod
-    def points_2d(cls, data, region_labels, fields_labels, invert_axes=False):
+    def points_2d(
+        cls, data, region_labels, fields_labels, invert_axes=False, groupby: str | None = None
+    ):
         "Vectorizes point regions to VLines * HLines. Note does not support hover info"
         msg = "2D point regions not supported yet"
         raise NotImplementedError(msg)
@@ -68,7 +74,9 @@ class Indicator:
         return element.opts(tools=[hover])
 
     @classmethod
-    def ranges_2d(cls, data, region_labels, fields_labels, invert_axes=False):
+    def ranges_2d(
+        cls, data, region_labels, fields_labels, invert_axes=False, groupby: str | None = None
+    ):
         "Vectorizes an nd-overlay of range_2d rectangles."
         kdims = [region_labels[i] for i in (0, 2, 1, 3)]  # LBRT format
         vdims = [*fields_labels, data.index.name]
@@ -78,14 +86,17 @@ class Indicator:
         return element.opts(tools=[hover])
 
     @classmethod
-    def ranges_1d(cls, data, region_labels, fields_labels, invert_axes=False):
+    def ranges_1d(
+        cls, data, region_labels, fields_labels, invert_axes=False, groupby: str | None = None
+    ):
         """
         Vectorizes an nd-overlay of range_1d rectangles.
 
         NOTE: Should use VSpans once available!
         """
         vdims = [*fields_labels, data.index.name]
-        element = hv.VSpans(data.reset_index(), kdims=region_labels, vdims=vdims)
+        ds = hv.Dataset(data.reset_index(), kdims=region_labels, vdims=vdims)
+        element = ds.to(hv.VSpans, groupby=groupby)
         hover = cls._build_hover_tool(data)
         return element.opts(tools=[hover])
 
@@ -493,7 +504,11 @@ class AnnotationDisplay(param.Parameterized):
         return self._region_editor
 
     def _get_range_indices_by_position(self, **inputs) -> list[Any]:
-        df = self.static_indicators.data
+        if isinstance(self.static_indicators, hv.NdOverlay):
+            df = pd.concat([el.data for el in self.static_indicators.values()])
+        else:
+            df = self.static_indicators.data
+
         if df.empty:
             return []
 
@@ -606,6 +621,7 @@ class AnnotationDisplay(param.Parameterized):
             "region_labels": region_labels,
             "fields_labels": fields_labels,
             "invert_axes": False,  # Not yet handled
+            "groupby": self.style.groupby,
         }
 
         if self.region_types == "range":
@@ -619,6 +635,9 @@ class AnnotationDisplay(param.Parameterized):
         else:
             msg = f"{self.region_types} not implemented"
             raise NotImplementedError(msg)
+
+        if self.style.groupby:
+            indicator = indicator.overlay()
 
         return indicator
 
