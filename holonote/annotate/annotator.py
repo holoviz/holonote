@@ -16,12 +16,7 @@ if TYPE_CHECKING:
     from .typing import SpecDict
 
 
-class Indicator:
-    """
-    Collection of class methods that express annotation data as final
-    displayed (vectorized) HoloViews object.
-    """
-
+class Style:
     range_style = {"color": "red", "alpha": 0.4, "apply_ranges": False}
     point_style = {"color": "red", "alpha": 0.4, "apply_ranges": False}
     indicator_highlight = {"alpha": (0.7, 0.2)}
@@ -29,8 +24,7 @@ class Indicator:
     edit_range_style = {"alpha": 0.4, "line_alpha": 1, "line_width": 1, "line_color": "black"}
     edit_point_style = {"alpha": 0.4, "line_alpha": 1, "line_color": "black"}
 
-    @classmethod
-    def indicator_style(cls, range_style, point_style, highlighters):
+    def indicator(self, range_style, point_style, highlighters):
         return (
             hv.opts.Rectangles(**dict(range_style, **highlighters)),
             hv.opts.VSpans(**dict(range_style, **highlighters)),
@@ -39,8 +33,7 @@ class Indicator:
             hv.opts.HLines(**dict(range_style, **highlighters)),
         )
 
-    @classmethod
-    def region_style(cls, edit_range_style, edit_point_style):
+    def region(self, edit_range_style, edit_point_style):
         return (
             hv.opts.Rectangles(**edit_range_style),
             hv.opts.VSpans(**edit_range_style),
@@ -48,6 +41,13 @@ class Indicator:
             hv.opts.VLines(**edit_range_style),
             hv.opts.HLines(**edit_range_style),
         )
+
+
+class Indicator:
+    """
+    Collection of class methods that express annotation data as final
+    displayed (vectorized) HoloViews object.
+    """
 
     @classmethod
     def points_1d(cls, data, region_labels, fields_labels, invert_axes=False):
@@ -363,6 +363,7 @@ class AnnotationDisplay(param.Parameterized):
         ]
 
         self.annotator = weakref.proxy(annotator)
+        self.style = weakref.proxy(annotator.style)
         self._set_region_types()
         self._element = self._make_empty_element()
 
@@ -569,30 +570,16 @@ class AnnotationDisplay(param.Parameterized):
 
         return hv.DynamicMap(inner, streams=[self._annotation_count_stream])
 
-    def overlay(
-        self,
-        indicators=True,
-        editor=True,
-        range_style=None,
-        point_style=None,
-        edit_range_style=None,
-        edit_point_style=None,
-        highlight=None,
-    ) -> hv.Overlay:
-        if range_style is None:
-            range_style = Indicator.range_style
-        if point_style is None:
-            point_style = Indicator.point_style
-        if edit_range_style is None:
-            edit_range_style = Indicator.edit_range_style
-        if edit_point_style is None:
-            edit_point_style = Indicator.edit_point_style
-        if highlight is None:
-            highlight = Indicator.indicator_highlight
+    def overlay(self, indicators=True, editor=True) -> hv.Overlay:
+        range_style = self.style.range_style
+        point_style = self.style.point_style
+        edit_range_style = self.style.edit_range_style
+        edit_point_style = self.style.edit_point_style
+        highlight = self.style.indicator_highlight
 
         highlighters = {opt: self.selected_dim_expr(v[0], v[1]) for opt, v in highlight.items()}
-        indicator_style = Indicator.indicator_style(range_style, point_style, highlighters)
-        region_style = Indicator.region_style(edit_range_style, edit_point_style)
+        indicator = self.style.indicator(range_style, point_style, highlighters)
+        region = self.style.region(edit_range_style, edit_point_style)
 
         layers = []
         active_tools = []
@@ -603,9 +590,9 @@ class AnnotationDisplay(param.Parameterized):
         layers.append(self._element.opts(tools=self.edit_tools, active_tools=active_tools))
 
         if indicators:
-            layers.append(self.indicators().opts(*indicator_style))
+            layers.append(self.indicators().opts(*indicator))
         if editor:
-            layers.append(self.region_editor().opts(*region_style))
+            layers.append(self.region_editor().opts(*region))
         return hv.Overlay(layers).collate()
 
     @property
@@ -699,6 +686,8 @@ class Annotator(AnnotatorInterface):
 
         self._selection_enabled = True
         self._editable_enabled = True
+
+        self.style = Style()
 
     @classmethod
     def _infer_kdim_dtypes(self, element: hv.Element) -> dict:
