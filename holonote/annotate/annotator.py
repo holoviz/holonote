@@ -33,6 +33,8 @@ class Style(param.Parameterized):
 
     color = param.Parameter(default="red", doc="Color of the indicator", allow_refs=True)
 
+    edit_color = param.Parameter(default="blue", doc="Color of the editor", allow_refs=True)
+
     range_style = {"apply_ranges": False, "show_legend": False}
     point_style = {"apply_ranges": False, "show_legend": False}
 
@@ -43,22 +45,24 @@ class Style(param.Parameterized):
     def indicator_highlight(self) -> dict[str, tuple[float, float]]:
         return {"alpha": (self.selection_alpha, self.alpha)}
 
-    def indicator(self, range_style, point_style, highlighters):
+    def indicator(self, highlighters):
+        opts = dict(self.range_style, color=self.color, **highlighters)
         return (
-            hv.opts.Rectangles(**dict(range_style, color=self.color, **highlighters)),
-            hv.opts.VSpans(**dict(range_style, color=self.color, **highlighters)),
-            hv.opts.HSpans(**dict(range_style, color=self.color, **highlighters)),
-            hv.opts.VLines(**dict(range_style, color=self.color, **highlighters)),
-            hv.opts.HLines(**dict(range_style, color=self.color, **highlighters)),
+            hv.opts.Rectangles(**opts),
+            hv.opts.VSpans(**opts),
+            hv.opts.HSpans(**opts),
+            hv.opts.VLines(**opts),
+            hv.opts.HLines(**opts),
         )
 
-    def region(self, edit_range_style, edit_point_style):
+    def region(self):
+        opts = dict(alpha=self.edit_alpha, color=self.edit_color, **self.edit_range_style)
         return (
-            hv.opts.Rectangles(alpha=self.edit_alpha, **edit_range_style),
-            hv.opts.VSpans(alpha=self.edit_alpha, **edit_range_style),
-            hv.opts.HSpans(alpha=self.edit_alpha, **edit_range_style),
-            hv.opts.VLines(alpha=self.edit_alpha, **edit_range_style),
-            hv.opts.HLines(alpha=self.edit_alpha, **edit_range_style),
+            hv.opts.Rectangles(**opts),
+            hv.opts.VSpans(**opts),
+            hv.opts.HSpans(**opts),
+            hv.opts.VLines(**opts),
+            hv.opts.HLines(**opts),
         )
 
 
@@ -512,10 +516,7 @@ class AnnotationDisplay(param.Parameterized):
                     msg = "Only 1d and 2d supported for Points"
                     raise ValueError(msg)
 
-            edit_range_style = self.style.edit_range_style
-            edit_point_style = self.style.edit_point_style
-            opts = self.style.region(edit_range_style, edit_point_style)
-            return region_element.opts(*opts)
+            return region_element.opts(*self.style.region())
 
         return hv.DynamicMap(inner, streams=self._edit_streams)
 
@@ -652,12 +653,9 @@ class AnnotationDisplay(param.Parameterized):
             # TODO: Handle when indicator is empty
 
         # Set styling on annotations indicator
-        range_style = self.style.range_style
-        point_style = self.style.point_style
         highlight = self.style.indicator_highlight
-
         highlighters = {opt: self.selected_dim_expr(v[0], v[1]) for opt, v in highlight.items()}
-        indicator = indicator.opts(*self.style.indicator(range_style, point_style, highlighters))
+        indicator = indicator.opts(*self.style.indicator(highlighters))
 
         return indicator.overlay() if self.style.groupby else hv.NdOverlay({0: indicator})
 
@@ -769,6 +767,7 @@ class Annotator(AnnotatorInterface):
         "style.groupby",
         "style.visible",
         "style.color",
+        "style.edit_color",
         "style.alpha",
         "style.selection_alpha",
         "style.edit_alpha",
