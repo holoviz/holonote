@@ -16,23 +16,37 @@ if TYPE_CHECKING:
     from .typing import SpecDict
 
 
-class Style:
-    range_style = {"alpha": 0.4, "apply_ranges": False, "show_legend": False}
-    point_style = {"alpha": 0.4, "apply_ranges": False, "show_legend": False}
-    indicator_highlight = {"alpha": (0.7, 0.2)}
+class Style(param.Parameterized):
+    alpha = param.Number(default=0.2, bounds=(0, 1), allow_refs=True)
+    alpha.doc = "Alpha value for non-selected regions"
 
-    edit_range_style = {"alpha": 0.4, "line_alpha": 1, "line_width": 1, "line_color": "black"}
-    edit_point_style = {"alpha": 0.4, "line_alpha": 1, "line_color": "black"}
+    highlight = param.Number(default=0.7, bounds=(0, 1), allow_refs=True)
+    highlight.doc = "Alpha value for selected regions"
 
-    groupby = None
+    groupby = param.Selector(default=None, doc="Groupby dimension", allow_refs=True)
+    visible = param.ListSelector(
+        default=[], doc="Visible dimensions, needs groupby enabled", allow_refs=True
+    )
+
+    color = param.Parameter(default="red", doc="Color of the indicator", allow_refs=True)
+
+    range_style = {"apply_ranges": False, "show_legend": False}
+    point_style = {"apply_ranges": False, "show_legend": False}
+
+    edit_range_style = {"line_alpha": 1, "line_width": 1, "line_color": "black"}
+    edit_point_style = {"line_alpha": 1, "line_color": "black"}
+
+    @property
+    def indicator_highlight(self) -> dict[str, tuple[float, float]]:
+        return {"alpha": (self.highlight, self.alpha)}
 
     def indicator(self, range_style, point_style, highlighters):
         return (
-            hv.opts.Rectangles(**dict(range_style, **highlighters)),
-            hv.opts.VSpans(**dict(range_style, **highlighters)),
-            hv.opts.HSpans(**dict(range_style, **highlighters)),
-            hv.opts.VLines(**dict(range_style, **highlighters)),
-            hv.opts.HLines(**dict(range_style, **highlighters)),
+            hv.opts.Rectangles(**dict(range_style, color=self.color, **highlighters)),
+            hv.opts.VSpans(**dict(range_style, color=self.color, **highlighters)),
+            hv.opts.HSpans(**dict(range_style, color=self.color, **highlighters)),
+            hv.opts.VLines(**dict(range_style, color=self.color, **highlighters)),
+            hv.opts.HLines(**dict(range_style, color=self.color, **highlighters)),
         )
 
     def region(self, edit_range_style, edit_point_style):
@@ -691,6 +705,8 @@ class Annotator(AnnotatorInterface):
     add new annotations and update existing annotations.
     """
 
+    style = param.ClassSelector(default=Style(), class_=Style, doc="Style parameters")
+
     def __init__(self, spec: dict, **params):
         """
         The spec argument must be an element or a dictionary of kdim dtypes
@@ -706,7 +722,7 @@ class Annotator(AnnotatorInterface):
         self._selection_enabled = True
         self._editable_enabled = True
 
-        self.style = Style()
+        self.style.param.groupby.objects = [*self.fields, None]  # TODO: Smarter way?
 
     @classmethod
     def _infer_kdim_dtypes(self, element: hv.Element) -> dict:
@@ -741,6 +757,18 @@ class Annotator(AnnotatorInterface):
             if clear:
                 v.clear_indicated_region()
             v.show_region()
+
+    # all the style parameters?
+    @param.depends(
+        "style.groupby",
+        "style.visible",
+        "style.color",
+        "style.alpha",
+        "style.highlight",
+        watch=True,
+    )
+    def _refresh_style(self):
+        self.refresh()
 
     def set_annotation_table(self, annotation_table):
         self.select_by_index()
