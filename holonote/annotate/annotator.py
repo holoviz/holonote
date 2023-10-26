@@ -20,8 +20,11 @@ class Style(param.Parameterized):
     alpha = param.Number(default=0.2, bounds=(0, 1), allow_refs=True)
     alpha.doc = "Alpha value for non-selected regions"
 
-    highlight = param.Number(default=0.7, bounds=(0, 1), allow_refs=True)
-    highlight.doc = "Alpha value for selected regions"
+    selection_alpha = param.Number(default=0.7, bounds=(0, 1), allow_refs=True)
+    selection_alpha.doc = "Alpha value for selected regions"
+
+    edit_alpha = param.Number(default=0.4, bounds=(0, 1), allow_refs=True)
+    edit_alpha.doc = "Alpha value for editing regions"
 
     groupby = param.Selector(default=None, doc="Groupby dimension", allow_refs=True)
     visible = param.ListSelector(
@@ -38,7 +41,7 @@ class Style(param.Parameterized):
 
     @property
     def indicator_highlight(self) -> dict[str, tuple[float, float]]:
-        return {"alpha": (self.highlight, self.alpha)}
+        return {"alpha": (self.selection_alpha, self.alpha)}
 
     def indicator(self, range_style, point_style, highlighters):
         return (
@@ -51,11 +54,11 @@ class Style(param.Parameterized):
 
     def region(self, edit_range_style, edit_point_style):
         return (
-            hv.opts.Rectangles(alpha=self.alpha, **edit_range_style),
-            hv.opts.VSpans(alpha=self.alpha, **edit_range_style),
-            hv.opts.HSpans(alpha=self.alpha, **edit_range_style),
-            hv.opts.VLines(alpha=self.alpha, **edit_range_style),
-            hv.opts.HLines(alpha=self.alpha, **edit_range_style),
+            hv.opts.Rectangles(alpha=self.edit_alpha, **edit_range_style),
+            hv.opts.VSpans(alpha=self.edit_alpha, **edit_range_style),
+            hv.opts.HSpans(alpha=self.edit_alpha, **edit_range_style),
+            hv.opts.VLines(alpha=self.edit_alpha, **edit_range_style),
+            hv.opts.HLines(alpha=self.edit_alpha, **edit_range_style),
         )
 
 
@@ -767,7 +770,8 @@ class Annotator(AnnotatorInterface):
         "style.visible",
         "style.color",
         "style.alpha",
-        "style.highlight",
+        "style.selection_alpha",
+        "style.edit_alpha",
         watch=True,
     )
     def _refresh_style(self):
