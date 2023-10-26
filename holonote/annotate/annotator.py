@@ -51,11 +51,11 @@ class Style(param.Parameterized):
 
     def region(self, edit_range_style, edit_point_style):
         return (
-            hv.opts.Rectangles(**edit_range_style),
-            hv.opts.VSpans(**edit_range_style),
-            hv.opts.HSpans(**edit_range_style),
-            hv.opts.VLines(**edit_range_style),
-            hv.opts.HLines(**edit_range_style),
+            hv.opts.Rectangles(alpha=self.alpha, **edit_range_style),
+            hv.opts.VSpans(alpha=self.alpha, **edit_range_style),
+            hv.opts.HSpans(alpha=self.alpha, **edit_range_style),
+            hv.opts.VLines(alpha=self.alpha, **edit_range_style),
+            hv.opts.HLines(alpha=self.alpha, **edit_range_style),
         )
 
 
@@ -94,7 +94,8 @@ class Indicator:
         "Vectorizes an nd-overlay of range_2d rectangles."
         kdims = [region_labels[i] for i in (0, 2, 1, 3)]  # LBRT format
         vdims = [*fields_labels, data.index.name]
-        element = hv.Rectangles(data.reset_index(), kdims=kdims, vdims=vdims)
+        ds = hv.Dataset(data.reset_index(), kdims=kdims, vdims=vdims)
+        element = ds.to(hv.Rectangles, groupby=groupby)
         cds_map = dict(zip(region_labels, ("left", "right", "bottom", "top")))
         hover = cls._build_hover_tool(data, cds_map)
         return element.opts(tools=[hover])
