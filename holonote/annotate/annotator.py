@@ -509,7 +509,10 @@ class AnnotationDisplay(param.Parameterized):
                     msg = "Only 1d and 2d supported for Points"
                     raise ValueError(msg)
 
-            return region_element
+            edit_range_style = self.style.edit_range_style
+            edit_point_style = self.style.edit_point_style
+            opts = self.style.region(edit_range_style, edit_point_style)
+            return region_element.opts(*opts)
 
         return hv.DynamicMap(inner, streams=self._edit_streams)
 
@@ -601,10 +604,6 @@ class AnnotationDisplay(param.Parameterized):
         return hv.DynamicMap(inner, streams=[self._annotation_count_stream])
 
     def overlay(self, indicators=True, editor=True) -> hv.Overlay:
-        edit_range_style = self.style.edit_range_style
-        edit_point_style = self.style.edit_point_style
-        region = self.style.region(edit_range_style, edit_point_style)
-
         layers = []
         active_tools = []
         if "range" in self.region_types or self.region_types == "point":
@@ -616,7 +615,7 @@ class AnnotationDisplay(param.Parameterized):
         if indicators:
             layers.append(self.indicators())
         if editor:
-            layers.append(self.region_editor().opts(*region))
+            layers.append(self.region_editor())
         return hv.Overlay(layers).collate()
 
     @property
