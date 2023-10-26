@@ -59,10 +59,10 @@ class Style(param.Parameterized):
         opts = dict(alpha=self.edit_alpha, color=self.edit_color, **self.edit_range_style)
         return (
             hv.opts.Rectangles(**opts),
-            hv.opts.VSpans(**opts),
-            hv.opts.HSpans(**opts),
-            hv.opts.VLines(**opts),
-            hv.opts.HLines(**opts),
+            hv.opts.VSpan(**opts),
+            hv.opts.HSpan(**opts),
+            hv.opts.VLine(**opts),
+            hv.opts.HLine(**opts),
         )
 
 
