@@ -600,14 +600,8 @@ class AnnotationDisplay(param.Parameterized):
         return hv.DynamicMap(inner, streams=[self._annotation_count_stream])
 
     def overlay(self, indicators=True, editor=True) -> hv.Overlay:
-        range_style = self.style.range_style
-        point_style = self.style.point_style
         edit_range_style = self.style.edit_range_style
         edit_point_style = self.style.edit_point_style
-        highlight = self.style.indicator_highlight
-
-        highlighters = {opt: self.selected_dim_expr(v[0], v[1]) for opt, v in highlight.items()}
-        indicator = self.style.indicator(range_style, point_style, highlighters)
         region = self.style.region(edit_range_style, edit_point_style)
 
         layers = []
@@ -619,7 +613,7 @@ class AnnotationDisplay(param.Parameterized):
         layers.append(self._element.opts(tools=self.edit_tools, active_tools=active_tools))
 
         if indicators:
-            layers.append(self.indicators().opts(*indicator))
+            layers.append(self.indicators())
         if editor:
             layers.append(self.region_editor().opts(*region))
         return hv.Overlay(layers).collate()
@@ -650,10 +644,19 @@ class AnnotationDisplay(param.Parameterized):
             msg = f"{self.region_types} not implemented"
             raise NotImplementedError(msg)
 
-        if self.style.groupby:
-            indicator = indicator.overlay()
+        if self.style.groupby and self.style.visible:
+            indicator = indicator.get(self.style.visible)
+            # TODO: Handle when indicator is empty
 
-        return indicator
+        # Set styling on annotations indicator
+        range_style = self.style.range_style
+        point_style = self.style.point_style
+        highlight = self.style.indicator_highlight
+
+        highlighters = {opt: self.selected_dim_expr(v[0], v[1]) for opt, v in highlight.items()}
+        indicator = indicator.opts(*self.style.indicator(range_style, point_style, highlighters))
+
+        return indicator.overlay() if self.style.groupby else hv.NdOverlay({0: indicator})
 
     def selected_dim_expr(self, selected_value, non_selected_value):
         self._selected_values.append(selected_value)
