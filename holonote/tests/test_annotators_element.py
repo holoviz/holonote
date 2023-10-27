@@ -24,7 +24,8 @@ def get_region_editor_data(
 
 
 def get_indicators_data(annotator, element_type, kdims=None):
-    return _get_display(annotator, kdims).static_indicators.data
+    si = _get_display(annotator, kdims).static_indicators
+    return next(iter(si.data.values())).data
 
 
 def test_set_regions_range1d(annotator_range1d, element_range1d) -> None:
