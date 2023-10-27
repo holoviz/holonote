@@ -644,7 +644,10 @@ class AnnotationDisplay(param.Parameterized):
 
         if self.annotator.groupby and self.annotator.visible:
             indicator = indicator.get(self.annotator.visible)
-            # TODO: Handle when indicator is empty
+            if indicator is None:
+                vis = "', '".join(self.annotator.visible)
+                msg = f"Visible dimensions {vis!r} not in spec"
+                raise ValueError(msg)
 
         # Set styling on annotations indicator
         highlight = self.style.indicator_highlight
