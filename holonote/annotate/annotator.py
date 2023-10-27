@@ -32,7 +32,6 @@ class Style(param.Parameterized):
     )
 
     color = param.Parameter(default="red", doc="Color of the indicator", allow_refs=True)
-
     edit_color = param.Parameter(default="blue", doc="Color of the editor", allow_refs=True)
 
     range_style = {"apply_ranges": False, "show_legend": False}
@@ -726,8 +725,6 @@ class Annotator(AnnotatorInterface):
         self._selection_enabled = True
         self._editable_enabled = True
 
-        self.style.param.groupby.objects = [*self.fields, None]  # TODO: Smarter way?
-
     @classmethod
     def _infer_kdim_dtypes(self, element: hv.Element) -> dict:
         # Remove?
@@ -761,20 +758,6 @@ class Annotator(AnnotatorInterface):
             if clear:
                 v.clear_indicated_region()
             v.show_region()
-
-    # all the style parameters?
-    @param.depends(
-        "style.groupby",
-        "style.visible",
-        "style.color",
-        "style.edit_color",
-        "style.alpha",
-        "style.selection_alpha",
-        "style.edit_alpha",
-        watch=True,
-    )
-    def _refresh_style(self):
-        self.refresh()
 
     def set_annotation_table(self, annotation_table):
         self.select_by_index()
@@ -858,3 +841,11 @@ class Annotator(AnnotatorInterface):
     def editable_enabled(self, enabled: bool) -> None:
         for v in self._displays.values():
             v.editable_enabled = enabled
+
+    @param.depends("style.param", watch=True)
+    def _refresh_style(self) -> None:
+        self.refresh()
+
+    @param.depends("fields", watch=True, on_init=True)
+    def _set_groupby_objects(self) -> None:
+        self.style.param.groupby.objects = [*self.fields, None]
