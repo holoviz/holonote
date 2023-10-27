@@ -26,11 +26,6 @@ class Style(param.Parameterized):
     edit_alpha = param.Number(default=0.4, bounds=(0, 1), allow_refs=True)
     edit_alpha.doc = "Alpha value for editing regions"
 
-    groupby = param.Selector(default=None, doc="Groupby dimension", allow_refs=True)
-    visible = param.ListSelector(
-        default=[], doc="Visible dimensions, needs groupby enabled", allow_refs=True
-    )
-
     color = param.Parameter(default="red", doc="Color of the indicator", allow_refs=True)
     edit_color = param.Parameter(default="blue", doc="Color of the editor", allow_refs=True)
 
@@ -632,7 +627,7 @@ class AnnotationDisplay(param.Parameterized):
             "region_labels": region_labels,
             "fields_labels": fields_labels,
             "invert_axes": False,  # Not yet handled
-            "groupby": self.style.groupby,
+            "groupby": self.annotator.groupby,
         }
 
         if self.region_types == "range":
@@ -647,8 +642,8 @@ class AnnotationDisplay(param.Parameterized):
             msg = f"{self.region_types} not implemented"
             raise NotImplementedError(msg)
 
-        if self.style.groupby and self.style.visible:
-            indicator = indicator.get(self.style.visible)
+        if self.annotator.groupby and self.annotator.visible:
+            indicator = indicator.get(self.annotator.visible)
             # TODO: Handle when indicator is empty
 
         # Set styling on annotations indicator
@@ -656,7 +651,7 @@ class AnnotationDisplay(param.Parameterized):
         highlighters = {opt: self.selected_dim_expr(v[0], v[1]) for opt, v in highlight.items()}
         indicator = indicator.opts(*self.style.indicator(highlighters))
 
-        return indicator.overlay() if self.style.groupby else hv.NdOverlay({0: indicator})
+        return indicator.overlay() if self.annotator.groupby else hv.NdOverlay({0: indicator})
 
     def selected_dim_expr(self, selected_value, non_selected_value):
         self._selected_values.append(selected_value)
@@ -708,6 +703,10 @@ class Annotator(AnnotatorInterface):
     add new annotations and update existing annotations.
     """
 
+    groupby = param.Selector(default=None, doc="Groupby dimension", allow_refs=True)
+    visible = param.ListSelector(
+        default=[], doc="Visible dimensions, needs groupby enabled", allow_refs=True
+    )
     style = param.ClassSelector(default=Style(), class_=Style, doc="Style parameters")
 
     def __init__(self, spec: dict, **params):
@@ -842,10 +841,10 @@ class Annotator(AnnotatorInterface):
         for v in self._displays.values():
             v.editable_enabled = enabled
 
-    @param.depends("style.param", watch=True)
+    @param.depends("style.param", "groupby", "visible", watch=True)
     def _refresh_style(self) -> None:
         self.refresh()
 
     @param.depends("fields", watch=True, on_init=True)
     def _set_groupby_objects(self) -> None:
-        self.style.param.groupby.objects = [*self.fields, None]
+        self.param.groupby.objects = [*self.fields, None]
