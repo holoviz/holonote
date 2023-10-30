@@ -299,6 +299,12 @@ def test_connector_use_annotator_fields_default(conn_sqlite_uuid):
     assert annotator.connector.fields == ["description"]
 
 
+def test_annotator_default_region(conn_sqlite_uuid):
+    annotator = Annotator({"TIME": float}, connector=conn_sqlite_uuid, default_region="point")
+
+    assert annotator.spec["TIME"]["region"] == "point"
+
+
 def test_fields_with_spaces(conn_sqlite_uuid):
     fields = ["A Field with space"]
     annotator = Annotator({"A": float, "B": float}, fields=fields, connector=conn_sqlite_uuid)
