@@ -35,6 +35,10 @@ class AnnotatorInterface(param.Parameterized):
         doc="Dictionary with key and value which will be added to each commit",
     )
 
+    default_region = param.Selector(
+        default="range", objects=["range", "point"], doc="Default region, if nothing is provided"
+    )
+
     connector = param.ClassSelector(class_=Connector, allow_None=False)
 
     connector_class = SQLiteDB
@@ -43,8 +47,7 @@ class AnnotatorInterface(param.Parameterized):
         if "connector" not in params:
             params["connector"] = self.connector_class()
 
-        spec = self.normalize_spec(spec)
-
+        spec = self.normalize_spec(spec, default_region=params.get("default_region"))
         super().__init__(spec=spec, **params)
         if set(self.fields) & set(self.static_fields):
             msg = "The values of fields and static_fields must not overlap"
@@ -65,7 +68,7 @@ class AnnotatorInterface(param.Parameterized):
         return [*self.fields, *self.static_fields]
 
     @classmethod
-    def normalize_spec(self, input_spec: dict[str, Any]) -> SpecDict:
+    def normalize_spec(self, input_spec: dict[str, Any], default_region=None) -> SpecDict:
         """Normalize the spec to conform to SpecDict format
 
         Accepted input spec formats:
@@ -90,7 +93,7 @@ class AnnotatorInterface(param.Parameterized):
             elif isinstance(v, tuple):
                 v = {"type": v[0], "region": v[1]}
             else:
-                v = {"type": v, "region": "range"}
+                v = {"type": v, "region": default_region or self.default_region}
 
             if v["region"] not in ["range", "point", "geometry"]:
                 msg = "Region type must be range, point, or geometry."
@@ -222,6 +225,9 @@ class AnnotatorInterface(param.Parameterized):
 
             self._set_regions(**regions)
             self._add_annotation(**fields)
+
+        # See: https://github.com/holoviz/holonote/pull/50
+        self.clear_regions()
 
     # Snapshotting and reverting
     @property

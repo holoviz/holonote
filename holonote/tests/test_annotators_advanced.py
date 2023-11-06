@@ -234,3 +234,12 @@ def test_define_annotations_with_multiple_field_warn(conn_sqlite_uuid) -> None:
         annotator.define_annotations(
             pd.DataFrame(data), TIME=("start_number", "end_number"), description="category"
         )
+
+
+def test_define_annotations_clear_region(conn_sqlite_uuid) -> None:
+    # See: https://github.com/holoviz/holonote/pull/50
+    annotator = Annotator({"x": float}, connector=conn_sqlite_uuid)
+    data = {"description": ["A", "B"], "start_number": [0.1, 0.5], "end_number": [0.4, 0.8]}
+    annotator.define_annotations(pd.DataFrame(data), x=("start_number", "end_number"))
+    assert annotator.region == {}
+    assert annotator._last_region == {}
