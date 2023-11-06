@@ -37,7 +37,9 @@ class Style(param.Parameterized):
 
     color = param.Parameter(default="red", doc="Color of the indicator", allow_refs=True)
     edit_color = param.Parameter(default="blue", doc="Color of the editor", allow_refs=True)
-    selection_color = param.Parameter(default="red", doc="Color of selection", allow_refs=True)
+    selection_color = param.Parameter(
+        default=None, doc="Color of selection, by the default the same as color", allow_refs=True
+    )
 
     # Default opts
     opts = _StyleOpts(default=_default_opts)
@@ -53,10 +55,14 @@ class Style(param.Parameterized):
 
     @property
     def indicator_selection(self) -> dict[str, tuple]:
-        return {
-            "alpha": (self.selection_alpha, self.alpha),
-            "color": (self.selection_color, self.color),
-        }
+        select = {"alpha": (self.selection_alpha, self.alpha)}
+        if self.selection_color is not None:
+            if isinstance(self.color, hv.dim):
+                msg = "Style.color cannot be a `hv.dim` when 'Style.selection_color' is not None"
+                raise ValueError(msg)
+            else:
+                select["color"] = (self.selection_color, self.color)
+        return select
 
     def indicator(self, **opts):
         opts = {**_default_opts, **opts, **self.opts}
