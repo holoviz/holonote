@@ -1,12 +1,21 @@
-from __future__ import annotations
-
-from .annotator import Annotator  # noqa: F401
-from .connector import (  # noqa: F401
+from .annotator import Annotator
+from .connector import (
     AutoIncrementKey,
     Connector,
     SQLiteDB,
     UUIDBinaryKey,
     UUIDHexStringKey,
 )
-from .plotting import Style  # noqa: F401
-from .table import *
+from .plotting import Style
+from .table import AnnotationTable
+
+__all__ = (
+    "AnnotationTable",
+    "Annotator",
+    "AutoIncrementKey",
+    "Connector",
+    "SQLiteDB",
+    "Style",
+    "UUIDBinaryKey",
+    "UUIDHexStringKey",
+)

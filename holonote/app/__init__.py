@@ -1,3 +1,3 @@
-from __future__ import annotations
+from .panel import PanelWidgets
 
-from .panel import PanelWidgets  # noqa: F401
+__all__ = ("PanelWidgets",)

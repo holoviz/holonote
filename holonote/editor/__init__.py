@@ -1,3 +1,3 @@
-from __future__ import annotations
+from .editors import PathEditor
 
-from .editors import PathEditor  # noqa: F401
+__all__ = ("PathEditor",)
