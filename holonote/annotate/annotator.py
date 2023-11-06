@@ -16,6 +16,17 @@ if TYPE_CHECKING:
     from .typing import SpecDict
 
 
+class _StyleOpts(param.Dict):
+    def _validate(self, val) -> None:
+        super()._validate(val)
+        for k in val:
+            if k in ("color", "alpha"):
+                warn("Color and alpha opts should be set directly on the style object.")
+
+
+_default_opts = {"apply_ranges": False, "show_legend": False}
+
+
 class Style(param.Parameterized):
     alpha = param.Number(default=0.2, bounds=(0, 1), allow_refs=True)
     alpha.doc = "Alpha value for non-selected regions"
@@ -28,35 +39,50 @@ class Style(param.Parameterized):
 
     color = param.Parameter(default="red", doc="Color of the indicator", allow_refs=True)
     edit_color = param.Parameter(default="blue", doc="Color of the editor", allow_refs=True)
+    selection_color = param.Parameter(default="red", doc="Color of selection", allow_refs=True)
 
-    range_style = {"apply_ranges": False, "show_legend": False}
-    point_style = {"apply_ranges": False, "show_legend": False}
+    # Default opts
+    opts = _StyleOpts(default=_default_opts)
+    line_opts = _StyleOpts(default={})
+    span_opts = _StyleOpts(default={})
+    rectangle_opts = _StyleOpts(default={})
 
-    edit_range_style = {"line_alpha": 1, "line_width": 1, "line_color": "black"}
-    edit_point_style = {"line_alpha": 1, "line_color": "black"}
+    # Editor opts
+    edit_opts = _StyleOpts(default={**_default_opts, "line_color": "black"})
+    edit_line_opts = _StyleOpts(default={})
+    edit_span_opts = _StyleOpts(default={})
+    edit_rectangle_opts = _StyleOpts(default={})
 
     @property
-    def indicator_highlight(self) -> dict[str, tuple[float, float]]:
-        return {"alpha": (self.selection_alpha, self.alpha)}
+    def indicator_selection(self) -> dict[str, tuple]:
+        return {
+            "alpha": (self.selection_alpha, self.alpha),
+            "color": (self.selection_color, self.color),
+        }
 
-    def indicator(self, highlighters):
-        opts = dict(self.range_style, color=self.color, **highlighters)
+    def indicator(self, **opts):
+        opts = {**_default_opts, **opts, **self.opts}
         return (
-            hv.opts.Rectangles(**opts),
-            hv.opts.VSpans(**opts),
-            hv.opts.HSpans(**opts),
-            hv.opts.VLines(**opts),
-            hv.opts.HLines(**opts),
+            hv.opts.Rectangles(**opts, **self.rectangle_opts),
+            hv.opts.VSpans(**opts, **self.span_opts),
+            hv.opts.HSpans(**opts, **self.span_opts),
+            hv.opts.VLines(**opts, **self.line_opts),
+            hv.opts.HLines(**opts, **self.line_opts),
         )
 
-    def region(self):
-        opts = dict(alpha=self.edit_alpha, color=self.edit_color, **self.edit_range_style)
+    def editor(self, **opts):
+        opts = {
+            "alpha": self.edit_alpha,
+            "color": self.edit_color,
+            **_default_opts,
+            **self.edit_opts,
+        }
         return (
-            hv.opts.Rectangles(**opts),
-            hv.opts.VSpan(**opts),
-            hv.opts.HSpan(**opts),
-            hv.opts.VLine(**opts),
-            hv.opts.HLine(**opts),
+            hv.opts.Rectangles(**opts, **self.edit_rectangle_opts),
+            hv.opts.VSpan(**opts, **self.edit_span_opts),
+            hv.opts.HSpan(**opts, **self.edit_span_opts),
+            hv.opts.VLine(**opts, **self.edit_line_opts),
+            hv.opts.HLine(**opts, **self.edit_line_opts),
         )
 
 
@@ -510,7 +536,7 @@ class AnnotationDisplay(param.Parameterized):
                     msg = "Only 1d and 2d supported for Points"
                     raise ValueError(msg)
 
-            return region_element.opts(*self.style.region())
+            return region_element.opts(*self.style.editor())
 
         return hv.DynamicMap(inner, streams=self._edit_streams)
 
@@ -650,9 +676,9 @@ class AnnotationDisplay(param.Parameterized):
                 raise ValueError(msg)
 
         # Set styling on annotations indicator
-        highlight = self.style.indicator_highlight
+        highlight = self.style.indicator_selection
         highlighters = {opt: self.selected_dim_expr(v[0], v[1]) for opt, v in highlight.items()}
-        indicator = indicator.opts(*self.style.indicator(highlighters))
+        indicator = indicator.opts(*self.style.indicator(**highlighters))
 
         return indicator.overlay() if self.annotator.groupby else hv.NdOverlay({0: indicator})
 
