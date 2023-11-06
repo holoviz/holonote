@@ -315,6 +315,9 @@ class AnnotatorInterface(param.Parameterized):
             self._set_regions(**regions)
             self._add_annotation(**fields)
 
+        # See: https://github.com/holoviz/holonote/pull/50
+        self.clear_regions()
+
     # Snapshotting and reverting
     @property
     def has_snapshot(self) -> bool:
