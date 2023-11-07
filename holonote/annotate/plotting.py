@@ -90,7 +90,8 @@ class Style(param.Parameterized):
         )
 
     def reset(self):
-        self.param.update(**{k: v.default for k, v in self.param.objects().items() if k != "name"})
+        params = self.param.objects().items()
+        self.param.update(**{k: v.default for k, v in params if k != "name"})
 
 
 class Indicator:

@@ -140,3 +140,13 @@ def test_style_opts_warn(cat_annotator, opts):
     msg = "Color and alpha opts should be set directly on the style object"
     with pytest.raises(UserWarning, match=msg):
         cat_annotator.style.opts = opts
+
+
+def test_style_reset(cat_annotator) -> None:
+    style = cat_annotator.style
+    style.color = "blue"
+    compare_style(cat_annotator, {})
+
+    style.reset()
+    assert style.color == "red"
+    compare_style(cat_annotator, {})
