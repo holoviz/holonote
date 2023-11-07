@@ -65,7 +65,7 @@ class Style(param.Parameterized):
         return select
 
     def indicator(self, **opts):
-        opts = {**_default_opts, **opts, **self.opts}
+        opts = {**_default_opts, "color": self.color, **opts, **self.opts}
         return (
             hv.opts.Rectangles(**opts, **self.rectangle_opts),
             hv.opts.VSpans(**opts, **self.span_opts),
@@ -88,6 +88,9 @@ class Style(param.Parameterized):
             hv.opts.VLine(**opts, **self.edit_line_opts),
             hv.opts.HLine(**opts, **self.edit_line_opts),
         )
+
+    def reset(self):
+        self.param.update(**{k: v.default for k, v in self.param.objects().items() if k != "name"})
 
 
 class Indicator:
