@@ -41,7 +41,7 @@ class Style(param.Parameterized):
         default=None, doc="Color of selection, by the default the same as color", allow_refs=True
     )
 
-    # Default opts
+    # Indicator opts (default and selection)
     opts = _StyleOpts(default=_default_opts)
     line_opts = _StyleOpts(default={})
     span_opts = _StyleOpts(default={})

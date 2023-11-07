@@ -117,3 +117,26 @@ def test_style_error_color_dim_and_selection(cat_annotator):
     msg = r"'Style\.color' cannot be a `hv.dim` when 'Style.selection_color' is not None"
     with pytest.raises(ValueError, match=msg):
         compare_style(cat_annotator, {})
+
+
+def test_style_opts(cat_annotator):
+    cat_annotator.style.opts = {"line_width": 2}
+    compare_style(cat_annotator, {})
+
+    indicator = get_indicator(cat_annotator, hv.VSpans)
+    assert indicator.opts["line_width"] == 2
+
+    editor = get_editor(cat_annotator, hv.VSpan)
+    assert "line_width" not in editor.opts.get().kwargs
+
+    cat_annotator.style.edit_opts = {"line_width": 3}
+    cat_annotator.set_regions(x=(0, 1))  # To update plot
+    editor = get_editor(cat_annotator, hv.VSpan)
+    assert editor.opts["line_width"] == 3
+
+
+@pytest.mark.parametrize("opts", [{"alpha": 0.5}, {"color": "red"}], ids=["alpha", "color"])
+def test_style_opts_warn(cat_annotator, opts):
+    msg = "Color and alpha opts should be set directly on the style object"
+    with pytest.raises(UserWarning, match=msg):
+        cat_annotator.style.opts = opts
