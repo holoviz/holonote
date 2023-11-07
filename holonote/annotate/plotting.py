@@ -42,13 +42,13 @@ class Style(param.Parameterized):
     )
 
     # Indicator opts (default and selection)
-    opts = _StyleOpts(default=_default_opts)
+    opts = _StyleOpts(default={})
     line_opts = _StyleOpts(default={})
     span_opts = _StyleOpts(default={})
     rectangle_opts = _StyleOpts(default={})
 
     # Editor opts
-    edit_opts = _StyleOpts(default={**_default_opts, "line_color": "black"})
+    edit_opts = _StyleOpts(default={"line_color": "black"})
     edit_line_opts = _StyleOpts(default={})
     edit_span_opts = _StyleOpts(default={})
     edit_rectangle_opts = _StyleOpts(default={})
