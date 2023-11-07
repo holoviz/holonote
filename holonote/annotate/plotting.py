@@ -64,8 +64,8 @@ class Style(param.Parameterized):
                 select["color"] = (self.selection_color, self.color)
         return select
 
-    def indicator(self, **opts):
-        opts = {**_default_opts, "color": self.color, **opts, **self.opts}
+    def indicator(self, **select_opts) -> tuple[hv.Options, ...]:
+        opts = {**_default_opts, "color": self.color, **select_opts, **self.opts}
         return (
             hv.opts.Rectangles(**opts, **self.rectangle_opts),
             hv.opts.VSpans(**opts, **self.span_opts),
@@ -74,11 +74,11 @@ class Style(param.Parameterized):
             hv.opts.HLines(**opts, **self.line_opts),
         )
 
-    def editor(self, **opts):
+    def editor(self) -> tuple[hv.Options, ...]:
         opts = {
+            **_default_opts,
             "alpha": self.edit_alpha,
             "color": self.edit_color,
-            **_default_opts,
             **self.edit_opts,
         }
         return (
