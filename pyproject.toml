@@ -14,6 +14,7 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Operating System :: OS Independent",
 ]
 dependencies = ["holoviews >=1.18.0a1", "pandas"]
@@ -36,7 +37,7 @@ scripts.build = "bash conda/build.sh"
 [tool.hatch.envs.test]
 dependencies = ["pytest", "pytest-github-actions-annotate-failures"]
 scripts.run = "python -m pytest holonote/tests"
-matrix = [{ python = ["3.9", "3.10", "3.11"] }]
+matrix = [{ python = ["3.9", "3.10", "3.11", "3.12"] }]
 
 [tool.hatch.envs.fmt]
 detached = true
