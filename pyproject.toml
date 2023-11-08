@@ -48,6 +48,8 @@ scripts.update = "pre-commit autoupdate"
 addopts = "-vv"
 filterwarnings = [
     "error",
+    # 2023-10: Datetime's utctimestamp() and utcnow() is deprecated in Python 3.12
+    "ignore:datetime.datetime.utcfromtimestamp():DeprecationWarning:dateutil.tz.tz",  # https://github.com/dateutil/dateutil/pull/1285
 ]
 
 [tool.ruff]
