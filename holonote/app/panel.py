@@ -6,9 +6,12 @@ from typing import TYPE_CHECKING, Any
 
 import panel as pn
 import param
+from packaging.version import Version
 
 if TYPE_CHECKING:
     from holonote.annotate import Annotator
+
+PN13 = Version(pn.__version__) >= Version("1.3.0")
 
 
 class PanelWidgets:
@@ -30,6 +33,8 @@ class PanelWidgets:
         self._widget_apply_button = pn.widgets.Button(name="✓", width=20)
         self._widget_revert_button = pn.widgets.Button(name="↺", width=20)
         self._widget_commit_button = pn.widgets.Button(name="▲", width=20)
+        if PN13:
+            self._add_button_description()
 
         if field_values is None:
             self._fields_values = {k: "" for k in self.annotator.fields}
@@ -38,6 +43,40 @@ class PanelWidgets:
         self._fields_widgets = self._create_fields_widgets(self._fields_values)
 
         self._set_standard_callbacks()
+
+    def _add_button_description(self):
+        from bokeh.models import Tooltip
+        from bokeh.models.dom import HTML
+
+        html_table = """
+        <h3>Select mode:</h3>
+        <table style="width:100%">
+        <tr>
+            <td style="min-width:50px">+</td>
+            <td>Add annotation</td>
+        </tr>
+        <tr>
+            <td>-</td>
+            <td>Delete annotation</td>
+        </tr>
+        <tr>
+            <td>✏</td>
+            <td>Edit annotation</td>
+        </tr>
+        </table>
+        """
+
+        self._widget_mode_group.description = Tooltip(
+            content=HTML(html_table),
+            position="bottom",
+        )
+        self._widget_apply_button.description = Tooltip(content="Apply changes", position="bottom")
+        self._widget_revert_button.description = Tooltip(
+            content="Revert changes not yet saved to database", position="bottom"
+        )
+        self._widget_commit_button.description = Tooltip(
+            content="Save to database", position="bottom"
+        )
 
     @property
     def tool_widgets(self):
