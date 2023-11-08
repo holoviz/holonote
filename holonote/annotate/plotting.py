@@ -89,7 +89,7 @@ class Style(param.Parameterized):
             hv.opts.HLine(**opts, **self.edit_line_opts),
         )
 
-    def reset(self):
+    def reset(self) -> None:
         params = self.param.objects().items()
         self.param.update(**{k: v.default for k, v in params if k != "name"})
 
