@@ -46,7 +46,7 @@ def test_set_regions_range1d(annotator_range1d) -> None:
     assert output2 == expected2
 
 
-def test_set_regions_range2d(annotator_range2d, element_range2d) -> None:
+def test_set_regions_range2d(annotator_range2d) -> None:
     annotator = annotator_range2d
     annotator.get_display("x", "y")
 
@@ -74,7 +74,7 @@ def test_set_regions_range2d(annotator_range2d, element_range2d) -> None:
     assert output2 == expected2
 
 
-def test_set_regions_multiple(multiple_annotators, element_range1d, element_range2d):
+def test_set_regions_multiple(multiple_annotators):
     annotator = multiple_annotators
     annotator.get_display("TIME")
     annotator.get_display("x", "y")
