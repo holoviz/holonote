@@ -11,7 +11,8 @@ def get_editor_data(annotator, element_type, kdims=None):
 
 
 def get_indicator_data(annotator, element_type, kdims=None):
-    return get_indicator(annotator, element_type, kdims).data
+    for el in get_indicator(annotator, element_type, kdims):
+        yield el.data
 
 
 def test_set_regions_range1d(annotator_range1d) -> None:
@@ -35,7 +36,7 @@ def test_set_regions_range1d(annotator_range1d) -> None:
     expected = [None, None]
     assert output == expected
 
-    output = get_indicator_data(annotator, hv.Rectangles)
+    output = next(get_indicator_data(annotator, hv.Rectangles))
     output1 = output.loc[0, ["start[TIME]", "end[TIME]"]].tolist()
     expected1 = [-0.25, 0.25]
     assert output1 == expected1
@@ -63,7 +64,7 @@ def test_set_regions_range2d(annotator_range2d, element_range2d) -> None:
     output = get_editor_data(annotator, hv.Rectangles)
     assert output.empty
 
-    output = get_indicator_data(annotator, hv.Rectangles)
+    output = next(get_indicator_data(annotator, hv.Rectangles))
     output1 = output.loc[0, ["start[x]", "start[y]", "end[x]", "end[y]"]].tolist()
     expected1 = [-0.25, -0.25, 0.25, 0.25]
     assert output1 == expected1
@@ -104,7 +105,7 @@ def test_set_regions_multiple(multiple_annotators, element_range1d, element_rang
     expected = [None, None]
     assert output == expected
 
-    output = get_indicator_data(annotator, hv.Rectangles, "TIME")
+    output = next(get_indicator_data(annotator, hv.Rectangles, "TIME"))
     output1 = output.loc[0, ["start[TIME]", "end[TIME]"]].tolist()
     expected1 = [-0.25, 0.25]
     assert output1 == expected1
@@ -116,7 +117,7 @@ def test_set_regions_multiple(multiple_annotators, element_range1d, element_rang
     output = get_editor_data(annotator, hv.Rectangles, ("x", "y"))
     assert output.empty
 
-    output = get_indicator_data(annotator, hv.Rectangles, ("x", "y"))
+    output = next(get_indicator_data(annotator, hv.Rectangles, ("x", "y")))
     output1 = output.loc[0, ["start[x]", "start[y]", "end[x]", "end[y]"]].tolist()
     expected1 = [-0.25, -0.25, 0.25, 0.25]
     assert output1 == expected1

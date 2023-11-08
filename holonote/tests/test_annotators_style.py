@@ -20,7 +20,7 @@ def compare_indicator_color(indicator, style, style_categories):
 
 def compare_style(cat_annotator, categories, style_categories=None):
     style = cat_annotator.style
-    indicator = get_indicator(cat_annotator, hv.VSpans)
+    indicator = next(get_indicator(cat_annotator, hv.VSpans))
     compare_indicator_color(indicator, style, style_categories)
     expected_dim = hv.dim("uuid").categorize(categories=categories, default=style.alpha)
     assert str(indicator.opts["alpha"]) == str(expected_dim)
@@ -100,7 +100,7 @@ def test_style_opts(cat_annotator):
     cat_annotator.style.opts = {"line_width": 2}
     compare_style(cat_annotator, {})
 
-    indicator = get_indicator(cat_annotator, hv.VSpans)
+    indicator = next(get_indicator(cat_annotator, hv.VSpans))
     assert indicator.opts["line_width"] == 2
 
     editor = get_editor(cat_annotator, hv.VSpan)
