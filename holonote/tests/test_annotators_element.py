@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import holoviews as hv
+import pytest
 
 from holonote.tests.util import get_editor, get_indicator
 
@@ -150,3 +151,34 @@ def test_selection_enabled(annotator_range1d, element_range1d):
     annotator_range1d.selection_enabled = True
     for display in annotator_range1d._displays.values():
         assert display.selection_enabled
+
+
+def test_groupby(cat_annotator):
+    cat_annotator.groupby = "category"
+    iter_indicator = get_indicator(cat_annotator, hv.VSpans)
+    indicator = next(iter_indicator)
+    assert indicator.data.shape == (2, 5)
+    assert (indicator.data["category"] == "A").all()
+
+    indicator = next(iter_indicator)
+    assert indicator.data.shape == (2, 5)
+    assert (indicator.data["category"] == "B").all()
+
+    indicator = next(iter_indicator)
+    assert indicator.data.shape == (1, 5)
+    assert (indicator.data["category"] == "C").all()
+
+    with pytest.raises(StopIteration):
+        next(iter_indicator)
+
+
+def test_groupby_visible(cat_annotator):
+    cat_annotator.groupby = "category"
+    cat_annotator.visible = ["A"]
+    iter_indicator = get_indicator(cat_annotator, hv.VSpans)
+    indicator = next(iter_indicator)
+    assert indicator.data.shape == (2, 5)
+    assert (indicator.data["category"] == "A").all()
+
+    with pytest.raises(StopIteration):
+        next(iter_indicator)
