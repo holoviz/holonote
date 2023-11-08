@@ -9,6 +9,8 @@ import numpy as np
 import pandas as pd
 import param
 
+from .util import sqlite_date_adapters
+
 if TYPE_CHECKING:
     from .typing import SpecDict
 
@@ -298,6 +300,7 @@ class SQLiteDB(Connector):
             self._initialize(column_schema, create_table=False)
 
     def _initialize(self, column_schema, create_table=True):
+        sqlite_date_adapters()
         if self.con is None:
             self.con = sqlite3.connect(
                 self.filename, detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES
