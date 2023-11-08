@@ -14,9 +14,10 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Operating System :: OS Independent",
 ]
-dependencies = ["holoviews >=1.18.0a1", "pandas"]
+dependencies = ["holoviews >=1.18.0", "pandas"]
 
 [project.optional-dependencies]
 dev = [
@@ -36,7 +37,7 @@ scripts.build = "bash conda/build.sh"
 [tool.hatch.envs.test]
 dependencies = ["pytest", "pytest-github-actions-annotate-failures"]
 scripts.run = "python -m pytest holonote/tests"
-matrix = [{ python = ["3.9", "3.10", "3.11"] }]
+matrix = [{ python = ["3.9", "3.10", "3.11", "3.12"] }]
 
 [tool.hatch.envs.fmt]
 detached = true
@@ -47,10 +48,11 @@ scripts.update = "pre-commit autoupdate"
 addopts = "-vv"
 filterwarnings = [
     "error",
+    # 2023-10: Datetime's utctimestamp() and utcnow() is deprecated in Python 3.12
+    "ignore:datetime.datetime.utcfromtimestamp():DeprecationWarning:dateutil.tz.tz",  # https://github.com/dateutil/dateutil/pull/1285
 ]
 
 [tool.ruff]
-target-version = "py39"
 line-length = 99
 
 select = [
