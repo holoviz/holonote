@@ -35,8 +35,9 @@ detached = true
 scripts.build = "bash conda/build.sh"
 
 [tool.hatch.envs.test]
-dependencies = ["pytest", "pytest-github-actions-annotate-failures"]
+dependencies = ["pytest", "pytest-github-actions-annotate-failures", "coverage"]
 scripts.run = "python -m pytest holonote/tests"
+scripts.cov = "coverage run -m pytest holonote/tests {args:.}"
 matrix = [{ python = ["3.9", "3.10", "3.11", "3.12"] }]
 
 [tool.hatch.envs.fmt]
@@ -50,6 +51,17 @@ filterwarnings = [
     "error",
     # 2023-10: Datetime's utctimestamp() and utcnow() is deprecated in Python 3.12
     "ignore:datetime.datetime.utcfromtimestamp():DeprecationWarning:dateutil.tz.tz",  # https://github.com/dateutil/dateutil/pull/1285
+]
+
+[tool.coverage.report]
+exclude_also = [
+    "@pytest.mark.skip",
+    "pass",
+    "if TYPE_CHECKING",
+]
+omit = [
+    "holonote/_version.py",
+    "holonote/__init__.py",
 ]
 
 [tool.ruff]
