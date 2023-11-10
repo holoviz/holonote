@@ -200,11 +200,11 @@ class AnnotationDisplay(param.Parameterized):
 
         self.annotator = weakref.proxy(annotator)
         self.style = weakref.proxy(annotator.style)
-        self._set_region_types()
+        self._set_region_format()
         self._element = self._make_empty_element()
 
-    def _set_region_types(self) -> None:
-        self.region_types = "-".join([self.annotator.spec[k]["region"] for k in self.kdims])
+    def _set_region_format(self) -> None:
+        self.region_format = "-".join([self.annotator.spec[k]["region"] for k in self.kdims])
 
     @property
     def element(self):
@@ -213,13 +213,13 @@ class AnnotationDisplay(param.Parameterized):
     @property
     def edit_tools(self) -> list[Tool]:
         tools = []
-        if self.region_types == "range":
+        if self.region_format == "range":
             tools.append(BoxSelectTool(dimensions="width"))
-        elif self.region_types == "range-range":
+        elif self.region_format == "range-range":
             tools.append(BoxSelectTool())
-        elif self.region_types == "point":
+        elif self.region_format == "point":
             tools.append(BoxSelectTool(dimensions="width"))
-        elif self.region_types == "point-point":
+        elif self.region_format == "point-point":
             tools.append("tap")
         return tools
 
@@ -271,16 +271,16 @@ class AnnotationDisplay(param.Parameterized):
     def _filter_stream_values(self, bounds, x, y, geometry):
         if not self._editable_enabled:
             return (None, None, None, None)
-        if self.region_types == "point" and bounds:
+        if self.region_format == "point" and bounds:
             x = (bounds[0] + bounds[2]) / 2
             y = None
             bounds = (x, 0, x, 0)
-        elif "range" not in self.region_types:
+        elif "range" not in self.region_format:
             bounds = None
 
         # If selection enabled, tap stream used for selection not for creating point regions
-        # if ('point' in self.region_types and self.selection_enabled) or 'point' not in self.region_types:
-        if "point" not in self.region_types:
+        # if ('point' in self.region_format and self.selection_enabled) or 'point' not in self.region_format:
+        if "point" not in self.region_format:
             x, y = None, None
 
         return bounds, x, y, geometry
@@ -308,7 +308,7 @@ class AnnotationDisplay(param.Parameterized):
                 self.annotator._set_regions(**bbox)
 
             kdims = list(self.kdims)
-            if self.region_types == "point" and x is not None:
+            if self.region_format == "point" and x is not None:
                 self.annotator._set_regions(**{kdims[0]: x})
             if None not in [x, y]:
                 if len(kdims) == 1:
@@ -371,12 +371,12 @@ class AnnotationDisplay(param.Parameterized):
 
     def get_indices_by_position(self, **inputs) -> list[Any]:
         "Return primary key values matching given position in data space"
-        if "range" in self.region_types:
+        if "range" in self.region_format:
             return self._get_range_indices_by_position(**inputs)
-        elif "point" in self.region_types:
+        elif "point" in self.region_format:
             return self._get_point_indices_by_position(**inputs)
         else:
-            msg = f"{self.region_types} not implemented"
+            msg = f"{self.region_format} not implemented"
             raise NotImplementedError(msg)
 
     def register_tap_selector(self, element: hv.Element) -> hv.Element:
@@ -413,9 +413,9 @@ class AnnotationDisplay(param.Parameterized):
     def overlay(self, indicators=True, editor=True) -> hv.Overlay:
         layers = []
         active_tools = []
-        if "range" in self.region_types or self.region_types == "point":
+        if "range" in self.region_format or self.region_format == "point":
             active_tools += ["box_select"]
-        elif self.region_types == "point-point":
+        elif self.region_format == "point-point":
             active_tools += ["tap"]
         layers.append(self._element.opts(tools=self.edit_tools, active_tools=active_tools))
 
@@ -439,16 +439,16 @@ class AnnotationDisplay(param.Parameterized):
             "groupby": self.annotator.groupby,
         }
 
-        if self.region_types == "range":
+        if self.region_format == "range":
             indicator = Indicator.ranges_1d(**indicator_kwargs)
-        elif self.region_types == "range-range":
+        elif self.region_format == "range-range":
             indicator = Indicator.ranges_2d(**indicator_kwargs)
-        elif self.region_types == "point":
+        elif self.region_format == "point":
             indicator = Indicator.points_1d(**indicator_kwargs)
-        elif self.region_types == "point-point":
+        elif self.region_format == "point-point":
             indicator = Indicator.points_2d(**indicator_kwargs)
         else:
-            msg = f"{self.region_types} not implemented"
+            msg = f"{self.region_format} not implemented"
             raise NotImplementedError(msg)
 
         if self.annotator.groupby and self.annotator.visible:
@@ -488,17 +488,17 @@ class AnnotationDisplay(param.Parameterized):
         if not region:
             return
 
-        if self.region_types == "range":
+        if self.region_format == "range":
             value = region[kdims[0]]
             bounds = (value[0], 0, value[1], 1)
-        elif self.region_types == "range-range":
+        elif self.region_format == "range-range":
             bounds = (
                 region[kdims[0]][0],
                 region[kdims[1]][0],
                 region[kdims[0]][1],
                 region[kdims[1]][1],
             )
-        elif self.region_types == "point":
+        elif self.region_format == "point":
             value = region[kdims[0]]
             bounds = (value, 0, value, 1)
         else:
