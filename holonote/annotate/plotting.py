@@ -57,7 +57,7 @@ class Style(param.Parameterized):
     edit_rectangle_opts = _StyleOpts(default={})
 
     @property
-    def indicator_selection(self) -> dict[str, tuple]:
+    def _indicator_selection(self) -> dict[str, tuple]:
         select = {"alpha": (self.selection_alpha, self.alpha)}
         if self.selection_color is not None:
             if isinstance(self.color, hv.dim):
@@ -459,7 +459,7 @@ class AnnotationDisplay(param.Parameterized):
                 raise ValueError(msg)
 
         # Set styling on annotations indicator
-        highlight = self.style.indicator_selection
+        highlight = self.style._indicator_selection
         highlighters = {opt: self.selected_dim_expr(v[0], v[1]) for opt, v in highlight.items()}
         indicator = indicator.opts(*self.style.indicator(**highlighters))
 
