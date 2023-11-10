@@ -26,6 +26,32 @@ _default_opts = {"apply_ranges": False, "show_legend": False}
 
 
 class Style(param.Parameterized):
+    """
+    Style class for controlling the appearance of the annotations
+    indicator and editor.
+
+    This can be accessed as an accessor on an annotator object,
+    the following will set the annotation color to red:
+
+    >>> from holonote.annotate import Annotator
+    >>> annotator = Annotator(...)
+    >>> annotator.style.color = "red"
+
+    This will update existing annotation displays and any new
+    displays with the new style.
+
+    The style object can also be used to control the appearance
+    of the editor and selected indicator:
+
+    >>> annotator.style.edit_color = "blue"
+    >>> annotator.style.edit_alpha = 0.5
+    >>> annotator.style.selection_color = "green"
+    >>> annotator.style.selection_alpha = 0.5
+
+    See the [styling notebook](../../examples/styling.ipynb) for more examples
+    of how to use the style object.
+    """
+
     alpha = param.Number(
         default=0.2, bounds=(0, 1), allow_refs=True, doc="Alpha value for non-selected regions"
     )
