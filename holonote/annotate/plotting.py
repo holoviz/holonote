@@ -26,14 +26,17 @@ _default_opts = {"apply_ranges": False, "show_legend": False}
 
 
 class Style(param.Parameterized):
-    alpha = param.Number(default=0.2, bounds=(0, 1), allow_refs=True)
-    alpha.doc = "Alpha value for non-selected regions"
+    alpha = param.Number(
+        default=0.2, bounds=(0, 1), allow_refs=True, doc="Alpha value for non-selected regions"
+    )
 
-    selection_alpha = param.Number(default=0.7, bounds=(0, 1), allow_refs=True)
-    selection_alpha.doc = "Alpha value for selected regions"
+    selection_alpha = param.Number(
+        default=0.7, bounds=(0, 1), allow_refs=True, doc="Alpha value for selected regions"
+    )
 
-    edit_alpha = param.Number(default=0.4, bounds=(0, 1), allow_refs=True)
-    edit_alpha.doc = "Alpha value for editing regions"
+    edit_alpha = param.Number(
+        default=0.4, bounds=(0, 1), allow_refs=True, doc="Alpha value for editing regions"
+    )
 
     color = param.Parameter(default="red", doc="Color of the indicator", allow_refs=True)
     edit_color = param.Parameter(default="blue", doc="Color of the editor", allow_refs=True)
