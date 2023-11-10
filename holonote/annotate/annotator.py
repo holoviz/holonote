@@ -8,7 +8,7 @@ import param
 
 from .._warnings import warn
 from .connector import Connector, SQLiteDB
-from .plotting import AnnotationDisplay, Indicator, Style  # noqa: F401
+from .display import AnnotationDisplay, Indicator, Style  # noqa: F401
 from .table import AnnotationTable
 
 if TYPE_CHECKING:

@@ -6,7 +6,7 @@ from .connector import (
     UUIDBinaryKey,
     UUIDHexStringKey,
 )
-from .plotting import Style
+from .display import Style
 from .table import AnnotationTable
 
 __all__ = (
