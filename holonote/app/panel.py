@@ -49,7 +49,7 @@ class PanelWidgets:
         from bokeh.models.dom import HTML
 
         html_table = """
-        <h3>Select mode:</h3>
+        <h3>Mode:</h3>
         <table style="width:100%">
         <tr>
             <td style="min-width:50px">+</td>
