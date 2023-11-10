@@ -1,8 +1,6 @@
-from __future__ import annotations
-
 import os
 
-from . import annotate, editor  # noqa: F401
+from . import annotate, editor
 
 # Define '__version__'
 try:
@@ -24,3 +22,5 @@ except (ImportError, LookupError, FileNotFoundError):
         # The user is probably trying to run this without having installed
         # the package.
         __version__ = "0.0.0+unknown"
+
+__all__ = ("__version__", "annotate", "editor")

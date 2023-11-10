@@ -1,107 +1,18 @@
 from __future__ import annotations
 
-import weakref
 from typing import TYPE_CHECKING, Any
 
 import holoviews as hv
 import pandas as pd
 import param
-from bokeh.models.tools import BoxSelectTool, HoverTool, Tool
 
 from .._warnings import warn
 from .connector import Connector, SQLiteDB
+from .display import AnnotationDisplay, Indicator, Style  # noqa: F401
 from .table import AnnotationTable
 
 if TYPE_CHECKING:
     from .typing import SpecDict
-
-
-class Indicator:
-    """
-    Collection of class methods that express annotation data as final
-    displayed (vectorized) HoloViews object.
-    """
-
-    range_style = {"color": "red", "alpha": 0.4, "apply_ranges": False}
-    point_style = {"color": "red", "alpha": 0.4, "apply_ranges": False}
-    indicator_highlight = {"alpha": (0.7, 0.2)}
-
-    edit_range_style = {"alpha": 0.4, "line_alpha": 1, "line_width": 1, "line_color": "black"}
-    edit_point_style = {"alpha": 0.4, "line_alpha": 1, "line_color": "black"}
-
-    @classmethod
-    def indicator_style(cls, range_style, point_style, highlighters):
-        return (
-            hv.opts.Rectangles(**dict(range_style, **highlighters)),
-            hv.opts.VSpans(**dict(range_style, **highlighters)),
-            hv.opts.HSpans(**dict(range_style, **highlighters)),
-            hv.opts.VLines(**dict(range_style, **highlighters)),
-            hv.opts.HLines(**dict(range_style, **highlighters)),
-        )
-
-    @classmethod
-    def region_style(cls, edit_range_style, edit_point_style):
-        return (
-            hv.opts.Rectangles(**edit_range_style),
-            hv.opts.VSpans(**edit_range_style),
-            hv.opts.HSpans(**edit_range_style),
-            hv.opts.VLines(**edit_range_style),
-            hv.opts.HLines(**edit_range_style),
-        )
-
-    @classmethod
-    def points_1d(cls, data, region_labels, fields_labels, invert_axes=False):
-        "Vectorizes point regions to VLines. Note does not support hover info"
-        vdims = [*fields_labels, data.index.name]
-        element = hv.VLines(data.reset_index(), kdims=region_labels, vdims=vdims)
-        hover = cls._build_hover_tool(data)
-        return element.opts(tools=[hover])
-
-    @classmethod
-    def points_2d(cls, data, region_labels, fields_labels, invert_axes=False):
-        "Vectorizes point regions to VLines * HLines. Note does not support hover info"
-        msg = "2D point regions not supported yet"
-        raise NotImplementedError(msg)
-        vdims = [*fields_labels, data.index.name]
-        element = hv.Points(data.reset_index(), kdims=region_labels, vdims=vdims)
-        hover = cls._build_hover_tool(data)
-        return element.opts(tools=[hover])
-
-    @classmethod
-    def ranges_2d(cls, data, region_labels, fields_labels, invert_axes=False):
-        "Vectorizes an nd-overlay of range_2d rectangles."
-        kdims = [region_labels[i] for i in (0, 2, 1, 3)]  # LBRT format
-        vdims = [*fields_labels, data.index.name]
-        element = hv.Rectangles(data.reset_index(), kdims=kdims, vdims=vdims)
-        cds_map = dict(zip(region_labels, ("left", "right", "bottom", "top")))
-        hover = cls._build_hover_tool(data, cds_map)
-        return element.opts(tools=[hover])
-
-    @classmethod
-    def ranges_1d(cls, data, region_labels, fields_labels, invert_axes=False):
-        """
-        Vectorizes an nd-overlay of range_1d rectangles.
-
-        NOTE: Should use VSpans once available!
-        """
-        vdims = [*fields_labels, data.index.name]
-        element = hv.VSpans(data.reset_index(), kdims=region_labels, vdims=vdims)
-        hover = cls._build_hover_tool(data)
-        return element.opts(tools=[hover])
-
-    @classmethod
-    def _build_hover_tool(self, data, cds_map=None) -> HoverTool:
-        if cds_map is None:
-            cds_map = {}
-        tooltips, formatters = [], {}
-        for dim in data.columns:
-            cds_name = cds_map.get(dim, dim)
-            if data[dim].dtype.kind == "M":
-                tooltips.append((dim, f"@{{{cds_name}}}{{%F}}"))
-                formatters[f"@{{{cds_name}}}"] = "datetime"
-            else:
-                tooltips.append((dim, f"@{{{cds_name}}}"))
-        return HoverTool(tooltips=tooltips, formatters=formatters)
 
 
 class AnnotatorInterface(param.Parameterized):
@@ -336,360 +247,18 @@ class AnnotatorInterface(param.Parameterized):
             return commits
 
 
-class AnnotationDisplay(param.Parameterized):
-    kdims = param.List(
-        default=["x"], bounds=(1, 3), constant=True, doc="Dimensions of the element"
-    )
-
-    indicator = Indicator
-
-    _count = param.Integer(default=0, precedence=-1)
-
-    def __init__(self, annotator: Annotator, **params) -> None:
-        super().__init__(**params)
-
-        self._annotation_count_stream = hv.streams.Params(
-            parameterized=self,
-            parameters=["_count"],
-            transient=True,
-        )
-
-        self._selection_info = {}
-
-        self._selection_enabled = True
-        self._editable_enabled = True
-        self._selected_values = []
-        self._selected_options = []
-
-        transient = False
-        self._edit_streams = [
-            hv.streams.BoundsXY(transient=transient),
-            hv.streams.SingleTap(transient=transient),
-            hv.streams.Lasso(transient=transient),
-        ]
-
-        self.annotator = weakref.proxy(annotator)
-        self._set_region_types()
-        self._element = self._make_empty_element()
-
-    def _set_region_types(self) -> None:
-        self.region_types = "-".join([self.annotator.spec[k]["region"] for k in self.kdims])
-
-    @property
-    def element(self):
-        return self.overlay()
-
-    @property
-    def edit_tools(self) -> list[Tool]:
-        tools = []
-        if self.region_types == "range":
-            tools.append(BoxSelectTool(dimensions="width"))
-        elif self.region_types == "range-range":
-            tools.append(BoxSelectTool())
-        elif self.region_types == "point":
-            tools.append(BoxSelectTool(dimensions="width"))
-        elif self.region_types == "point-point":
-            tools.append("tap")
-        return tools
-
-    @classmethod
-    def _infer_kdim_dtypes(cls, element):
-        if not isinstance(element, hv.Element):
-            msg = "Supplied object {element} is not a bare HoloViews Element"
-            raise ValueError(msg)
-        kdim_dtypes = {}
-        for kdim in element.dimensions(selection="key"):
-            kdim_dtypes[str(kdim)] = type(element.dimension_values(kdim)[0])
-        return kdim_dtypes
-
-    def clear_indicated_region(self):
-        "Clear any region currently indicated on the plot by the editor"
-        self._edit_streams[0].event(bounds=None)
-        self._edit_streams[1].event(x=None, y=None)
-        self._edit_streams[2].event(geometry=None)
-        self.annotator.clear_regions()
-
-    def _make_empty_element(self) -> hv.Curve | hv.Image:
-        El = hv.Curve if len(self.kdims) == 1 else hv.Image
-        return El([], kdims=self.kdims).opts(apply_ranges=False)
-
-    @property
-    def selection_element(self) -> hv.Element:
-        if not hasattr(self, "_selection_element"):
-            self._selection_element = self._make_empty_element()
-        return self._selection_element
-
-    @property
-    def selection_enabled(self) -> bool:
-        return self._selection_enabled
-
-    @selection_enabled.setter
-    def selection_enabled(self, enabled: bool) -> None:
-        self._selection_enabled = enabled
-
-    @property
-    def editable_enabled(self) -> bool:
-        return self._editable_enabled
-
-    @editable_enabled.setter
-    def editable_enabled(self, enabled: bool) -> None:
-        self._editable_enabled = enabled
-        if not enabled:
-            self.clear_indicated_region()
-
-    def _filter_stream_values(self, bounds, x, y, geometry):
-        if not self._editable_enabled:
-            return (None, None, None, None)
-        if self.region_types == "point" and bounds:
-            x = (bounds[0] + bounds[2]) / 2
-            y = None
-            bounds = (x, 0, x, 0)
-        elif "range" not in self.region_types:
-            bounds = None
-
-        # If selection enabled, tap stream used for selection not for creating point regions
-        # if ('point' in self.region_types and self.selection_enabled) or 'point' not in self.region_types:
-        if "point" not in self.region_types:
-            x, y = None, None
-
-        return bounds, x, y, geometry
-
-    def _make_selection_editor(self) -> hv.DynamicMap:
-        def inner(bounds, x, y, geometry):
-            bounds, x, y, geometry = self._filter_stream_values(bounds, x, y, geometry)
-
-            info = self.selection_element._get_selection_expr_for_stream_value(
-                bounds=bounds, x=x, y=y, geometry=geometry
-            )
-            (dim_expr, bbox, region_element) = info
-
-            self._selection_info = {
-                "dim_expr": dim_expr,
-                "bbox": bbox,
-                "x": x,
-                "y": y,
-                "geometry": geometry,
-                "region_element": region_element,
-            }
-
-            if bbox is not None:
-                # self.annotator.set_regions will give recursion error
-                self.annotator._set_regions(**bbox)
-
-            kdims = list(self.kdims)
-            if self.region_types == "point" and x is not None:
-                self.annotator._set_regions(**{kdims[0]: x})
-            if None not in [x, y]:
-                if len(kdims) == 1:
-                    self.annotator._set_regions(**{kdims[0]: x})
-                elif len(kdims) == 2:
-                    self.annotator._set_regions(**{kdims[0]: x, kdims[1]: y})
-                else:
-                    msg = "Only 1d and 2d supported for Points"
-                    raise ValueError(msg)
-
-            return region_element
-
-        return hv.DynamicMap(inner, streams=self._edit_streams)
-
-    def region_editor(self) -> hv.DynamicMap:
-        if not hasattr(self, "_region_editor"):
-            self._region_editor = self._make_selection_editor()
-        return self._region_editor
-
-    def _get_range_indices_by_position(self, **inputs) -> list[Any]:
-        df = self.static_indicators.data
-        if df.empty:
-            return []
-
-        # Because we reset_index in Indicators
-        id_col = df.columns[0]
-
-        for i, (k, v) in enumerate(inputs.items()):
-            mask = (df[f"start[{k}]"] <= v) & (v < df[f"end[{k}]"])
-            if i == 0:
-                ids = set(df[mask][id_col])
-            else:
-                ids &= set(df[mask][id_col])
-        return list(ids)
-
-    def _get_point_indices_by_position(self, **inputs) -> list[Any]:
-        """
-        Simple algorithm for finding the closest point
-        annotation to the given position.
-        """
-
-        df = self.static_indicators.data
-        if df.empty:
-            return []
-
-        # Because we reset_index in Indicators
-        id_col = df.columns[0]
-
-        for i, (k, v) in enumerate(inputs.items()):
-            nearest = (df[f"point[{k}]"] - v).abs().argmin()
-            if i == 0:
-                ids = {df.iloc[nearest][id_col]}
-            else:
-                ids &= {df.iloc[nearest][id_col]}
-        return list(ids)
-
-    def get_indices_by_position(self, **inputs) -> list[Any]:
-        "Return primary key values matching given position in data space"
-        if "range" in self.region_types:
-            return self._get_range_indices_by_position(**inputs)
-        elif "point" in self.region_types:
-            return self._get_point_indices_by_position(**inputs)
-        else:
-            msg = f"{self.region_types} not implemented"
-            raise NotImplementedError(msg)
-
-    def register_tap_selector(self, element: hv.Element) -> hv.Element:
-        def tap_selector(x, y) -> None:  # Tap tool must be enabled on the element
-            # Only select the first
-            inputs = {str(k): v for k, v in zip(self.kdims, (x, y))}
-            indices = self.get_indices_by_position(**inputs)
-            if indices:
-                self.annotator.select_by_index(indices[0])
-            else:
-                self.annotator.select_by_index()
-
-        tap_stream = hv.streams.Tap(source=element, transient=True)
-        tap_stream.add_subscriber(tap_selector)
-        return element
-
-    def register_double_tap_clear(self, element: hv.Element) -> hv.Element:
-        def double_tap_clear(x, y):
-            self.clear_indicated_region()
-
-        double_tap_stream = hv.streams.DoubleTap(source=element, transient=True)
-        double_tap_stream.add_subscriber(double_tap_clear)
-        return element
-
-    def indicators(self) -> hv.DynamicMap:
-        self.register_tap_selector(self._element)
-        self.register_double_tap_clear(self._element)
-
-        def inner(_count):
-            return self.static_indicators
-
-        return hv.DynamicMap(inner, streams=[self._annotation_count_stream])
-
-    def overlay(
-        self,
-        indicators=True,
-        editor=True,
-        range_style=None,
-        point_style=None,
-        edit_range_style=None,
-        edit_point_style=None,
-        highlight=None,
-    ) -> hv.Overlay:
-        if range_style is None:
-            range_style = Indicator.range_style
-        if point_style is None:
-            point_style = Indicator.point_style
-        if edit_range_style is None:
-            edit_range_style = Indicator.edit_range_style
-        if edit_point_style is None:
-            edit_point_style = Indicator.edit_point_style
-        if highlight is None:
-            highlight = Indicator.indicator_highlight
-
-        highlighters = {opt: self.selected_dim_expr(v[0], v[1]) for opt, v in highlight.items()}
-        indicator_style = Indicator.indicator_style(range_style, point_style, highlighters)
-        region_style = Indicator.region_style(edit_range_style, edit_point_style)
-
-        layers = []
-        active_tools = []
-        if "range" in self.region_types or self.region_types == "point":
-            active_tools += ["box_select"]
-        elif self.region_types == "point-point":
-            active_tools += ["tap"]
-        layers.append(self._element.opts(tools=self.edit_tools, active_tools=active_tools))
-
-        if indicators:
-            layers.append(self.indicators().opts(*indicator_style))
-        if editor:
-            layers.append(self.region_editor().opts(*region_style))
-        return hv.Overlay(layers).collate()
-
-    @property
-    def static_indicators(self):
-        data = self.annotator.get_dataframe(dims=self.kdims)
-        fields_labels = self.annotator.all_fields
-        region_labels = [k for k in data.columns if k not in fields_labels]
-
-        indicator_kwargs = {
-            "data": data,
-            "region_labels": region_labels,
-            "fields_labels": fields_labels,
-            "invert_axes": False,  # Not yet handled
-        }
-
-        if self.region_types == "range":
-            indicator = Indicator.ranges_1d(**indicator_kwargs)
-        elif self.region_types == "range-range":
-            indicator = Indicator.ranges_2d(**indicator_kwargs)
-        elif self.region_types == "point":
-            indicator = Indicator.points_1d(**indicator_kwargs)
-        elif self.region_types == "point-point":
-            indicator = Indicator.points_2d(**indicator_kwargs)
-        else:
-            msg = f"{self.region_types} not implemented"
-            raise NotImplementedError(msg)
-
-        return indicator
-
-    def selected_dim_expr(self, selected_value, non_selected_value):
-        self._selected_values.append(selected_value)
-        self._selected_options.append({i: selected_value for i in self.annotator.selected_indices})
-        index_name = (
-            "id"
-            if self.annotator.annotation_table._field_df.index.name is None
-            else self.annotator.annotation_table._field_df.index.name
-        )
-        return hv.dim(index_name).categorize(
-            self._selected_options[-1], default=non_selected_value
-        )
-
-    @property
-    def dim_expr(self):
-        return self._selection_info["dim_expr"]
-
-    def show_region(self):
-        kdims = list(self.kdims)
-        region = {k: v for k, v in self.annotator._region.items() if k in self.kdims}
-
-        if not region:
-            return
-
-        if self.region_types == "range":
-            value = region[kdims[0]]
-            bounds = (value[0], 0, value[1], 1)
-        elif self.region_types == "range-range":
-            bounds = (
-                region[kdims[0]][0],
-                region[kdims[1]][0],
-                region[kdims[0]][1],
-                region[kdims[1]][1],
-            )
-        elif self.region_types == "point":
-            value = region[kdims[0]]
-            bounds = (value, 0, value, 1)
-        else:
-            bounds = False
-
-        if bounds:
-            self._edit_streams[0].event(bounds=bounds)
-
-
 class Annotator(AnnotatorInterface):
     """
     An annotator displays the contents of an AnnotationTable and
     provides the means to manipulate view the corresponding contents,
     add new annotations and update existing annotations.
     """
+
+    groupby = param.Selector(default=None, doc="Groupby dimension", allow_refs=True)
+    visible = param.ListSelector(
+        default=[], doc="Visible dimensions, needs groupby enabled", allow_refs=True
+    )
+    style = param.ClassSelector(default=Style(), class_=Style, doc="Style parameters")
 
     def __init__(self, spec: dict, **params):
         """
@@ -822,3 +391,11 @@ class Annotator(AnnotatorInterface):
     def editable_enabled(self, enabled: bool) -> None:
         for v in self._displays.values():
             v.editable_enabled = enabled
+
+    @param.depends("style.param", "groupby", "visible", watch=True)
+    def _refresh_style(self) -> None:
+        self.refresh()
+
+    @param.depends("fields", watch=True, on_init=True)
+    def _set_groupby_objects(self) -> None:
+        self.param.groupby.objects = [*self.fields, None]

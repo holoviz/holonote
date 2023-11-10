@@ -36,7 +36,7 @@ scripts.build = "bash conda/build.sh"
 
 [tool.hatch.envs.test]
 dependencies = ["pytest", "pytest-github-actions-annotate-failures"]
-scripts.run = "python -m pytest holonote/tests"
+scripts.run = "python -m pytest holonote/tests {args:.}"
 matrix = [{ python = ["3.9", "3.10", "3.11", "3.12"] }]
 
 [tool.hatch.envs.fmt]

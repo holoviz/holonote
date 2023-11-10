@@ -102,3 +102,25 @@ def element_range2d() -> hv.Image:
     x = np.arange(10)
     xy = x[:, np.newaxis] * x
     return hv.Image(xy, kdims=["x", "y"])
+
+
+@pytest.fixture()
+def cat_annotator(conn_sqlite_uuid) -> Annotator:
+    # Initialize annotator
+    annotator = Annotator(
+        {"x": float},
+        fields=["description", "category"],
+        connector=conn_sqlite_uuid,
+        groupby="category",
+    )
+    # Add data to annotator
+    data = {
+        "category": ["A", "B", "A", "C", "B"],
+        "start_number": [1, 6, 11, 16, 21],
+        "end_number": [5, 10, 15, 20, 25],
+        "description": list("ABCDE"),
+    }
+    annotator.define_annotations(pd.DataFrame(data), x=("start_number", "end_number"))
+    # Setup display
+    annotator.get_display("x")
+    return annotator
