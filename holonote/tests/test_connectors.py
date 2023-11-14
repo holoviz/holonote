@@ -134,7 +134,7 @@ class TestSQLiteDB:
 
 
 @pytest.mark.parametrize(
-    ("pk", "table_name"),
+    ("primary_key", "table_name"),
     [
         (UUIDHexStringKey, "annotations_542e3f1d"),
         (AutoIncrementKey, "annotations_0b20e2b2"),
@@ -142,8 +142,8 @@ class TestSQLiteDB:
     ],
     ids=["uuid_hex", "auto_inc", "uuid_bin"],
 )
-def test_automatic_tablename(conn_sqlite_uuid, pk, table_name):
-    conn_sqlite_uuid.primary_key = pk(field_name="uuid")
+def test_automatic_tablename(conn_sqlite_uuid, primary_key, table_name):
+    conn_sqlite_uuid.primary_key = primary_key(field_name="uuid")
     assert conn_sqlite_uuid.table_name is None
 
     column_schema = {
