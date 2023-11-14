@@ -154,3 +154,17 @@ def test_automatic_tablename(conn_sqlite_uuid, primary_key, table_name):
     }
     conn_sqlite_uuid.initialize(column_schema)
     assert conn_sqlite_uuid.table_name == table_name
+
+
+def test_already_set_tablename(conn_sqlite_uuid):
+    assert conn_sqlite_uuid.table_name is None
+    conn_sqlite_uuid.table_name = "manual_table_name"
+
+    column_schema = {
+        "uuid": conn_sqlite_uuid.primary_key.schema,
+        "description": "TEXT",
+        "start": "TIMESTAMP",
+        "end": "TIMESTAMP",
+    }
+    conn_sqlite_uuid.initialize(column_schema)
+    assert conn_sqlite_uuid.table_name == "manual_table_name"
