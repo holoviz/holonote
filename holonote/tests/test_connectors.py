@@ -133,7 +133,7 @@ class TestSQLiteDB:
         pd.testing.assert_frame_equal(database.load_dataframe(), df)
 
 
-@pytest.mark.parametrize(
+@pytest.mark.parameterize(
     ("primary_key", "table_name"),
     [
         (UUIDHexStringKey, "annotations_542e3f1d"),
