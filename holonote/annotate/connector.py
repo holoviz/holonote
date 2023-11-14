@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 import sqlite3
 import uuid
 from typing import TYPE_CHECKING
@@ -274,7 +275,13 @@ class SQLiteDB(Connector):
 
     filename = param.String(default="annotations.db")
 
-    table_name = param.String(default="annotations")
+    table_name = param.String(
+        default=None,
+        allow_None=True,
+        doc="""
+        The SQL table name to connect to in the database. If None, an
+        automatically generated table name will be used.""",
+    )
 
     column_schema = param.Dict(default={})
 
@@ -284,6 +291,8 @@ class SQLiteDB(Connector):
         "save": "add_rows",
         "update": "update_row",
     }
+
+    _tablename_prefix = "annotations"
 
     def __init__(self, column_schema=None, connect=True, **params):
         """
@@ -307,7 +316,17 @@ class SQLiteDB(Connector):
             )
             self.cursor = self.con.cursor()  # should be context manager
         if create_table:
+            if self.table_name is None:
+                self.table_name = self._generate_table_name(column_schema)
             self.create_table(column_schema=column_schema)
+
+    def _generate_table_name(self, column_schema) -> str:
+        "Given the column_schema outputs a deterministic table name"
+        h = hashlib.new("md5")
+        for item in sorted(column_schema):
+            h.update(item.encode("utf-8"))
+            h.update(column_schema[item].encode("utf-8"))
+        return f"{self._tablename_prefix}_{h.hexdigest()[:8]}"
 
     @property
     def uninitialized(self):

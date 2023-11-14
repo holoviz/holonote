@@ -16,13 +16,13 @@ from holonote.annotate import (
 def database(conn_sqlite_uuid, request):
     # Change the primary key type
     conn_sqlite_uuid.primary_key = request.param(field_name="uuid")
-    fields = {
+    column_schema = {
         "uuid": conn_sqlite_uuid.primary_key.schema,
         "description": "TEXT",
         "start": "TIMESTAMP",
         "end": "TIMESTAMP",
     }
-    conn_sqlite_uuid.initialize(fields)
+    conn_sqlite_uuid.initialize(column_schema)
     return conn_sqlite_uuid
 
 
@@ -131,3 +131,40 @@ class TestSQLiteDB:
         database.add_row(**insertion3)
         database.delete_row(id2)
         pd.testing.assert_frame_equal(database.load_dataframe(), df)
+
+
+@pytest.mark.parametrize(
+    ("primary_key", "table_name"),
+    [
+        (UUIDHexStringKey, "annotations_542e3f1d"),
+        (AutoIncrementKey, "annotations_0b20e2b2"),
+        (UUIDBinaryKey, "annotations_d6cceeed"),
+    ],
+    ids=["uuid_hex", "auto_inc", "uuid_bin"],
+)
+def test_automatic_tablename(conn_sqlite_uuid, primary_key, table_name):
+    conn_sqlite_uuid.primary_key = primary_key(field_name="uuid")
+    assert conn_sqlite_uuid.table_name is None
+
+    column_schema = {
+        "uuid": conn_sqlite_uuid.primary_key.schema,
+        "description": "TEXT",
+        "start": "TIMESTAMP",
+        "end": "TIMESTAMP",
+    }
+    conn_sqlite_uuid.initialize(column_schema)
+    assert conn_sqlite_uuid.table_name == table_name
+
+
+def test_already_set_tablename(conn_sqlite_uuid):
+    assert conn_sqlite_uuid.table_name is None
+    conn_sqlite_uuid.table_name = "manual_table_name"
+
+    column_schema = {
+        "uuid": conn_sqlite_uuid.primary_key.schema,
+        "description": "TEXT",
+        "start": "TIMESTAMP",
+        "end": "TIMESTAMP",
+    }
+    conn_sqlite_uuid.initialize(column_schema)
+    assert conn_sqlite_uuid.table_name == "manual_table_name"
