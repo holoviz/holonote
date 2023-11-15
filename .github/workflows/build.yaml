@@ -56,4 +56,4 @@ jobs:
       if: (github.event_name == 'release' && github.event.action == 'published' && !(contains(steps.vars.outputs.tag, 'a') || contains(steps.vars.outputs.tag, 'b') || contains(steps.vars.outputs.tag, 'rc')))
       run: |
         FILE="$CONDA_PREFIX/conda-bld/noarch/holonote-$(hatch version)-py_0.tar.bz2"
-        # anaconda --token $CONDA_UPLOAD_TOKEN upload --user pyviz --label=dev --label=main $FILE
+        anaconda --token $CONDA_UPLOAD_TOKEN upload --user pyviz --label=dev --label=main $FILE
