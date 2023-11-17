@@ -5,6 +5,7 @@ import datetime as dt
 from typing import TYPE_CHECKING, Any
 
 import panel as pn
+from panel.viewable import Viewer
 import param
 from packaging.version import Version
 
@@ -14,7 +15,7 @@ if TYPE_CHECKING:
 PN13 = Version(pn.__version__) >= Version("1.3.0")
 
 
-class PanelWidgets:
+class PanelWidgets(Viewer):
     mapping = {
         str: pn.widgets.TextInput,
         bool: pn.widgets.Checkbox,
