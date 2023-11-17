@@ -5,9 +5,9 @@ import datetime as dt
 from typing import TYPE_CHECKING, Any
 
 import panel as pn
-from panel.viewable import Viewer
 import param
 from packaging.version import Version
+from panel.viewable import Viewer
 
 if TYPE_CHECKING:
     from holonote.annotate import Annotator
