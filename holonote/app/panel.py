@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 import panel as pn
 import param
 from packaging.version import Version
+from panel.viewable import Viewer
 
 if TYPE_CHECKING:
     from holonote.annotate import Annotator
@@ -14,7 +15,7 @@ if TYPE_CHECKING:
 PN13 = Version(pn.__version__) >= Version("1.3.0")
 
 
-class PanelWidgets:
+class PanelWidgets(Viewer):
     mapping = {
         str: pn.widgets.TextInput,
         bool: pn.widgets.Checkbox,
