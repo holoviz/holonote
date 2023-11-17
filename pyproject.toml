@@ -45,7 +45,9 @@ scripts.run = "pre-commit run --all"
 scripts.update = "pre-commit autoupdate"
 
 [tool.pytest.ini_options]
-addopts = "-vv"
+addopts = ["--strict-config", "--strict-markers", "--color=yes"]
+minversion = "7"
+xfail_strict = true
 filterwarnings = [
     "error",
     # 2023-10: Datetime's utctimestamp() and utcnow() is deprecated in Python 3.12
