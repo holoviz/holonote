@@ -6,5 +6,6 @@ git status
 
 hatch build --clean
 
-export VERSION="$(hatch version)"
+VERSION="$(hatch version)"
+export VERSION
 conda build conda/recipe --no-anaconda-upload --no-verify
