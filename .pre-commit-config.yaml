@@ -7,16 +7,20 @@ repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
     hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: mixed-line-ending
       - id: check-builtin-literals
       - id: check-case-conflict
       - id: check-docstring-first
       - id: check-executables-have-shebangs
       - id: check-toml
+      - id: check-yaml
+        exclude: conda.recipe/meta.yaml
+      - id: check-json
       - id: detect-private-key
-      - id: end-of-file-fixer
-      - id: trailing-whitespace
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.1.5
+    rev: v0.1.6
     hooks:
       - id: ruff
         files: holonote/
@@ -32,3 +36,7 @@ repos:
     - id: codespell
       additional_dependencies:
         - tomli
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: "v0.9.0.6"
+    hooks:
+      - id: shellcheck
