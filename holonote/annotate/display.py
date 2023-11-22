@@ -199,6 +199,8 @@ class AnnotationDisplay(param.Parameterized):
         default=["x"], bounds=(1, 3), constant=True, doc="Dimensions of the element"
     )
 
+    data = param.DataFrame(doc="Combined dataframe of annotation data", constant=True)
+
     _count = param.Integer(default=0, precedence=-1)
 
     def __init__(self, annotator: Annotator, **params) -> None:
@@ -214,8 +216,6 @@ class AnnotationDisplay(param.Parameterized):
 
         self._selection_enabled = True
         self._editable_enabled = True
-        self._selected_values = []
-        self._selected_options = []
 
         transient = False
         self._edit_streams = [
@@ -226,11 +226,16 @@ class AnnotationDisplay(param.Parameterized):
 
         self.annotator = weakref.proxy(annotator)
         self.style = weakref.proxy(annotator.style)
+        self._update_data()
         self._set_region_format()
         self._element = self._make_empty_element()
 
     def _set_region_format(self) -> None:
         self.region_format = "-".join([self.annotator.spec[k]["region"] for k in self.kdims])
+
+    def _update_data(self):
+        with param.edit_constant(self):
+            self.data = self.annotator.get_dataframe(dims=self.kdims)
 
     @property
     def element(self):
@@ -431,10 +436,12 @@ class AnnotationDisplay(param.Parameterized):
         self.register_tap_selector(self._element)
         self.register_double_tap_clear(self._element)
 
-        def inner(_count):
+        def inner(_count, selected_indices):
             return self.static_indicators
 
-        return hv.DynamicMap(inner, streams=[self._annotation_count_stream])
+        return hv.DynamicMap(
+            inner, streams=[self._annotation_count_stream, self.annotator.param.selected_indices]
+        )
 
     def overlay(self, indicators=True, editor=True) -> hv.Overlay:
         layers = []
@@ -453,12 +460,11 @@ class AnnotationDisplay(param.Parameterized):
 
     @property
     def static_indicators(self):
-        data = self.annotator.get_dataframe(dims=self.kdims)
         fields_labels = self.annotator.all_fields
-        region_labels = [k for k in data.columns if k not in fields_labels]
+        region_labels = [k for k in self.data.columns if k not in fields_labels]
 
         indicator_kwargs = {
-            "data": data,
+            "data": self.data,
             "region_labels": region_labels,
             "fields_labels": fields_labels,
             "invert_axes": False,  # Not yet handled
@@ -491,17 +497,10 @@ class AnnotationDisplay(param.Parameterized):
 
         return indicator.overlay() if self.annotator.groupby else hv.NdOverlay({0: indicator})
 
-    def selected_dim_expr(self, selected_value, non_selected_value):
-        self._selected_values.append(selected_value)
-        self._selected_options.append({i: selected_value for i in self.annotator.selected_indices})
-        index_name = (
-            "id"
-            if self.annotator.annotation_table._field_df.index.name is None
-            else self.annotator.annotation_table._field_df.index.name
-        )
-        return hv.dim(index_name).categorize(
-            self._selected_options[-1], default=non_selected_value
-        )
+    def selected_dim_expr(self, selected_value, non_selected_value) -> hv.dim:
+        selected_options = dict.fromkeys(self.annotator.selected_indices, selected_value)
+        index_name = self.data.index.name or "id"
+        return hv.dim(index_name).categorize(selected_options, default=non_selected_value)
 
     @property
     def dim_expr(self):

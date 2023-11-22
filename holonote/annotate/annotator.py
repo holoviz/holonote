@@ -117,7 +117,7 @@ class AnnotatorInterface(param.Parameterized):
 
     # Selecting annotations
 
-    def select_by_index(self, *inds):
+    def select_by_index(self, *inds) -> None:
         "Set the selection state by the indices i.e. primary key values"
         self.selected_indices = list(inds)
 
@@ -304,6 +304,7 @@ class Annotator(AnnotatorInterface):
 
     def refresh(self, clear=False) -> None:
         for v in self._displays.values():
+            v._update_data()
             hv.streams.Stream.trigger([v._annotation_count_stream])
             if clear:
                 v.clear_indicated_region()
@@ -343,20 +344,6 @@ class Annotator(AnnotatorInterface):
             raise ValueError(msg)
         for index in indices:
             super().delete_annotation(index)
-        self.refresh()
-
-    def select_by_index(self, *inds):
-        "Set the selection state by the indices i.e. primary key values"
-
-        for v in self._displays.values():
-            if not v.selection_enabled:
-                inds = ()
-
-            for d, val in zip(v._selected_options, v._selected_values):
-                d.clear()
-                for ind in inds:
-                    d[ind] = val
-        super().select_by_index(*inds)
         self.refresh()
 
     def define_annotations(self, data: pd.DataFrame, **kwargs) -> None:

@@ -288,7 +288,7 @@ class AnnotationTable(param.Parameterized):
         field_df = self._field_df
         region_df = self._expand_region_df(spec=spec, dims=dims)
 
-        df = region_df.merge(field_df, left_index=True, right_index=True, how="left")
+        df = region_df.join(field_df, how="left")
         df.index.name = self._field_df.index.name
         df = df.reindex(field_df.index)
         return df
