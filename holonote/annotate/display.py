@@ -438,10 +438,12 @@ class AnnotationDisplay(param.Parameterized):
         self.register_tap_selector(self._element)
         self.register_double_tap_clear(self._element)
 
-        def inner(_count):
+        def inner(_count, selected_indices):
             return self.static_indicators
 
-        return hv.DynamicMap(inner, streams=[self._annotation_count_stream])
+        return hv.DynamicMap(
+            inner, streams=[self._annotation_count_stream, self.annotator.param.selected_indices]
+        )
 
     def overlay(self, indicators=True, editor=True) -> hv.Overlay:
         layers = []

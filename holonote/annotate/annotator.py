@@ -379,7 +379,7 @@ class Annotator(AnnotatorInterface):
         for v in self._displays.values():
             v.editable_enabled = enabled
 
-    @param.depends("style.param", "groupby", "visible", "selected_indices", watch=True)
+    @param.depends("style.param", "groupby", "visible", watch=True)
     def _refresh_style(self) -> None:
         self.refresh()
 
