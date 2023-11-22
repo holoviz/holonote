@@ -117,7 +117,7 @@ class AnnotatorInterface(param.Parameterized):
 
     # Selecting annotations
 
-    def select_by_index(self, *inds):
+    def select_by_index(self, *inds) -> None:
         "Set the selection state by the indices i.e. primary key values"
         self.selected_indices = list(inds)
 
@@ -346,20 +346,6 @@ class Annotator(AnnotatorInterface):
             super().delete_annotation(index)
         self.refresh()
 
-    def select_by_index(self, *inds):
-        "Set the selection state by the indices i.e. primary key values"
-
-        for v in self._displays.values():
-            if not v.selection_enabled:
-                inds = ()
-
-            for d, val in zip(v._selected_options, v._selected_values):
-                d.clear()
-                for ind in inds:
-                    d[ind] = val
-        super().select_by_index(*inds)
-        self.refresh()
-
     def define_annotations(self, data: pd.DataFrame, **kwargs) -> None:
         super().define_annotations(data, **kwargs)
         self.refresh(clear=True)
@@ -393,7 +379,7 @@ class Annotator(AnnotatorInterface):
         for v in self._displays.values():
             v.editable_enabled = enabled
 
-    @param.depends("style.param", "groupby", "visible", watch=True)
+    @param.depends("style.param", "groupby", "visible", "selected_indices", watch=True)
     def _refresh_style(self) -> None:
         self.refresh()
 
