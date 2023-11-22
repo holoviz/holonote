@@ -11,6 +11,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  PYDEVD_DISABLE_FILE_VALIDATION: 1
+
 jobs:
   pre_commit:
     name: Run pre-commit
@@ -36,3 +39,5 @@ jobs:
       run: pipx install hatch
     - name: Testing
       run: hatch run +py=${{ matrix.python-version }} test:run
+    - name: Example testing
+      run: hatch run +py=${{ matrix.python-version }} test:examples

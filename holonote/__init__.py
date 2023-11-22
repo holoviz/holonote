@@ -14,7 +14,7 @@ try:
         __version__ = get_version(root="..", relative_to=__file__)
     else:
         raise FileNotFoundError
-except (ImportError, LookupError, FileNotFoundError):
+except Exception:
     # As a fallback, use the version that is hard-coded in the file.
     try:
         from ._version import __version__

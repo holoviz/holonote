@@ -24,6 +24,9 @@ dev = [
     "pre-commit",
     "setuptools_scm",
     "pytest",
+    "nbval",
+    "hvplot",
+    "fastparquet",
 ]
 
 [tool.hatch]
@@ -35,8 +38,9 @@ detached = true
 scripts.build = "bash conda/build.sh"
 
 [tool.hatch.envs.test]
-dependencies = ["pytest", "pytest-github-actions-annotate-failures"]
+dependencies = ["holonote[dev]", "pytest-github-actions-annotate-failures"]
 scripts.run = "python -m pytest holonote/tests {args:.}"
+scripts.examples = "python scripts/example_testing.py"
 matrix = [{ python = ["3.9", "3.10", "3.11", "3.12"] }]
 
 [tool.hatch.envs.fmt]
