@@ -12,6 +12,11 @@ import param
 
 from .util import sqlite_date_adapters
 
+try:
+    import sqlalchemy
+except:
+    sqlalchemy = None
+
 if TYPE_CHECKING:
     from .typing import SpecDict
 
@@ -264,6 +269,135 @@ class Connector(param.Parameterized):
             self.primary_key, all_region_types, all_kdim_dtypes, field_dtypes
         )
         self.column_schema = schema
+
+
+class SQLAlchemyDB(Connector):
+    """
+    Example of a Connector using sqlalchemy useful for connecting to MariaBD.
+
+    Note that testing with SQLite is also possible using a connection
+    string such as "sqlite:///annotations.db".
+    """
+
+    table_name = param.String(default="annotations")
+
+    column_schema = param.Dict(default={})
+
+    connection_string = param.String(default=None, allow_None=True)
+
+    operation_mapping = {
+        "insert": "add_row",
+        "delete": "delete_row",
+        "save": "add_rows",
+        "update": "update_row",
+    }
+
+    def __init__(self, column_schema=None, connect=True, **params):
+        if sqlalchemy is None:
+            return ImportError(
+                "Optional dependency sqlalchemy required for MariaDB connector"
+            )
+
+        if column_schema is None:
+            column_schema = {}
+
+        params["column_schema"] = column_schema
+
+        super().__init__(**params)
+        self.connection = None
+        if self.connection_string is None:
+            return ValueError("Connection string needed to access database.")
+        if connect:
+            self._initialize(column_schema, create_table=False)
+
+    def _initialize(self, column_schema, create_table=True):
+        if self.connection is None:
+            self.engine = sqlalchemy.create_engine(self.connection_string)
+            self.connection = self.engine.connect()
+            self.meta = sqlalchemy.MetaData()
+
+            pkey_name = self.primary_key.field_name
+            columns = [
+                sqlalchemy.Column(pkey_name, column_schema[pkey_name], primary_key=True)
+            ]
+            columns += [
+                sqlalchemy.Column(name, v)
+                for name, v in column_schema.items()
+                if name != self.primary_key.field_name
+            ]
+            self.table = sqlalchemy.Table(self.table_name, self.meta, *columns)
+        if create_table:
+            self.create_table()
+
+    @property
+    def uninitialized(self):
+        if self.connection is not None:
+            return self.table_name not in self.get_tables()
+        return True
+
+    @property
+    def columns(self):
+        return list(self.column_schema.keys())
+
+    def load_dataframe(self):
+        with self.engine.begin() as conn:
+            result = conn.execute(sqlalchemy.select(self.table))
+        results = result.all()
+        if len(results) == 0:
+            return pd.DataFrame({k: [] for k in self.column_schema.keys()}).set_index(
+                self.primary_key.field_name
+            )
+        else:
+            return pd.DataFrame(results).set_index(
+                self.table.primary_key.columns[0].name
+            )
+
+    def get_tables(self):
+        return sqlalchemy.inspect(self.engine).get_table_names()
+
+    def create_table(self):
+        transaction = self.connection.begin()
+        self.meta.create_all(self.engine)
+        transaction.commit()
+
+    def delete_table(self):
+        self.table.drop(self.engine)
+
+    def add_rows(self, field_list):  # Use execute_many
+        for field in field_list:
+            self.add_row(**field)
+
+    def add_row(self, **fields):
+        # Note, missing fields will be set as NULL
+        columns = self.columns
+        field_values = [fields.get(col, None) for col in self.columns]
+
+        if self.primary_key.policy != "insert":
+            field_values = field_values[1:]
+            columns = columns[1:]
+
+        with self.engine.begin() as conn:
+            ins_expr = self.table.insert().values(field_values)
+            conn.execute(ins_expr)
+
+    def delete_row(self, id_val):
+        with self.engine.begin() as conn:
+            del_expr = self.table.delete().where(
+                self.table.c[self.primary_key.field_name] == id_val
+            )
+            conn.execute(del_expr)
+
+    def update_row(self, **updates):
+        assert self.primary_key.field_name in updates
+        id_val = updates.pop(self.primary_key.field_name)
+
+        with self.engine.begin() as conn:
+            update_expr = (
+                self.table.update()
+                .values(**updates)
+                .where(self.table.c[self.primary_key.field_name] == id_val)
+            )
+            conn.execute(update_expr)
 
 
 class SQLiteDB(Connector):
