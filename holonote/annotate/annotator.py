@@ -304,6 +304,7 @@ class Annotator(AnnotatorInterface):
 
     def refresh(self, clear=False) -> None:
         for v in self._displays.values():
+            v._update_data()
             hv.streams.Stream.trigger([v._annotation_count_stream])
             if clear:
                 v.clear_indicated_region()
