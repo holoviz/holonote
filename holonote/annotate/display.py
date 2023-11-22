@@ -216,8 +216,6 @@ class AnnotationDisplay(param.Parameterized):
 
         self._selection_enabled = True
         self._editable_enabled = True
-        self._selected_values = []
-        self._selected_options = []
 
         transient = False
         self._edit_streams = [
@@ -499,17 +497,10 @@ class AnnotationDisplay(param.Parameterized):
 
         return indicator.overlay() if self.annotator.groupby else hv.NdOverlay({0: indicator})
 
-    def selected_dim_expr(self, selected_value, non_selected_value):
-        self._selected_values.append(selected_value)
-        self._selected_options.append({i: selected_value for i in self.annotator.selected_indices})
-        index_name = (
-            "id"
-            if self.annotator.annotation_table._field_df.index.name is None
-            else self.annotator.annotation_table._field_df.index.name
-        )
-        return hv.dim(index_name).categorize(
-            self._selected_options[-1], default=non_selected_value
-        )
+    def selected_dim_expr(self, selected_value, non_selected_value) -> hv.dim:
+        selected_options = dict.fromkeys(self.annotator.selected_indices, selected_value)
+        index_name = self.data.index.name or "id"
+        return hv.dim(index_name).categorize(selected_options, default=non_selected_value)
 
     @property
     def dim_expr(self):
