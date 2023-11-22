@@ -24,6 +24,7 @@ def main() -> None:
 
         os.chdir(tmpdir)
         exit_code = pytest.main(["--nbval-lax", tmpdir])
+        os.chdir(example_path)  # To be able to clean up folder on Windows
 
     sys.exit(exit_code)
 
