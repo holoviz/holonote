@@ -35,7 +35,7 @@ detached = true
 scripts.build = "bash conda/build.sh"
 
 [tool.hatch.envs.test]
-dependencies = ["pytest", "pytest-github-actions-annotate-failures", "nbval"]
+dependencies = ["pytest", "pytest-github-actions-annotate-failures", "nbval", "hvplot"]
 scripts.run = "python -m pytest holonote/tests {args:.}"
 scripts.examples = "python scripts/example_testing.py"
 matrix = [{ python = ["3.9", "3.10", "3.11", "3.12"] }]

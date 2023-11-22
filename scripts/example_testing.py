@@ -1,4 +1,5 @@
 import shutil
+import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from uuid import uuid4
@@ -19,7 +20,9 @@ def main() -> None:
             shutil.copy(file, example_file)
             shutil.copytree(example_path / "assets", test_folder / "assets")
 
-        pytest.main(["--nbval-lax", tmpdir])
+        exit_code = pytest.main(["--nbval-lax", tmpdir])
+
+    sys.exit(exit_code)
 
 
 if __name__ == "__main__":
