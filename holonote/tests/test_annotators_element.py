@@ -38,10 +38,10 @@ def test_set_regions_range1d(annotator_range1d) -> None:
     assert output == expected
 
     output = next(get_indicator_data(annotator, hv.Rectangles))
-    output1 = output.loc[0, ["start[TIME]", "end[TIME]"]].tolist()
+    output1 = output.iloc[0][["start[TIME]", "end[TIME]"]].tolist()
     expected1 = [-0.25, 0.25]
     assert output1 == expected1
-    output2 = output.loc[0, "description"]
+    output2 = output.iloc[0]["description"]
     expected2 = "Test"
     assert output2 == expected2
 
@@ -66,10 +66,10 @@ def test_set_regions_range2d(annotator_range2d) -> None:
     assert output.empty
 
     output = next(get_indicator_data(annotator, hv.Rectangles))
-    output1 = output.loc[0, ["start[x]", "start[y]", "end[x]", "end[y]"]].tolist()
+    output1 = output.iloc[0][["start[x]", "start[y]", "end[x]", "end[y]"]].tolist()
     expected1 = [-0.25, -0.25, 0.25, 0.25]
     assert output1 == expected1
-    output2 = output.loc[0, "description"]
+    output2 = output.iloc[0]["description"]
     expected2 = "Test"
     assert output2 == expected2
 
@@ -107,10 +107,10 @@ def test_set_regions_multiple(multiple_annotators):
     assert output == expected
 
     output = next(get_indicator_data(annotator, hv.Rectangles, "TIME"))
-    output1 = output.loc[0, ["start[TIME]", "end[TIME]"]].tolist()
+    output1 = output.iloc[0][["start[TIME]", "end[TIME]"]].tolist()
     expected1 = [-0.25, 0.25]
     assert output1 == expected1
-    output2 = output.loc[0, "description"]
+    output2 = output.iloc[0]["description"]
     expected2 = "Test"
     assert output2 == expected2
 
@@ -119,10 +119,10 @@ def test_set_regions_multiple(multiple_annotators):
     assert output.empty
 
     output = next(get_indicator_data(annotator, hv.Rectangles, ("x", "y")))
-    output1 = output.loc[0, ["start[x]", "start[y]", "end[x]", "end[y]"]].tolist()
+    output1 = output.iloc[0][["start[x]", "start[y]", "end[x]", "end[y]"]].tolist()
     expected1 = [-0.25, -0.25, 0.25, 0.25]
     assert output1 == expected1
-    output2 = output.loc[0, "description"]
+    output2 = output.iloc[0]["description"]
     expected2 = "Test"
     assert output2 == expected2
 

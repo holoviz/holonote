@@ -142,8 +142,8 @@ class Indicator:
         cls, data, region_labels, fields_labels, invert_axes=False, groupby: str | None = None
     ):
         "Vectorizes point regions to VLines. Note does not support hover info"
-        vdims = [*fields_labels, data.index.name]
-        element = hv.VLines(data.reset_index(), kdims=region_labels, vdims=vdims)
+        vdims = [*fields_labels, "__selected__"]
+        element = hv.VLines(data, kdims=region_labels, vdims=vdims)
         hover = cls._build_hover_tool(data)
         return element.opts(tools=[hover])
 
@@ -154,8 +154,8 @@ class Indicator:
         "Vectorizes point regions to VLines * HLines. Note does not support hover info"
         msg = "2D point regions not supported yet"
         raise NotImplementedError(msg)
-        vdims = [*fields_labels, data.index.name]
-        element = hv.Points(data.reset_index(), kdims=region_labels, vdims=vdims)
+        vdims = [*fields_labels, "__selected__"]
+        element = hv.Points(data, kdims=region_labels, vdims=vdims)
         hover = cls._build_hover_tool(data)
         return element.opts(tools=[hover])
 
@@ -165,8 +165,8 @@ class Indicator:
     ):
         "Vectorizes an nd-overlay of range_2d rectangles."
         kdims = [region_labels[i] for i in (0, 2, 1, 3)]  # LBRT format
-        vdims = [*fields_labels, data.index.name]
-        ds = hv.Dataset(data.reset_index(), kdims=kdims, vdims=vdims)
+        vdims = [*fields_labels, "__selected__"]
+        ds = hv.Dataset(data, kdims=kdims, vdims=vdims)
         element = ds.to(hv.Rectangles, groupby=groupby)
         cds_map = dict(zip(region_labels, ("left", "right", "bottom", "top")))
         hover = cls._build_hover_tool(data, cds_map)
@@ -181,8 +181,8 @@ class Indicator:
 
         NOTE: Should use VSpans once available!
         """
-        vdims = [*fields_labels, data.index.name]
-        ds = hv.Dataset(data.reset_index(), kdims=region_labels, vdims=vdims)
+        vdims = [*fields_labels, "__selected__"]
+        ds = hv.Dataset(data, kdims=region_labels, vdims=vdims)
         element = ds.to(hv.VSpans, groupby=groupby)
         hover = cls._build_hover_tool(data)
         return element.opts(tools=[hover])
@@ -193,6 +193,8 @@ class Indicator:
             cds_map = {}
         tooltips, formatters = [], {}
         for dim in data.columns:
+            if dim == "__selected__":
+                continue
             cds_name = cds_map.get(dim, dim)
             if data[dim].dtype.kind == "M":
                 tooltips.append((dim, f"@{{{cds_name}}}{{%F}}"))
@@ -441,6 +443,8 @@ class AnnotationDisplay(param.Parameterized):
         fields_labels = self.annotator.all_fields
         region_labels = [k for k in self.data.columns if k not in fields_labels]
 
+        self.data["__selected__"] = self.data.index.isin(self.annotator.selected_indices)
+
         indicator_kwargs = {
             "data": self.data,
             "region_labels": region_labels,
@@ -470,17 +474,17 @@ class AnnotationDisplay(param.Parameterized):
 
         # Set styling on annotations indicator
         highlight = self.style._indicator_selection
-        highlighters = {opt: self.selected_dim_expr(v[0], v[1]) for opt, v in highlight.items()}
+        highlighters = {opt: self._selected_dim_expr(v[0], v[1]) for opt, v in highlight.items()}
         indicator = indicator.opts(*self.style.indicator(**highlighters))
 
         return indicator.overlay() if self.annotator.groupby else hv.NdOverlay({0: indicator})
 
-    def selected_dim_expr(self, selected_value, non_selected_value) -> hv.dim:
-        selected_options = dict.fromkeys(self.annotator.selected_indices, selected_value)
-        index_name = self.data.index.name or "id"
+    def _selected_dim_expr(self, selected_value, non_selected_value) -> hv.dim:
         if isinstance(non_selected_value, hv.Cycle):
             non_selected_value = non_selected_value.values[0]
-        return hv.dim(index_name).categorize(selected_options, default=non_selected_value)
+        return hv.dim("__selected__").categorize(
+            {True: selected_value}, default=non_selected_value
+        )
 
     @property
     def dim_expr(self):
