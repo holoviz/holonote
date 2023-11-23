@@ -10,8 +10,11 @@ def compare_indicator_color(indicator, style, style_categories):
         if isinstance(style.color, hv.dim):
             assert str(indicator.opts["color"]) == str(style.color)
         else:
+            style_color = (
+                style.color.values[0] if isinstance(style.color, hv.Cycle) else style.color
+            )
             expected_dim = hv.dim("uuid").categorize(
-                categories=style_categories or {}, default=style.color
+                categories=style_categories or {}, default=style_color
             )
             assert str(indicator.opts["color"]) == str(expected_dim)
     else:
@@ -125,5 +128,5 @@ def test_style_reset(cat_annotator) -> None:
     compare_style(cat_annotator, {})
 
     style.reset()
-    assert style.color == "red"
+    assert style.color == Style.color
     compare_style(cat_annotator, {})

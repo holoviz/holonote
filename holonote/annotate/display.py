@@ -507,6 +507,8 @@ class AnnotationDisplay(param.Parameterized):
     def selected_dim_expr(self, selected_value, non_selected_value) -> hv.dim:
         selected_options = dict.fromkeys(self.annotator.selected_indices, selected_value)
         index_name = self.data.index.name or "id"
+        if isinstance(non_selected_value, hv.Cycle):
+            non_selected_value = non_selected_value.values[0]
         return hv.dim(index_name).categorize(selected_options, default=non_selected_value)
 
     @property
