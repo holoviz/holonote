@@ -157,7 +157,7 @@ class PanelWidgets(Viewer):
         selected_index = event.new[0]
         # if self._widget_mode_group.value == '✏':
         for name, widget in self._fields_widgets.items():
-            value = self.annotator.annotation_table._field_df.loc[selected_index][name]
+            value = self.annotator.annotation_table.field_df.loc[selected_index][name]
             widget.value = value
 
     def _watcher_mode_group(self, event):

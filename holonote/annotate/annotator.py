@@ -150,7 +150,7 @@ class AnnotatorInterface(param.Parameterized):
         # Primary key specification is optional
         if self.connector.primary_key.field_name not in fields:
             index_val = self.connector.primary_key(
-                self.connector, list(self.annotation_table._field_df.index)
+                self.connector, list(self.annotation_table.index)
             )
             fields[self.connector.primary_key.field_name] = index_val
 
