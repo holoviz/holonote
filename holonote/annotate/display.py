@@ -3,6 +3,7 @@ from __future__ import annotations
 import weakref
 from typing import TYPE_CHECKING, Any
 
+import colorcet as cc
 import holoviews as hv
 import pandas as pd
 import param
@@ -23,6 +24,10 @@ class _StyleOpts(param.Dict):
 
 
 _default_opts = {"apply_ranges": False, "show_legend": False}
+
+# Make red the first color
+_default_color = cc.palette["glasbey_category10"].copy()
+_default_color[:4] = [_default_color[3], *_default_color[:3]]
 
 
 class Style(param.Parameterized):
@@ -64,7 +69,9 @@ class Style(param.Parameterized):
         default=0.4, bounds=(0, 1), allow_refs=True, doc="Alpha value for editing regions"
     )
 
-    color = param.Parameter(default="red", doc="Color of the indicator", allow_refs=True)
+    color = param.Parameter(
+        default=hv.Cycle(_default_color), doc="Color of the indicator", allow_refs=True
+    )
     edit_color = param.Parameter(default="blue", doc="Color of the editor", allow_refs=True)
     selection_color = param.Parameter(
         default=None, doc="Color of selection, by the default the same as color", allow_refs=True
