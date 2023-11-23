@@ -4,14 +4,13 @@ import datetime as dt
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
-import param
 
 if TYPE_CHECKING:
     from .connector import Connector
     from .typing import SpecDict
 
 
-class AnnotationTable(param.Parameterized):
+class AnnotationTable:
     """
     Class that stores and manipulates annotation data, including methods
     to declare annotations and commit edits back to the original data
@@ -20,14 +19,12 @@ class AnnotationTable(param.Parameterized):
 
     columns = ("region", "dim", "value", "_id")
 
-    def __init__(self, **params):
+    def __init__(self):
         """
         Either specify annotation fields with filled field columns
         (via connector or dataframe) or declare the expected
         field columns if starting with no annotation data.
         """
-        super().__init__(**params)
-
         self._region_df = pd.DataFrame(columns=self.columns)
         self._new_regions = []
         self._field_df = None
