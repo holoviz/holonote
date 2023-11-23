@@ -23,8 +23,8 @@ def main() -> None:
             os.symlink(file, test_file)
             os.symlink(example_path / "assets", test_folder / "assets")
 
-        os.chdir(tmpdir)
-        exit_code = pytest.main(["--nbval-lax", tmpdir])
+        os.chdir(tmpdir)  # To not have large paths in pytest output
+        exit_code = pytest.main(["--nbval-lax"])
         os.chdir(example_path)  # To be able to clean up folder on Windows
 
     sys.exit(exit_code)
