@@ -20,8 +20,6 @@ class AnnotationTable(param.Parameterized):
 
     columns = ("region", "dim", "value", "_id")
 
-    index = param.List(default=[])
-
     def __init__(self, **params):
         """
         Either specify annotation fields with filled field columns
@@ -38,7 +36,6 @@ class AnnotationTable(param.Parameterized):
         self._edits = []
         self._index_mapping = {}
 
-        self._update_index()
         self._field_df_snapshot, self._region_df_snapshot = None, None
 
     def load(self, connector=None, fields_df=None, primary_key_name=None, fields=None, spec=None):
@@ -69,7 +66,6 @@ class AnnotationTable(param.Parameterized):
             self._field_df = fields_df
 
         self.clear_edits()
-        self._update_index()
 
     def update_annotation_region(self, region, index):
         value = region["value"]
@@ -100,12 +96,9 @@ class AnnotationTable(param.Parameterized):
     def _snapshot(self):
         return self.field_df.copy(), self.region_df.copy()
 
-    def _update_index(self) -> None:
-        if self._field_df is None:
-            self.index = []
-            return
-
-        self.index = list(self._field_df.index)
+    @property
+    def index(self):
+        return list(self.field_df.index)
 
     def _expand_commit_by_id(self, id_val, fields=None, region_fields=None):
         kwargs = self.field_df.loc[[id_val]].to_dict("records")[0]
@@ -215,7 +208,6 @@ class AnnotationTable(param.Parameterized):
         self._field_df = self.field_df.drop(index, axis=0)
 
         self._edits.append({"operation": "delete", "id": index})
-        self._update_index()
 
     def update_annotation_fields(self, index, **fields):
         for column, value in fields.items():
@@ -333,7 +325,6 @@ class AnnotationTable(param.Parameterized):
 
         self._region_df = pd.concat(data, ignore_index=True)
 
-        self._update_index()
         self.clear_edits()
 
     @property
