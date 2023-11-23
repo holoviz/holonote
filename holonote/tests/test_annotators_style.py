@@ -1,4 +1,5 @@
 import holoviews as hv
+import pandas as pd
 import pytest
 
 from holonote.annotate import Style
@@ -32,6 +33,11 @@ def compare_style(cat_annotator):
     assert editor.opts["alpha"] == style.edit_alpha
 
 
+def get_selected_indicator_data(annotator) -> pd.Series:
+    df = pd.concat([i.data for i in get_indicator(annotator, hv.VLines)])
+    return df["__selected__"]
+
+
 def test_style_accessor(cat_annotator) -> None:
     assert isinstance(cat_annotator.style, Style)
 
@@ -42,12 +48,18 @@ def test_style_default(cat_annotator) -> None:
 
 def test_style_default_select(cat_annotator) -> None:
     # Select the first value
-    cat_annotator.select_by_index(0)
+    index = cat_annotator.df.index[0]
+    cat_annotator.select_by_index(index)
     compare_style(cat_annotator)
+    sel_data = get_selected_indicator_data(cat_annotator)
+    assert sel_data[index]
+    assert sel_data.sum() == 1
 
     # remove it again
     cat_annotator.select_by_index()
     compare_style(cat_annotator)
+    sel_data = get_selected_indicator_data(cat_annotator)
+    assert sel_data.sum() == 0
 
 
 def test_style_change_color_alpha(cat_annotator) -> None:
@@ -75,14 +87,22 @@ def test_style_selection_color(cat_annotator):
     style = cat_annotator.style
     style.selection_color = "blue"
     compare_style(cat_annotator)
+    sel_data = get_selected_indicator_data(cat_annotator)
+    assert sel_data.sum() == 0
 
     # Select the first value
-    cat_annotator.select_by_index(0)
+    index = cat_annotator.df.index[0]
+    cat_annotator.select_by_index(index)
     compare_style(cat_annotator)
+    sel_data = get_selected_indicator_data(cat_annotator)
+    assert sel_data[index]
+    assert sel_data.sum() == 1
 
     # remove it again
     cat_annotator.select_by_index()
     compare_style(cat_annotator)
+    sel_data = get_selected_indicator_data(cat_annotator)
+    assert sel_data.sum() == 0
 
 
 def test_style_error_color_dim_and_selection(cat_annotator):
