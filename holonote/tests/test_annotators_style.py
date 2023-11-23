@@ -130,3 +130,13 @@ def test_style_reset(cat_annotator) -> None:
     style.reset()
     assert style.color == Style.color
     compare_style(cat_annotator, {})
+
+
+def test_groupby_color_change(cat_annotator) -> None:
+    cat_annotator.groupby = "category"
+    cat_annotator.visible = ["A", "B", "C"]
+
+    indicators = hv.render(cat_annotator.get_display("x").static_indicators).renderers
+    color_cycle = cat_annotator.style.color.values
+    for indicator, expected_color in zip(indicators, color_cycle):
+        assert indicator.glyph.fill_color == expected_color
