@@ -20,5 +20,5 @@ def get_editor(annotator, element_type, kdims=None):
 
 
 def get_indicator(annotator, element_type, kdims=None):
-    si = _get_display(annotator, kdims).static_indicators
+    si = _get_display(annotator, kdims).indicators().last
     yield from si.data.values()
