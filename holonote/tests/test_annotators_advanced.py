@@ -166,8 +166,8 @@ def test_reconnect(method, tmp_path):
 
     # Save internal dataframes
     a1_df = a1.df.copy()
-    a1_region = a1.annotation_table._region_df.copy()
-    a1_field = a1.annotation_table._field_df.copy()
+    a1_region = a1.annotation_table.region_df.copy()
+    a1_field = a1.annotation_table.field_df.copy()
 
     # Add new connector
     a2 = Annotator(
@@ -176,8 +176,8 @@ def test_reconnect(method, tmp_path):
         connector=conn2,
     )
     a2_df = a2.df.copy()
-    a2_region = a2.annotation_table._region_df.copy()
-    a2_field = a2.annotation_table._field_df.copy()
+    a2_region = a2.annotation_table.region_df.copy()
+    a2_field = a2.annotation_table.field_df.copy()
 
     pd.testing.assert_frame_equal(a1_df, a2_df)
     pd.testing.assert_frame_equal(a1_region, a2_region)

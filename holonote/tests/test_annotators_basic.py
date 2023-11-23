@@ -308,7 +308,7 @@ def test_annotator_default_region(conn_sqlite_uuid):
 def test_fields_with_spaces(conn_sqlite_uuid):
     fields = ["A Field with space"]
     annotator = Annotator({"A": float, "B": float}, fields=fields, connector=conn_sqlite_uuid)
-    assert annotator.annotation_table._field_df.columns == fields
+    assert annotator.annotation_table.field_df.columns == fields
 
 
 def test_static_fields(conn_sqlite_uuid):
@@ -316,7 +316,7 @@ def test_static_fields(conn_sqlite_uuid):
     annotator = Annotator({"TIME": float}, static_fields=static_fields, connector=conn_sqlite_uuid)
 
     assert annotator.static_fields == static_fields
-    assert "static" in annotator.annotation_table._field_df.columns
+    assert "static" in annotator.annotation_table.field_df.columns
     assert "static" in annotator.df
     assert annotator.connector.fields == ["description", "static"]
 
