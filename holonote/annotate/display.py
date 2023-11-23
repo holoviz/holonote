@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import weakref
+from functools import reduce
 from typing import TYPE_CHECKING, Any
 
 import holoviews as hv
-import pandas as pd
+import numpy as np
 import param
 from bokeh.models.tools import BoxSelectTool, HoverTool, Tool
 
@@ -359,56 +360,27 @@ class AnnotationDisplay(param.Parameterized):
             self._region_editor = self._make_selection_editor()
         return self._region_editor
 
-    def _get_range_indices_by_position(self, **inputs) -> list[Any]:
-        if isinstance(self.static_indicators, hv.NdOverlay):
-            df = pd.concat([el.data for el in self.static_indicators.values()])
-        else:
-            df = self.static_indicators.data
-
-        if df.empty:
-            return []
-
-        # Because we reset_index in Indicators
-        id_col = df.columns[0]
-
-        for i, (k, v) in enumerate(inputs.items()):
-            mask = (df[f"start[{k}]"] <= v) & (v < df[f"end[{k}]"])
-            if i == 0:
-                ids = set(df[mask][id_col])
-            else:
-                ids &= set(df[mask][id_col])
-        return list(ids)
-
-    def _get_point_indices_by_position(self, **inputs) -> list[Any]:
-        """
-        Simple algorithm for finding the closest point
-        annotation to the given position.
-        """
-
-        df = self.static_indicators.data
-        if df.empty:
-            return []
-
-        # Because we reset_index in Indicators
-        id_col = df.columns[0]
-
-        for i, (k, v) in enumerate(inputs.items()):
-            nearest = (df[f"point[{k}]"] - v).abs().argmin()
-            if i == 0:
-                ids = {df.iloc[nearest][id_col]}
-            else:
-                ids &= {df.iloc[nearest][id_col]}
-        return list(ids)
-
     def get_indices_by_position(self, **inputs) -> list[Any]:
         "Return primary key values matching given position in data space"
+        if self.annotator.groupby:
+            df = self.data[self.data[self.annotator.groupby].isin(self.annotator.visible)]
+        else:
+            df = self.data
+
+        if df.empty:
+            return []
+
         if "range" in self.region_format:
-            return self._get_range_indices_by_position(**inputs)
+            iter_mask = (
+                (df[f"start[{k}]"] <= v) & (v < df[f"end[{k}]"]) for k, v in inputs.items()
+            )
         elif "point" in self.region_format:
-            return self._get_point_indices_by_position(**inputs)
+            iter_mask = ((df[f"point[{k}]"] - v).abs().argmin() for k, v in inputs.items())
         else:
             msg = f"{self.region_format} not implemented"
             raise NotImplementedError(msg)
+
+        return list(df[reduce(np.logical_and, iter_mask)].index)
 
     def register_tap_selector(self, element: hv.Element) -> hv.Element:
         def tap_selector(x, y) -> None:  # Tap tool must be enabled on the element
@@ -437,7 +409,7 @@ class AnnotationDisplay(param.Parameterized):
         self.register_double_tap_clear(self._element)
 
         def inner(_count, selected_indices):
-            return self.static_indicators
+            return self.static_indicators()
 
         return hv.DynamicMap(
             inner, streams=[self._annotation_count_stream, self.annotator.param.selected_indices]
@@ -458,7 +430,6 @@ class AnnotationDisplay(param.Parameterized):
             layers.append(self.region_editor())
         return hv.Overlay(layers).collate()
 
-    @property
     def static_indicators(self):
         fields_labels = self.annotator.all_fields
         region_labels = [k for k in self.data.columns if k not in fields_labels]
