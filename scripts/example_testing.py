@@ -22,7 +22,7 @@ def main() -> None:
             test_file = test_folder / file.relative_to(example_path)
             test_file.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy(file, test_file)
-            shutil.copytree(example_path / "assets", test_folder / "assets")
+            os.symlink(example_path / "assets", test_folder / "assets")
 
         os.chdir(tmpdir)
         exit_code = pytest.main(["--nbval-lax", tmpdir])
