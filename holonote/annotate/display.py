@@ -405,15 +405,15 @@ class AnnotationDisplay(param.Parameterized):
         return element
 
     def indicators(self) -> hv.DynamicMap:
-        self.register_tap_selector(self._element)
-        self.register_double_tap_clear(self._element)
+        if not hasattr(self, "_indicators"):
+            self.register_tap_selector(self._element)
+            self.register_double_tap_clear(self._element)
 
-        def inner(_count, selected_indices):
-            return self.static_indicators()
-
-        return hv.DynamicMap(
-            inner, streams=[self._annotation_count_stream, self.annotator.param.selected_indices]
-        )
+            self._indicators = hv.DynamicMap(
+                self.static_indicators,
+                streams=[self._annotation_count_stream, self.annotator.param.selected_indices],
+            )
+        return self._indicators
 
     def overlay(self, indicators=True, editor=True) -> hv.Overlay:
         layers = []
@@ -430,7 +430,7 @@ class AnnotationDisplay(param.Parameterized):
             layers.append(self.region_editor())
         return hv.Overlay(layers).collate()
 
-    def static_indicators(self):
+    def static_indicators(self, **events):
         fields_labels = self.annotator.all_fields
         region_labels = [k for k in self.data.columns if k not in fields_labels]
 
