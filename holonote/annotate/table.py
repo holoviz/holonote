@@ -31,6 +31,7 @@ class AnnotationTable(param.Parameterized):
         super().__init__(**params)
 
         self._region_df = pd.DataFrame(columns=self.columns)
+        self._new_regions = []
         self._field_df = None
 
         self._edits = []
@@ -71,9 +72,9 @@ class AnnotationTable(param.Parameterized):
 
     def update_annotation_region(self, region, index):
         value = region["value"]
-        mask = self._region_df[self._region_df._id == index]
+        mask = self.region_df[self.region_df._id == index]
         assert len(mask) == 1, "TODO: Handle multiple region updates for single index"
-        self._region_df.at[mask.index.values[0], "value"] = value
+        self.region_df.at[mask.index.values[0], "value"] = value
         self._edits.append(
             {"operation": "update", "id": index, "fields": None, "region_fields": []}
         )
@@ -112,7 +113,7 @@ class AnnotationTable(param.Parameterized):
         kwargs[self._field_df.index.name] = id_val
         if region_fields == []:
             return kwargs
-        items = self._region_df[self._region_df["_id"] == id_val]
+        items = self.region_df[self.region_df["_id"] == id_val]
         for i in items.itertuples(index=False):
             if i.region == "range":
                 kwargs[f"start_{i.dim}"] = i.value[0]
@@ -127,7 +128,7 @@ class AnnotationTable(param.Parameterized):
     def _create_commits(self):
         "Expands out the commit history into commit operations"
         fields_inds = set(self._field_df.index)
-        region_inds = set(self._region_df["_id"].unique())
+        region_inds = set(self.region_df["_id"].unique())
         unassigned_inds = fields_inds - region_inds
         if unassigned_inds:
             msg = f"Following annotations have no associated region: {unassigned_inds}"
@@ -188,7 +189,7 @@ class AnnotationTable(param.Parameterized):
                 pd.DataFrame(d.values(), index=d.keys()).T
             )
 
-        self._region_df = pd.concat((self._region_df, *data), ignore_index=True)
+        self._new_regions.extend(data)
 
         self._edits.append({"operation": "insert", "id": index_value})
         self._update_index()
@@ -213,8 +214,8 @@ class AnnotationTable(param.Parameterized):
         if index is None:
             msg = "Deletion index cannot be None"
             raise ValueError(msg)
-        self._region_df = self._region_df[
-            self._region_df["_id"] != index
+        self._region_df = self.region_df[
+            self.region_df["_id"] != index
         ]  # Could match multiple rows
         self._field_df = self._field_df.drop(index, axis=0)
 
@@ -256,7 +257,7 @@ class AnnotationTable(param.Parameterized):
         return pd.DataFrame([types], columns=columns).drop(index=0)
 
     def _expand_region_df(self, *, spec: SpecDict, dims: list[str] | None = None) -> pd.DataFrame:
-        data = self._region_df.pivot(index="_id", columns="dim", values="value")
+        data = self.region_df.pivot(index="_id", columns="dim", values="value")
         dims = list(dims or spec)
 
         expanded = self._empty_expanded_region_df(spec=spec, dims=dims)
@@ -339,3 +340,11 @@ class AnnotationTable(param.Parameterized):
 
         self._update_index()
         self.clear_edits()
+
+    @property
+    def region_df(self):
+        if self._new_regions:
+            self._region_df = pd.concat((self._region_df, *self._new_regions), ignore_index=True)
+            self._new_regions = []
+
+        return self._region_df
