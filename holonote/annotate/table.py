@@ -210,6 +210,7 @@ class AnnotationTable(param.Parameterized):
         self._edits.append({"operation": "delete", "id": index})
 
     def update_annotation_fields(self, index, **fields):
+        self.field_df  # noqa: B018 - Ensure new_fields are merged
         for column, value in fields.items():
             self._field_df.loc[index, column] = value
 
