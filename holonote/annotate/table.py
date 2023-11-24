@@ -172,19 +172,12 @@ class AnnotationTable:
         index_value = fields.pop(self.index_name)
         self._add_annotation_fields(index_value, fields=fields)
 
-        data = []
         for kdim, value in regions.items():
             if not value:
                 continue
 
             d = {"region": spec[kdim]["region"], "dim": kdim, "value": value, "_id": index_value}
-            data.append(
-                # pd.DataFrame(d) does not work because tuples is expanded into multiple rows:
-                # pd.DataFrame({'v': (1, 2)})
-                pd.DataFrame(d.values(), index=d.keys()).T
-            )
-
-        self._new_regions.extend(data)
+            self._new_regions.append(d)
 
         self._edits.append({"operation": "insert", "id": index_value})
 
@@ -331,7 +324,11 @@ class AnnotationTable:
     @property
     def region_df(self):
         if self._new_regions:
-            self._region_df = pd.concat((self._region_df, *self._new_regions), ignore_index=True)
+            new_regions = pd.DataFrame(self._new_regions)
+            if self._region_df.empty:
+                self._region_df = new_regions
+            else:
+                self._region_df = pd.concat((self._region_df, new_regions), ignore_index=True)
             self._new_regions = []
 
         return self._region_df

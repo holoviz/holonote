@@ -33,7 +33,7 @@ def test_table_single_kdim() -> None:
     table.add_annotation(regions, spec=spec, id=100, test_description="A test")
 
     d = {"region": "range", "dim": "TIME", "value": (start, end), "_id": 100}
-    expected = pd.DataFrame([d]).astype({"_id": object})
+    expected = pd.DataFrame([d])
     pd.testing.assert_frame_equal(table.region_df, expected)
 
     d = {
@@ -63,7 +63,7 @@ def test_table_multiple_kdim() -> None:
         "value": [1, (start, end)],
         "_id": [100, 100],
     }
-    expected = pd.DataFrame(d).astype({"_id": object})
+    expected = pd.DataFrame(d)
     pd.testing.assert_frame_equal(table.region_df, expected)
 
     d = {
@@ -96,7 +96,7 @@ def test_table_multiple_kdim_and_annotations() -> None:
         "value": [1, (start, end), 2],
         "_id": [100, 100, 101],
     }
-    expected = pd.DataFrame(d).astype({"_id": object})
+    expected = pd.DataFrame(d)
     pd.testing.assert_frame_equal(table.region_df, expected)
 
     d = {
@@ -128,7 +128,7 @@ def test_only_adding_one_dim_with_multiple_dimensions() -> None:
         "value": [1, 2],
         "_id": [100, 101],
     }
-    expected = pd.DataFrame(d).astype({"_id": object, "value": object})
+    expected = pd.DataFrame(d)
     pd.testing.assert_frame_equal(table.region_df, expected)
 
     d = {
@@ -187,7 +187,7 @@ def test_table_multiple_kdim_and_annotations_with_selected_dims(dim) -> None:
         "value": [1, (start, end), 2],
         "_id": [100, 100, 101],
     }
-    expected = pd.DataFrame(d).astype({"_id": object})
+    expected = pd.DataFrame(d)
     pd.testing.assert_frame_equal(table.region_df, expected)
 
     d = {
