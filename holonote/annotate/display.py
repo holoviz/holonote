@@ -4,6 +4,7 @@ import weakref
 from functools import reduce
 from typing import TYPE_CHECKING, Any
 
+import colorcet as cc
 import holoviews as hv
 import numpy as np
 import param
@@ -24,6 +25,10 @@ class _StyleOpts(param.Dict):
 
 
 _default_opts = {"apply_ranges": False, "show_legend": False}
+
+# Make red the first color
+_default_color = cc.palette["glasbey_category10"].copy()
+_default_color[:4] = [_default_color[3], *_default_color[:3]]
 
 
 class Style(param.Parameterized):
@@ -65,7 +70,9 @@ class Style(param.Parameterized):
         default=0.4, bounds=(0, 1), allow_refs=True, doc="Alpha value for editing regions"
     )
 
-    color = param.Parameter(default="red", doc="Color of the indicator", allow_refs=True)
+    color = param.Parameter(
+        default=hv.Cycle(_default_color), doc="Color of the indicator", allow_refs=True
+    )
     edit_color = param.Parameter(default="blue", doc="Color of the editor", allow_refs=True)
     selection_color = param.Parameter(
         default=None, doc="Color of selection, by the default the same as color", allow_refs=True
@@ -473,6 +480,8 @@ class AnnotationDisplay(param.Parameterized):
         return indicator.overlay() if self.annotator.groupby else hv.NdOverlay({0: indicator})
 
     def _selected_dim_expr(self, selected_value, non_selected_value) -> hv.dim:
+        if isinstance(non_selected_value, hv.Cycle):
+            non_selected_value = non_selected_value.values[0]
         return hv.dim("__selected__").categorize(
             {True: selected_value}, default=non_selected_value
         )

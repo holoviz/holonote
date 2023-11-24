@@ -43,6 +43,10 @@ scripts.run = "python -m pytest holonote/tests {args:.}"
 scripts.examples = "python scripts/example_testing.py"
 matrix = [{ python = ["3.9", "3.10", "3.11", "3.12"] }]
 
+[tool.hatch.envs.benchmark]
+dependencies = ["holonote[dev]", "pytest-codspeed"]
+scripts.run = "pytest holonote/tests/benchmark --codspeed --benchmark {args:.}"
+
 [tool.hatch.envs.fmt]
 detached = true
 scripts.run = "pre-commit run --all"

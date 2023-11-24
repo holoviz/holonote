@@ -11,8 +11,11 @@ def compare_indicator_color(indicator, style):
         if isinstance(style.color, hv.dim):
             assert str(indicator.opts["color"]) == str(style.color)
         else:
+            style_color = (
+                style.color.values[0] if isinstance(style.color, hv.Cycle) else style.color
+            )
             expected_dim = hv.dim("__selected__").categorize(
-                categories={True: style.selection_color}, default=style.color
+                categories={True: style.selection_color}, default=style_color
             )
             assert str(indicator.opts["color"]) == str(expected_dim)
     else:
@@ -145,5 +148,15 @@ def test_style_reset(cat_annotator) -> None:
     compare_style(cat_annotator)
 
     style.reset()
-    assert style.color == "red"
+    assert style.color == Style.color
     compare_style(cat_annotator)
+
+
+def test_groupby_color_change(cat_annotator) -> None:
+    cat_annotator.groupby = "category"
+    cat_annotator.visible = ["A", "B", "C"]
+
+    indicators = hv.render(cat_annotator.get_display("x").static_indicators()).renderers
+    color_cycle = cat_annotator.style.color.values
+    for indicator, expected_color in zip(indicators, color_cycle):
+        assert indicator.glyph.fill_color == expected_color
