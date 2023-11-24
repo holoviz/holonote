@@ -44,8 +44,8 @@ scripts.examples = "python scripts/example_testing.py"
 matrix = [{ python = ["3.9", "3.10", "3.11", "3.12"] }]
 
 [tool.hatch.envs.benchmark]
-dependencies = ["holonote[dev]", "asv"]
-scripts.run = "cd benchmarks && asv run"
+dependencies = ["holonote[dev]", "pytest-codspeed"]
+scripts.run = "pytest holonote/tests/benchmark --codspeed --benchmark {args:.}"
 
 [tool.hatch.envs.fmt]
 detached = true

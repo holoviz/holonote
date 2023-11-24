@@ -6,5 +6,3 @@ dist
 scratch
 holonote/_version.py
 annotations.db
-
-.asv

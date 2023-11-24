@@ -58,5 +58,8 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install hatch
       run: pipx install hatch
-    - name: benchmarks
-      run: hatch run benchmark:run
+    - name: Run benchmarks
+      uses: CodSpeedHQ/action@v1
+      with:
+        token: ${{ secrets.CODSPEED_TOKEN }}
+        run: hatch run benchmark:run
