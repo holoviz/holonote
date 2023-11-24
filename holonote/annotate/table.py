@@ -203,9 +203,8 @@ class AnnotationTable:
         self._edits.append({"operation": "delete", "id": index})
 
     def update_annotation_fields(self, index, **fields):
-        self._field_df  # noqa: B018 - Ensure new_fields are merged
         for column, value in fields.items():
-            self.__field_df.loc[index, column] = value
+            self._field_df.loc[index, column] = value
 
         self._edits.append(
             {"operation": "update", "id": index, "fields": list(fields), "region_fields": []}
