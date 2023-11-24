@@ -41,3 +41,22 @@ jobs:
       run: hatch run +py=${{ matrix.python-version }} test:run
     - name: Example testing
       run: hatch run +py=${{ matrix.python-version }} test:examples
+  benchmarks:
+    name: Benchmarks on ${{ matrix.os }} with Python ${{ matrix.python-version }}
+    needs: [pre_commit]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ['3.11']
+    timeout-minutes: 10
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install hatch
+      run: pipx install hatch
+    - name: benchmarks
+      run: hatch run benchmark:run
