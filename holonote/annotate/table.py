@@ -222,7 +222,7 @@ class AnnotationTable:
         # Need a staging area to hold everything till initialized
         self._index_mapping.update(index_mapping)  # Rename _field_df
         self._field_df = pd.concat([self._field_df, fields_df])
-        self._edits.append({"operation": "save", "ids": list(fields_df.index)})
+        self._edits.append({"operation": "save", "ids": self.index})
 
     def _empty_expanded_region_df(self, *, spec: SpecDict, dims: list[str] | None) -> pd.DataFrame:
         invalid_dims = set(dims) - spec.keys()
@@ -278,7 +278,7 @@ class AnnotationTable:
         region_df = self._expand_region_df(spec=spec, dims=dims)
 
         df = region_df.join(field_df, how="left")
-        df.index.name = field_df.index.name
+        df.index.name = self.index_name
         df = df.reindex(field_df.index)
         return df
 
