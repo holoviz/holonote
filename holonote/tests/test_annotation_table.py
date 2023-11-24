@@ -15,8 +15,8 @@ if TYPE_CHECKING:
 def _init_table(spec: SpecDict) -> AnnotationTable:
     table = AnnotationTable()
     table.load(primary_key_name="id", fields=["test_description"])
-    assert len(table.region_df) == 0, "Should be initialized empty"
-    assert tuple(table.region_df.columns) == AnnotationTable.columns
+    assert len(table._region_df) == 0, "Should be initialized empty"
+    assert tuple(table._region_df.columns) == AnnotationTable.columns
     return table
 
 
@@ -34,7 +34,7 @@ def test_table_single_kdim() -> None:
 
     d = {"region": "range", "dim": "TIME", "value": (start, end), "_id": 100}
     expected = pd.DataFrame([d])
-    pd.testing.assert_frame_equal(table.region_df, expected)
+    pd.testing.assert_frame_equal(table._region_df, expected)
 
     d = {
         "start[TIME]": {100: start},
@@ -64,7 +64,7 @@ def test_table_multiple_kdim() -> None:
         "_id": [100, 100],
     }
     expected = pd.DataFrame(d)
-    pd.testing.assert_frame_equal(table.region_df, expected)
+    pd.testing.assert_frame_equal(table._region_df, expected)
 
     d = {
         "start[TIME]": {100: start},
@@ -97,7 +97,7 @@ def test_table_multiple_kdim_and_annotations() -> None:
         "_id": [100, 100, 101],
     }
     expected = pd.DataFrame(d)
-    pd.testing.assert_frame_equal(table.region_df, expected)
+    pd.testing.assert_frame_equal(table._region_df, expected)
 
     d = {
         "start[TIME]": {100: start, 101: pd.NaT},
@@ -129,7 +129,7 @@ def test_only_adding_one_dim_with_multiple_dimensions() -> None:
         "_id": [100, 101],
     }
     expected = pd.DataFrame(d)
-    pd.testing.assert_frame_equal(table.region_df, expected)
+    pd.testing.assert_frame_equal(table._region_df, expected)
 
     d = {
         "start[TIME]": {100: pd.NaT, 101: pd.NaT},
@@ -149,8 +149,8 @@ def test_nodata_multiple_dimension() -> None:
     }
     table = _init_table(spec)
 
-    assert table.region_df.empty
-    assert tuple(table.region_df.columns) == AnnotationTable.columns
+    assert table._region_df.empty
+    assert tuple(table._region_df.columns) == AnnotationTable.columns
 
     d = {
         "start[TIME]": [pd.NaT],
@@ -188,7 +188,7 @@ def test_table_multiple_kdim_and_annotations_with_selected_dims(dim) -> None:
         "_id": [100, 100, 101],
     }
     expected = pd.DataFrame(d)
-    pd.testing.assert_frame_equal(table.region_df, expected)
+    pd.testing.assert_frame_equal(table._region_df, expected)
 
     d = {
         "start[TIME]": {100: start, 101: pd.NaT},
@@ -210,7 +210,7 @@ def test_nodata_multiple_dimension_with_selected_dims(dim) -> None:
     }
     table = _init_table(spec)
 
-    assert table.region_df.empty
+    assert table._region_df.empty
 
     d = {
         "start[TIME]": [pd.NaT],

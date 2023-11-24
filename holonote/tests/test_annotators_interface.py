@@ -18,8 +18,8 @@ import pytest
 def test_define_annotations_range1d(annotator_range1d, define_kwargs):
     annotator = annotator_range1d
     annotator_table = annotator.annotation_table
-    assert annotator_table.region_df.empty
-    assert annotator_table.field_df.empty
+    assert annotator_table._region_df.empty
+    assert annotator_table._field_df.empty
 
     # Create data
     time = pd.date_range("2020-01-01", periods=3, freq="D")
@@ -33,7 +33,7 @@ def test_define_annotations_range1d(annotator_range1d, define_kwargs):
     annotator.define_annotations(data, **define_kwargs)
 
     # Validate it
-    rdf, fdf = annotator_table.region_df, annotator_table.field_df
+    rdf, fdf = annotator_table._region_df, annotator_table._field_df
     assert (rdf["value"].to_list() == time).all()
     assert (rdf["dim"] == "TIME").all()
     assert (rdf["region"] == "range").all()
@@ -59,8 +59,8 @@ def test_define_annotations_range1d(annotator_range1d, define_kwargs):
 def test_define_annotations_range2d(annotator_range2d, define_kwargs):
     annotator = annotator_range2d
     annotator_table = annotator.annotation_table
-    assert annotator_table.region_df.empty
-    assert annotator_table.field_df.empty
+    assert annotator_table._region_df.empty
+    assert annotator_table._field_df.empty
 
     # Create data
     starts = np.arange(3)
@@ -72,7 +72,7 @@ def test_define_annotations_range2d(annotator_range2d, define_kwargs):
     annotator.define_annotations(data, **define_kwargs)
 
     # Validate it
-    rdf, fdf = annotator_table.region_df, annotator_table.field_df
+    rdf, fdf = annotator_table._region_df, annotator_table._field_df
     assert rdf["value"].to_list() == [(0, 2), (1, 3), (2, 4)]
     assert (rdf["dim"] == "x").all()
     assert (rdf["region"] == "range").all()
