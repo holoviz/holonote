@@ -374,31 +374,33 @@ class SQLiteDB(Connector):
         self.cursor.execute(f"DROP TABLE IF EXISTS {self.table_name}")
         self.con.commit()
 
-    def add_rows(self, field_list):  # Used execute_many
-        for field in field_list:
-            self.add_row(**field)
+    def add_rows(self, fields_df):
+        fields_df.to_sql(self.table_name, self.con, if_exists="append")
 
     def add_row(self, **fields):
-        # Note, missing fields will be set as NULL
-        columns = self.columns
-        field_values = [fields.get(col, None) for col in self.columns]
-        field_values = [
-            pd.to_datetime(el) if isinstance(el, np.datetime64) else el for el in field_values
-        ]
-        field_values = [
-            el.to_pydatetime() if isinstance(el, pd.Timestamp) else el for el in field_values
-        ]
+        df = pd.DataFrame([fields]).set_index(self.primary_key.field_name)
+        self.add_rows(df)
 
-        if self.primary_key.policy != "insert":
-            field_values = field_values[1:]
-            columns = columns[1:]
+    #     # Note, missing fields will be set as NULL
+    #     columns = self.columns
+    #     field_values = [fields.get(col, None) for col in self.columns]
+    #     field_values = [
+    #         pd.to_datetime(el) if isinstance(el, np.datetime64) else el for el in field_values
+    #     ]
+    #     field_values = [
+    #         el.to_pydatetime() if isinstance(el, pd.Timestamp) else el for el in field_values
+    #     ]
 
-        placeholders = ", ".join(["?"] * len(field_values))
-        self.cursor.execute(
-            f"INSERT INTO {self.table_name} {columns!s} VALUES({placeholders});", field_values
-        )
-        self.primary_key.validate(self.cursor.lastrowid, fields[self.primary_key.field_name])
-        self.con.commit()
+    #     if self.primary_key.policy != "insert":
+    #         field_values = field_values[1:]
+    #         columns = columns[1:]
+
+    #     placeholders = ", ".join(["?"] * len(field_values))
+    #     self.cursor.execute(
+    #         f"INSERT INTO {self.table_name} {columns!s} VALUES({placeholders});", field_values
+    #     )
+    #     self.primary_key.validate(self.cursor.lastrowid, fields[self.primary_key.field_name])
+    #     self.con.commit()
 
     def delete_all_rows(self):
         "Obviously a destructive operation!"
@@ -412,10 +414,24 @@ class SQLiteDB(Connector):
         )
         self.con.commit()
 
+    def delete_rows(self, id_vals):
+        query = f"DELETE FROM {self.table_name} WHERE {self.primary_key.field_name} = ?"
+        self.cursor.executemany(query, [tuple(map(self.primary_key.cast, id_vals.index))])
+        self.con.commit()
+
     def update_row(self, **updates):  # updates as a dictionary OR remove posarg?
         assert self.primary_key.field_name in updates
         id_val = updates.pop(self.primary_key.field_name)
-        set_updates = ", ".join('"' + k + '"' + " = ?" for k in updates)
+        set_updates = ", ".join([f'"{k}" = ?' for k in updates])
         query = f'UPDATE {self.table_name} SET {set_updates} WHERE "{self.primary_key.field_name}" = ?;'
         self.cursor.execute(query, [*updates.values(), id_val])
-        self.con.commit()
+
+    def update_rows(self, updates_df):
+        def replace_into(table_name, conn, keys, data_iter):
+            # First key is the primary key
+            placeholders = ", ".join([f'"{k}" = ?' for k in keys[1:]])
+            query = f'UPDATE {table_name.name} SET {placeholders} WHERE "{keys[0]}" = ?;'
+            data = [(*row[1:], row[0]) for row in data_iter]
+            conn.executemany(query, data)
+
+        updates_df.to_sql(self.table_name, self.con, if_exists="append", method=replace_into)
