@@ -82,6 +82,8 @@ class AnnotationTable:
         if self._field_df_snapshot is None:
             msg = "Call snapshot method before calling revert_to_snapshot"
             raise Exception(msg)
+        self._new_regions = []
+        self._new_fields = []
         self.__field_df = self._field_df_snapshot
         self.__region_df = self._region_df_snapshot
         self.clear_edits()
