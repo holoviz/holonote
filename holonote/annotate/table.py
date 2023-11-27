@@ -4,14 +4,13 @@ import datetime as dt
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
-import param
 
 if TYPE_CHECKING:
     from .connector import Connector
     from .typing import SpecDict
 
 
-class AnnotationTable(param.Parameterized):
+class AnnotationTable:
     """
     Class that stores and manipulates annotation data, including methods
     to declare annotations and commit edits back to the original data
@@ -20,23 +19,20 @@ class AnnotationTable(param.Parameterized):
 
     columns = ("region", "dim", "value", "_id")
 
-    index = param.List(default=[])
-
-    def __init__(self, **params):
+    def __init__(self):
         """
         Either specify annotation fields with filled field columns
         (via connector or dataframe) or declare the expected
         field columns if starting with no annotation data.
         """
-        super().__init__(**params)
-
-        self._region_df = pd.DataFrame(columns=self.columns)
-        self._field_df = None
+        self.__region_df = pd.DataFrame(columns=self.columns)
+        self._new_regions = []
+        self.__field_df = None
+        self._new_fields = []
 
         self._edits = []
         self._index_mapping = {}
 
-        self._update_index()
         self._field_df_snapshot, self._region_df_snapshot = None, None
 
     def load(self, connector=None, fields_df=None, primary_key_name=None, fields=None, spec=None):
@@ -58,16 +54,15 @@ class AnnotationTable(param.Parameterized):
 
         if fields_df:
             fields_df = fields_df[fields].copy()  # Primary key/index for annotations
-            self._field_df = fields_df
+            self.__field_df = fields_df
         elif connector:
             self.load_annotation_table(connector, fields, spec)
         elif fields_df is None:
             fields_df = pd.DataFrame(columns=[primary_key_name, *fields])
             fields_df = fields_df.set_index(primary_key_name)
-            self._field_df = fields_df
+            self.__field_df = fields_df
 
         self.clear_edits()
-        self._update_index()
 
     def update_annotation_region(self, region, index):
         value = region["value"]
@@ -87,8 +82,10 @@ class AnnotationTable(param.Parameterized):
         if self._field_df_snapshot is None:
             msg = "Call snapshot method before calling revert_to_snapshot"
             raise Exception(msg)
-        self._field_df = self._field_df_snapshot
-        self._region_df = self._region_df_snapshot
+        self._new_regions = []
+        self._new_fields = []
+        self.__field_df = self._field_df_snapshot
+        self.__region_df = self._region_df_snapshot
         self.clear_edits()
 
     def snapshot(self):
@@ -98,18 +95,19 @@ class AnnotationTable(param.Parameterized):
     def _snapshot(self):
         return self._field_df.copy(), self._region_df.copy()
 
-    def _update_index(self) -> None:
-        if self._field_df is None:
-            self.index = []
-            return
+    @property
+    def index(self):
+        return list(self._field_df.index)
 
-        self.index = list(self._field_df.index)
+    @property
+    def index_name(self):
+        return self.__field_df.index.name
 
     def _expand_commit_by_id(self, id_val, fields=None, region_fields=None):
         kwargs = self._field_df.loc[[id_val]].to_dict("records")[0]
         if fields:
             kwargs = {k: v for k, v in kwargs.items() if k in fields}
-        kwargs[self._field_df.index.name] = id_val
+        kwargs[self.index_name] = id_val
         if region_fields == []:
             return kwargs
         items = self._region_df[self._region_df["_id"] == id_val]
@@ -173,53 +171,38 @@ class AnnotationTable(param.Parameterized):
 
     def add_annotation(self, regions: dict[str, Any], spec: SpecDict, **fields):
         "Takes a list of regions or the special value 'annotation-regions' to use attached annotators"
-        index_value = fields.pop(self._field_df.index.name)
+        index_value = fields.pop(self.index_name)
         self._add_annotation_fields(index_value, fields=fields)
 
-        data = []
         for kdim, value in regions.items():
             if not value:
                 continue
 
             d = {"region": spec[kdim]["region"], "dim": kdim, "value": value, "_id": index_value}
-            data.append(
-                # pd.DataFrame(d) does not work because tuples is expanded into multiple rows:
-                # pd.DataFrame({'v': (1, 2)})
-                pd.DataFrame(d.values(), index=d.keys()).T
-            )
-
-        self._region_df = pd.concat((self._region_df, *data), ignore_index=True)
+            self._new_regions.append(d)
 
         self._edits.append({"operation": "insert", "id": index_value})
-        self._update_index()
 
     def _add_annotation_fields(self, index_value, fields=None):
-        index_name = self._field_df.index.name
-        index_name_set = set() if index_name is None else {index_name}
-        unknown_kwargs = set(fields.keys()) - set(self._field_df.columns)
+        index_name_set = set() if self.index_name is None else {self.index_name}
+        unknown_kwargs = set(fields.keys()) - set(self.__field_df.columns)
         if unknown_kwargs - index_name_set:
             unknown_str = ", ".join([f"{k!r}" for k in sorted(unknown_kwargs)])
             msg = f"Unknown fields columns: {unknown_str}"
             raise KeyError(msg)
 
-        new_fields = pd.DataFrame([dict(fields, **{index_name: index_value})])
-        new_fields = new_fields.set_index(index_name)
-        if self._field_df.empty:
-            self._field_df[new_fields.columns] = new_fields
-        else:
-            self._field_df = pd.concat((self._field_df, new_fields))
+        self._new_fields.append(dict(fields, **{self.index_name: index_value}))
 
     def delete_annotation(self, index):
         if index is None:
             msg = "Deletion index cannot be None"
             raise ValueError(msg)
-        self._region_df = self._region_df[
+        self.__region_df = self._region_df[
             self._region_df["_id"] != index
         ]  # Could match multiple rows
-        self._field_df = self._field_df.drop(index, axis=0)
+        self.__field_df = self._field_df.drop(index, axis=0)
 
         self._edits.append({"operation": "delete", "id": index})
-        self._update_index()
 
     def update_annotation_fields(self, index, **fields):
         for column, value in fields.items():
@@ -232,8 +215,8 @@ class AnnotationTable(param.Parameterized):
     def define_fields(self, fields_df, index_mapping):
         # Need a staging area to hold everything till initialized
         self._index_mapping.update(index_mapping)  # Rename _field_df
-        self._field_df = pd.concat([self._field_df, fields_df])
-        self._edits.append({"operation": "save", "ids": list(fields_df.index)})
+        self.__field_df = pd.concat([self.__field_df, fields_df])
+        self._edits.append({"operation": "save", "ids": self.index})
 
     def _empty_expanded_region_df(self, *, spec: SpecDict, dims: list[str] | None) -> pd.DataFrame:
         invalid_dims = set(dims) - spec.keys()
@@ -289,7 +272,7 @@ class AnnotationTable(param.Parameterized):
         region_df = self._expand_region_df(spec=spec, dims=dims)
 
         df = region_df.join(field_df, how="left")
-        df.index.name = self._field_df.index.name
+        df.index.name = self.index_name
         df = df.reindex(field_df.index)
         return df
 
@@ -314,7 +297,7 @@ class AnnotationTable(param.Parameterized):
 
         # Load region dataframe
         if df.empty:
-            self._region_df = pd.DataFrame(columns=self.columns)
+            self.__region_df = pd.DataFrame(columns=self.columns)
             return
 
         data = []
@@ -335,7 +318,31 @@ class AnnotationTable(param.Parameterized):
 
             data.append(subdata[~empty_mask])
 
-        self._region_df = pd.concat(data, ignore_index=True)
+        self.__region_df = pd.concat(data, ignore_index=True)
 
-        self._update_index()
         self.clear_edits()
+
+    @property
+    def _region_df(self):
+        if self._new_regions:
+            new_regions = pd.DataFrame(self._new_regions)
+            if self.__region_df.empty:
+                self.__region_df = new_regions
+            else:
+                self.__region_df = pd.concat((self.__region_df, new_regions), ignore_index=True)
+            self._new_regions = []
+
+        return self.__region_df
+
+    @property
+    def _field_df(self):
+        if self._new_fields:
+            new_fields = pd.DataFrame(self._new_fields)
+            new_fields = new_fields.set_index(self.index_name)
+            if self.__field_df.empty:
+                self.__field_df[new_fields.columns] = new_fields
+            else:
+                self.__field_df = pd.concat((self.__field_df, new_fields))
+            self._new_fields = []
+
+        return self.__field_df

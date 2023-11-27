@@ -149,9 +149,7 @@ class AnnotatorInterface(param.Parameterized):
     def _add_annotation(self, **fields):
         # Primary key specification is optional
         if self.connector.primary_key.field_name not in fields:
-            index_val = self.connector.primary_key(
-                self.connector, list(self.annotation_table._field_df.index)
-            )
+            index_val = self.connector.primary_key(self.connector)
             fields[self.connector.primary_key.field_name] = index_val
 
         # Don't do anything if self.region is an empty dict
