@@ -7,7 +7,7 @@ from holonote.annotate import Annotator, SQLiteDB
 pytestmark = pytest.mark.benchmark
 
 
-def setup_annotator(items) -> tuple[Annotator, pd.DataFrame]:
+def setup_annotator(items, filename=":memory:") -> tuple[Annotator, pd.DataFrame]:
     rng = np.random.default_rng(1337)
     start_time = np.arange(0, items * 2, 2)
     end_time = start_time + 1
@@ -18,7 +18,7 @@ def setup_annotator(items) -> tuple[Annotator, pd.DataFrame]:
             "description": rng.choice(["A", "B"], items),
         }
     )
-    annotator = Annotator({"TIME": int}, connector=SQLiteDB(filename=":memory:"))
+    annotator = Annotator({"TIME": int}, connector=SQLiteDB(filename=filename))
     annotator.define_annotations(data, TIME=("start_time", "end_time"))
     return annotator, data
 
@@ -33,8 +33,8 @@ def test_define_annotations(benchmark, items) -> None:
 
 
 @pytest.mark.parametrize("items", [10, 100, 1000])
-def test_commit(benchmark, items) -> None:
-    annotator, data = setup_annotator(items)
+def test_commit(benchmark, items, tmp_path) -> None:
+    annotator, data = setup_annotator(items, filename=str(tmp_path / "test.db"))
     annotator.define_annotations(data, TIME=("start_time", "end_time"))
 
     @benchmark
