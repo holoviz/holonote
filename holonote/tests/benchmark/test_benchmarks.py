@@ -18,7 +18,9 @@ def setup_annotator(items, filename=":memory:") -> tuple[Annotator, pd.DataFrame
             "description": rng.choice(["A", "B"], items),
         }
     )
-    annotator = Annotator({"TIME": int}, connector=SQLiteDB(filename=filename))
+    annotator = Annotator(
+        {"TIME": int}, fields=["description"], connector=SQLiteDB(filename=filename)
+    )
     annotator.define_annotations(data, TIME=("start_time", "end_time"))
     return annotator, data
 
