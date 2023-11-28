@@ -21,7 +21,6 @@ def setup_annotator(items, filename=":memory:") -> tuple[Annotator, pd.DataFrame
     annotator = Annotator(
         {"TIME": int}, fields=["description"], connector=SQLiteDB(filename=filename)
     )
-    annotator.define_annotations(data, TIME=("start_time", "end_time"))
     return annotator, data
 
 
@@ -37,7 +36,6 @@ def test_define_annotations(benchmark, items) -> None:
 @pytest.mark.parametrize("items", [10, 100, 1000])
 def test_commit(benchmark, items, tmp_path) -> None:
     annotator, data = setup_annotator(items, filename=str(tmp_path / "test.db"))
-    annotator.commit()  # Commit once to create the database
     annotator.define_annotations(data, TIME=("start_time", "end_time"))
 
     @benchmark
