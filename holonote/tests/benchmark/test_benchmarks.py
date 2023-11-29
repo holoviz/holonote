@@ -26,18 +26,16 @@ def setup_annotator(items, filename=":memory:") -> tuple[Annotator, pd.DataFrame
 
 @pytest.mark.parametrize("items", [10, 100, 1000])
 def test_define_annotations(benchmark, items) -> None:
-    annotator, data = setup_annotator(items)
-
     @benchmark
-    def bench() -> None:
+    def bench():
+        annotator, data = setup_annotator(items)
         annotator.define_annotations(data, TIME=("start_time", "end_time"))
 
 
 @pytest.mark.parametrize("items", [10, 100, 1000])
 def test_commit(benchmark, items, tmp_path) -> None:
-    annotator, data = setup_annotator(items, filename=str(tmp_path / "test.db"))
-    annotator.define_annotations(data, TIME=("start_time", "end_time"))
-
     @benchmark
-    def bench() -> None:
+    def bench():
+        annotator, data = setup_annotator(items, filename=str(tmp_path / "test.db"))
+        annotator.define_annotations(data, TIME=("start_time", "end_time"))
         annotator.commit()
