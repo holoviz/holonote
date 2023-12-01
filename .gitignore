@@ -6,3 +6,7 @@ dist
 scratch
 holonote/_version.py
 annotations.db
+
+# docs
+builtdocs
+jupyter_execute

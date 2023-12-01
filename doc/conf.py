@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 import param
 from nbsite.shared_conf import *  # noqa: F403
@@ -15,15 +16,15 @@ project = "HoloNote"
 authors = "HoloNote contributors"
 copyright_years["start_year"] = "2023"
 copyright = copyright_fmt.format(**copyright_years)
-description = "Tools to create, edit and persist annotated regions for HoloViews "
-
-
-# PANEL_ROOT = pathlib.Path(hn.__file__).parent
-
+description = "Tools to create, edit and persist annotated regions for HoloViews"
 version = release = base_version(hn.__version__)
-# js_version = json.loads((PANEL_ROOT / "package.json").read_text())["version"]
-
 is_dev = any(ext in version for ext in ("a", "b", "rc"))
+
+HOLONOTE_ROOT = Path(hn.__file__).parents[1]
+# Remove database files if they exist
+for db in (HOLONOTE_ROOT / "examples").rglob("*.db"):
+    db.unlink()
+
 
 # For the interactivity warning box created by nbsite to point to the right
 # git tag instead of the default i.e. main.
@@ -62,7 +63,7 @@ html_theme_options = {
     "header_links_before_dropdown": 5,
     "secondary_sidebar_items": [
         "github-stars-button",
-        "jupyterlitelink",
+        # "jupyterlitelink",
         "page-toc",
     ],
 }
@@ -84,7 +85,7 @@ jlite_url = (
 nbsite_gallery_conf = {
     "github_org": "holoviz",
     "github_project": "holonote",
-    # "galleries": {
+    "galleries": {},
     #     "reference": {
     #         "title": "Component Gallery",
     #         "sections": [
@@ -139,7 +140,7 @@ bokeh_req = f"{CDN_DIST}wheels/bokeh-{BOKEH_VERSION}-py3-none-any.whl"
 
 nbsite_pyodide_conf = {
     "PYODIDE_URL": "https://cdn.jsdelivr.net/pyodide/v0.23.1/full/pyodide.js",
-    "requirements": [bokeh_req, panel_req, "pyodide-http"],
+    "requirements": [bokeh_req, panel_req, "pyodide-http", "holonote"],
     # "requires": get_requirements(),
 }
 
@@ -151,7 +152,7 @@ html_context.update(
         "github_user": "holoviz",
         "github_repo": "holonote",
         "default_mode": "light",
-        "jupyterlite_endpoint": jlite_url,
+        # "jupyterlite_endpoint": jlite_url,
         # "gallery_url": gallery_url,
         # "pyodide_url": pyodide_url,
     }
