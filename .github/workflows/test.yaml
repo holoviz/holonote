@@ -59,7 +59,7 @@ jobs:
     - name: Install hatch
       run: pipx install hatch
     - name: Run benchmarks
-      uses: CodSpeedHQ/action@v1
+      uses: CodSpeedHQ/action@v2
       with:
         token: ${{ secrets.CODSPEED_TOKEN }}
         run: hatch run benchmark:run
