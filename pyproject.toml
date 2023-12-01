@@ -43,6 +43,14 @@ scripts.run = "python -m pytest holonote/tests {args:.}"
 scripts.examples = "python scripts/example_testing.py"
 matrix = [{ python = ["3.9", "3.10", "3.11", "3.12"] }]
 
+[tool.hatch.envs.docs]
+dependencies = ["holonote[dev]", "nbsite", "myst-nb <1"]
+scripts.build = [
+    "nbsite generate-rst --org holoviz --project-name holonote",
+    "python ./doc/generate_modules.py holoviews -n holonote -e tests",
+    "nbsite build --what=html --output=builtdocs --org holoviz --project-name holonote",
+]
+
 [tool.hatch.envs.benchmark]
 dependencies = ["holonote[dev]", "pytest-codspeed", "pytest-xdist"]
 scripts.run = "pytest holonote --codspeed --benchmark -n auto {args:.}"
@@ -111,6 +119,7 @@ unfixable = [
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F403"]
+"doc/generate_modules.py" = ["ALL"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["holonote"]
