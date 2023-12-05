@@ -13,4 +13,5 @@ sd_hide_title: true
 
 basics/index
 apps/index
+reference_manual/index
 ```
