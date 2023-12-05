@@ -51,6 +51,11 @@ scripts.build = [
     "nbsite build --what=html --output=builtdocs --org holoviz --project-name holonote",
 ]
 
+[tool.hatch.envs.lite]
+dependencies = ["holonote[dev]", "jupyterlab", "jupyterlab-open-url-parameter", "jupyterlite-core", "jupyterlite-pyodide-kernel"]
+scripts.build = "bash scripts/jupyterlite/build.sh"
+scripts.server = "python -m http.server --directory ./jupyterlite "
+
 [tool.hatch.envs.benchmark]
 dependencies = ["holonote[dev]", "pytest-codspeed", "pytest-xdist"]
 scripts.run = "pytest holonote --codspeed --benchmark -n auto {args:.}"

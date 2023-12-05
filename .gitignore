@@ -10,3 +10,8 @@ annotations.db
 # docs
 builtdocs
 jupyter_execute
+
+# jupyterlite
+jupyterlite/
+scripts/jupyterlite/.jupyterlite.doit.db
+scripts/jupyterlite/*.json
