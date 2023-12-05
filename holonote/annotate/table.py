@@ -141,28 +141,42 @@ class AnnotationTable:
                 kwargs = self._expand_commit_by_id(edit["id"])
 
             elif operation == "delete":
-                kwargs = {"id_val": edit["id"]}
+                kwargs = {self.index_name: edit["id"]}
             elif operation == "update":
                 if edit["id"] not in self._field_df.index:
                     continue
-                kwargs = self._expand_commit_by_id(
-                    edit["id"], fields=edit["fields"], region_fields=edit["region_fields"]
-                )
+                kwargs = self._expand_commit_by_id(edit["id"])
+                # , fields=edit["fields"], region_fields=edit["region_fields"]
             elif operation == "save":
                 kwargs = self._expand_save_commits(edit["ids"])
             commits.append({"operation": operation, "kwargs": kwargs})
 
         return commits
 
-    def commits(self, connector):
-        commits = self._create_commits()
+    def commits(self, connector) -> list[dict[str, Any]]:
+        raw_commits = self._create_commits()
+
+        commits = self._groupby_operation(raw_commits) if raw_commits else []
+
         for commit in commits:
             operation = commit["operation"]
-            kwargs = connector.transforms[operation](commit["kwargs"])
-            getattr(connector, connector.operation_mapping[operation])(**kwargs)
+            fn = connector.operation_mapping[operation]
+            kwargs = commit["kwargs"].apply(connector.transforms[operation])
+            getattr(connector, fn + "s")(kwargs)
 
         self.clear_edits()
-        return commits
+        return raw_commits
+
+    def _groupby_operation(self, commits) -> list[dict[str, Any]]:
+        df = pd.DataFrame(commits)
+        change_indices = (df["operation"] != df["operation"].shift(1)).cumsum()
+        return [
+            {
+                "operation": dfg["operation"].iloc[0],
+                "kwargs": pd.json_normalize(dfg["kwargs"]).set_index(self.index_name),
+            }
+            for _, dfg in df.groupby(change_indices)
+        ]
 
     def clear_edits(self, edit_type=None):
         "Clear edit state and index mapping"
