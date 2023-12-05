@@ -54,7 +54,9 @@ scripts.build = [
 [tool.hatch.envs.lite]
 dependencies = ["holonote[dev]", "jupyterlab", "jupyterlab-open-url-parameter", "jupyterlite-core", "jupyterlite-pyodide-kernel"]
 scripts.build = "bash scripts/jupyterlite/build.sh"
-scripts.server = "python -m http.server --directory ./jupyterlite "
+# Service worker only work on 127.0.0.1
+# https://jupyterlite.readthedocs.io/en/latest/howto/configure/advanced/service-worker.html#limitations
+scripts.server = "python -m http.server --directory ./jupyterlite --bind 127.0.0.1"
 
 [tool.hatch.envs.benchmark]
 dependencies = ["holonote[dev]", "pytest-codspeed", "pytest-xdist"]
