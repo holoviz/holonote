@@ -44,7 +44,7 @@ scripts.examples = "python scripts/example_testing.py"
 matrix = [{ python = ["3.9", "3.10", "3.11", "3.12"] }]
 
 [tool.hatch.envs.docs]
-dependencies = ["holonote[dev]", "nbsite", "myst-nb <1"]
+dependencies = ["holonote[dev]", "nbsite", "myst-nb <1", "matplotlib"]
 scripts.build = [
     "nbsite generate-rst --org holoviz --project-name holonote",
     "python ./doc/generate_modules.py holonote -n holonote -e tests",
