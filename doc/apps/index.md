@@ -1,6 +1,6 @@
 # Apps
 
-Will give you examples of how to integrate holonote in your apps with the use of the rest of the HoloViz ecosystem.
+Examples of how to apply HoloNote with other tools from the HoloViz ecosystem to build applications that include annotations.
 
 ```{toctree}
 :titlesonly:
