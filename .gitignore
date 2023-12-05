@@ -10,6 +10,8 @@ annotations.db
 # docs
 builtdocs
 jupyter_execute
+doc/**/*.rst
+doc/**/*.ipynb
 
 # jupyterlite
 jupyterlite/
