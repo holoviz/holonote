@@ -50,6 +50,7 @@ scripts.build = [
     "python ./doc/generate_modules.py holonote -d ./doc/reference_manual -n holonote -e tests",
     "nbsite build --what=html --output=builtdocs --org holoviz --project-name holonote",
 ]
+scripts.server = "python -m http.server --directory ./builtdocs"
 
 [tool.hatch.envs.lite]
 dependencies = ["holonote[dev]", "jupyterlab", "jupyterlab-open-url-parameter", "jupyterlite-core", "jupyterlite-pyodide-kernel"]
