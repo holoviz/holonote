@@ -15,6 +15,7 @@ With this library, users can easily annotate specific regions of their HoloViews
 :hidden:
 :maxdepth: 2
 
+tutorial/index
 basics/index
 apps/index
 reference_manual/index
