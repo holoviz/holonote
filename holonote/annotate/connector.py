@@ -464,4 +464,6 @@ if "_pyodide" in sys.modules:
     SQLiteDB = _SQLiteDB if hasattr(js, "document") else _SQLiteDBJupyterLite
 
 else:
-    SQLiteDB = _SQLiteDB
+
+    class SQLiteDB(_SQLiteDB):
+        pass
