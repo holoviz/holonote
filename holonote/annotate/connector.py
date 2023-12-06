@@ -2,8 +2,12 @@ from __future__ import annotations
 
 import datetime as dt
 import hashlib
+import os
 import sqlite3
+import sys
 import uuid
+from pathlib import Path
+from shutil import copyfile
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -266,7 +270,7 @@ class Connector(param.Parameterized):
         self.column_schema = schema
 
 
-class SQLiteDB(Connector):
+class _SQLiteDB(Connector):
     """
     Simple example of a Connector without dependencies, using sqlite3.
 
@@ -311,14 +315,17 @@ class SQLiteDB(Connector):
     def _initialize(self, column_schema, create_table=True):
         sqlite_date_adapters()
         if self.con is None:
-            self.con = sqlite3.connect(
-                self.filename, detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES
-            )
+            self.con = self._create_database_connection()
             self.cursor = self.con.cursor()  # should be context manager
         if create_table:
             if self.table_name is None:
                 self.table_name = self._generate_table_name(column_schema)
             self.create_table(column_schema=column_schema)
+
+    def _create_database_connection(self) -> sqlite3.Connection:
+        return sqlite3.connect(
+            self.filename, detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES
+        )
 
     def _generate_table_name(self, column_schema) -> str:
         "Given the column_schema outputs a deterministic table name"
@@ -419,3 +426,42 @@ class SQLiteDB(Connector):
         query = f'UPDATE {self.table_name} SET {set_updates} WHERE "{self.primary_key.field_name}" = ?;'
         self.cursor.execute(query, [*updates.values(), id_val])
         self.con.commit()
+
+
+class _SQLiteDBJupyterLite(_SQLiteDB):
+    # Sqlite don't work in JupyterLite environment:
+    # https://github.com/jupyterlite/pyodide-kernel/issues/35
+
+    def __init__(self, column_schema=None, connect=True, **params) -> None:
+        self.tmp_folder = Path("/tmp/holonote") / os.getcwd().removeprefix("/drive")
+        self.tmp_folder.mkdir(parents=True, exist_ok=True)
+        self.tmp_file = self.tmp_folder / "annotations.db"
+
+        if os.path.exists(self.filename):
+            copyfile(self.filename, self.tmp_file)
+
+        super().__init__(column_schema, connect, **params)
+
+    def _create_database_connection(self) -> sqlite3.Connection:
+        class CopyConnection(sqlite3.Connection):
+            def commit(_self):
+                super().commit()
+                copyfile(self.tmp_file, self.filename)
+
+        con = sqlite3.connect(
+            self.tmp_file,
+            factory=CopyConnection,
+            detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES,
+        )
+        con.execute("PRAGMA journal_mode=WAL;")
+        return con
+
+
+if "_pyodide" in sys.modules:
+    js = __import__("js")
+
+    # JupyterLite does not have document
+    SQLiteDB = _SQLiteDB if hasattr(js, "document") else _SQLiteDBJupyterLite
+
+else:
+    SQLiteDB = _SQLiteDB
