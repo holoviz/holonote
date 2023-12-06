@@ -44,13 +44,13 @@ scripts.examples = "python scripts/example_testing.py"
 matrix = [{ python = ["3.9", "3.10", "3.11", "3.12"] }]
 
 [tool.hatch.envs.docs]
-dependencies = ["holonote[dev]", "nbsite", "myst-nb <1", "matplotlib"]
+dependencies = ["holonote[dev]", "nbsite", "myst-nb <1", "matplotlib", "scipy"]
 scripts.build = [
     "nbsite generate-rst --org holoviz --project-name holonote",
     "python ./doc/generate_modules.py holonote -d ./doc/reference_manual -n holonote -e tests",
     "nbsite build --what=html --output=builtdocs --org holoviz --project-name holonote",
 ]
-scripts.server = "python -m http.server --directory ./builtdocs"
+scripts.server = "python -m http.server 5500 --directory ./builtdocs"
 
 [tool.hatch.envs.lite]
 dependencies = ["holonote[dev]", "jupyterlab", "jupyterlab-open-url-parameter", "jupyterlite-core", "jupyterlite-pyodide-kernel"]
