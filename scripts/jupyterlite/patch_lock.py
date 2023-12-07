@@ -33,8 +33,9 @@ hn["file_name"] = os.path.basename(whl_file)
 hn["sha256"] = calculate_sha256(whl_file)
 hn["imports"] = ["holonote"]  # Not completely sure why this is empty
 
-# To avoid importing it in the notebooks
-data["packages"]["pandas"]["depends"].extend(["fastparquet"])
+# To avoid importing it in the notebooks, we can't add it to pandas directly
+# as fastparquet depends on it. So we add it to hvplot instead.
+data["packages"]["hvplot"]["depends"].extend(["fastparquet"])
 
 
 with open(path, "w") as f:
