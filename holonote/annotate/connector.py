@@ -166,22 +166,28 @@ class Connector(param.Parameterized):
 
     operation_mapping = {}  # Mapping from operation type to corresponding connector method
 
+    # iterate on all the possible types
     type_mapping = {
         bool: "BOOLEAN",
         str: "TEXT",
         float: "REAL",
         int: "INTEGER",
-        np.datetime64: "TIMESTAMP",
         dt.date: "TIMESTAMP",
         dt.datetime: "TIMESTAMP",
-        param.Integer: "INTEGER",
-        param.Number: "REAL",
-        param.String: "TEXT",
-        param.Boolean: "BOOLEAN",
+        pd.Timedelta: "INTEGER",
+        pd.Timestamp: "TIMESTAMP",
         np.dtype("datetime64[ns]"): "TIMESTAMP",
         np.dtype("<M8"): "TIMESTAMP",
         np.float64: "REAL",
+        np.float32: "REAL",
+        np.float16: "REAL",
+        np.int8: "INTEGER",
+        np.int16: "INTEGER",
+        np.int32: "INTEGER",
         np.int64: "INTEGER",
+        np.uint8: "INTEGER",
+        np.uint16: "INTEGER",
+        np.uint32: "INTEGER",
     }
 
     @classmethod
