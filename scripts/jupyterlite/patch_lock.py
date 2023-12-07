@@ -32,7 +32,9 @@ hn["version"] = os.environ["VERSION"]
 hn["file_name"] = os.path.basename(whl_file)
 hn["sha256"] = calculate_sha256(whl_file)
 hn["imports"] = ["holonote"]  # Not completely sure why this is empty
-hn["depends"].extend(["fastparquet"])  # To avoid importing it in the notebooks
+
+# To avoid importing it in the notebooks
+data["packages"]["pandas"]["depends"].extend(["fastparquet"])
 
 
 with open(path, "w") as f:
