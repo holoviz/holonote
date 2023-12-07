@@ -4,6 +4,11 @@ set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
+# Make new wheel
+hatch build --clean -t wheel
+VERSION=$(hatch version)
+export VERSION
+
 # Update lockfiles
 rm -rf node_modules
 npm install pyodide
@@ -15,3 +20,4 @@ jupyter lite build
 
 cp -r node_modules/pyodide/ ../../jupyterlite/pyodide
 mv pyodide-lock.json ../../jupyterlite/pyodide/pyodide-lock.json
+mv ../../dist/* ../../jupyterlite/pyodide/
