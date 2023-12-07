@@ -29,6 +29,11 @@ dev = [
     "fastparquet",
     "scipy",
 ]
+examples = [
+    "holonote[dev]",
+    "jupyterlab",
+    "jupyterlab-myst",
+]
 
 [tool.hatch]
 version.source = "vcs"
@@ -54,7 +59,7 @@ scripts.build = [
 scripts.server = "python -m http.server 5500 --directory ./builtdocs"
 
 [tool.hatch.envs.lite]
-dependencies = ["holonote[dev]", "jupyterlab", "jupyterlab-open-url-parameter", "jupyterlite-core", "jupyterlite-pyodide-kernel"]
+dependencies = ["holonote[examples]", "jupyterlab-open-url-parameter", "jupyterlite-core", "jupyterlite-pyodide-kernel"]
 scripts.build = "bash scripts/jupyterlite/build.sh"
 # Service worker only work on 127.0.0.1
 # https://jupyterlite.readthedocs.io/en/latest/howto/configure/advanced/service-worker.html#limitations
