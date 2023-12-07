@@ -10,8 +10,7 @@ Still, the reference for a given component does provide a comprehensive listing 
 ```{toctree}
 :titlesonly:
 :hidden:
-:maxdepth: 1
+:maxdepth: 2
 
-annotate
-app
+modules
 ```
