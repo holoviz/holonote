@@ -19,6 +19,5 @@ With this library, users can easily annotate specific regions of their HoloViews
 
 tutorial/index
 basics/index
-apps/index
 reference_manual/index
 ```

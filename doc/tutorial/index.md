@@ -13,6 +13,6 @@ Overview
 First_Annotation
 Multiple_Annotations
 Styling_of_Annotations
-<!-- make_an_app -->
+Make_an_App
 
 ```
