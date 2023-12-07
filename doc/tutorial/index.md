@@ -12,7 +12,7 @@ The tutorial will walk you through the basic functionality of the HoloNote libra
 Overview
 First_Annotation
 Multiple_Annotations
-<!-- 03_style_annotations -->
-<!-- 04_make_an_app -->
+Styling_of_Annotations
+<!-- make_an_app -->
 
 ```
