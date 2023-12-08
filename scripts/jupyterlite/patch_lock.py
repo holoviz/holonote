@@ -37,6 +37,8 @@ hn["imports"] = ["holonote"]  # Not completely sure why this is empty
 # as fastparquet depends on it. So we add it to hvplot instead.
 data["packages"]["hvplot"]["depends"].extend(["fastparquet"])
 
+data["packages"]["holoviews"]["depends"].extend(["pyparsing"])
+
 
 with open(path, "w") as f:
     data = json.dump(data, f)
