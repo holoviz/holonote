@@ -3,7 +3,7 @@
 The `holonote` library offers tools to create, edit and persist
 annotated regions for [HoloViews](https://holoviews.org/).
 
-![Annotation demo](https://raw.githubusercontent.com/holoviz/holonote/main/doc/_static/assets/demo.gif)
+![Annotation demo](https://assets.holoviz.org/holonote/demo.gif)
 
 An annotated region marks a region-of-interest that is overlaid on top
 of the visual representation of a HoloViews element. Such a region has a

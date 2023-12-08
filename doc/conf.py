@@ -3,7 +3,7 @@ from pathlib import Path
 
 import param
 from nbsite.shared_conf import *  # noqa: F403
-from panel.io.convert import BOKEH_VERSION, PY_VERSION
+from panel.io.convert import BOKEH_VERSION, PY_VERSION, PYODIDE_VERSION
 from panel.io.resources import CDN_DIST
 
 import holonote as hn
@@ -138,7 +138,7 @@ bokeh_req = f"{CDN_DIST}wheels/bokeh-{BOKEH_VERSION}-py3-none-any.whl"
 
 
 nbsite_pyodide_conf = {
-    "PYODIDE_URL": "https://cdn.jsdelivr.net/pyodide/v0.23.1/full/pyodide.js",
+    "PYODIDE_URL": f"https://cdn.jsdelivr.net/pyodide/{PYODIDE_VERSION}/full/pyodide.js",
     "requirements": [bokeh_req, panel_req, "pyodide-http", "holonote"],
     # "requires": get_requirements(),
 }
