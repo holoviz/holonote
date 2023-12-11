@@ -27,6 +27,12 @@ dev = [
     "nbval",
     "hvplot",
     "fastparquet",
+    "scipy",
+]
+examples = [
+    "holonote[dev]",
+    "jupyterlab",
+    "jupyterlab-myst",
 ]
 
 [tool.hatch]
@@ -42,6 +48,23 @@ dependencies = ["holonote[dev]", "pytest-github-actions-annotate-failures"]
 scripts.run = "python -m pytest holonote/tests {args:.}"
 scripts.examples = "python scripts/example_testing.py"
 matrix = [{ python = ["3.9", "3.10", "3.11", "3.12"] }]
+
+[tool.hatch.envs.docs]
+dependencies = ["holonote[dev]", "nbsite", "myst-nb <1", "matplotlib"]
+scripts.build = [
+    "nbsite generate-rst --keep-numbers --org holoviz --project-name holonote",
+    "python ./doc/no_header_tutorial.py",
+    "python ./doc/generate_modules.py holonote -d ./doc/reference_manual -n holonote -e tests",
+    "nbsite build --what=html --output=builtdocs --org holoviz --project-name holonote",
+]
+scripts.server = "python -m http.server 5500 --directory ./builtdocs"
+
+[tool.hatch.envs.lite]
+dependencies = ["holonote[examples]", "jupyterlab-open-url-parameter", "jupyterlite-core", "jupyterlite-pyodide-kernel"]
+scripts.build = "bash scripts/jupyterlite/build.sh"
+# Service worker only work on 127.0.0.1
+# https://jupyterlite.readthedocs.io/en/latest/howto/configure/advanced/service-worker.html#limitations
+scripts.server = "python -m http.server --directory ./jupyterlite --bind 127.0.0.1"
 
 [tool.hatch.envs.benchmark]
 dependencies = ["holonote[dev]", "pytest-codspeed", "pytest-xdist"]
@@ -111,6 +134,7 @@ unfixable = [
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F403"]
+"doc/generate_modules.py" = ["ALL"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["holonote"]

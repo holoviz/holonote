@@ -6,3 +6,15 @@ dist
 scratch
 holonote/_version.py
 annotations.db
+
+# docs
+builtdocs
+jupyter_execute
+doc/**/*.rst
+doc/**/*.ipynb
+
+# jupyterlite
+jupyterlite/
+!scripts/jupyterlite
+scripts/jupyterlite/.jupyterlite.doit.db
+scripts/jupyterlite/*.json
