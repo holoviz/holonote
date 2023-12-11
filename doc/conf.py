@@ -3,8 +3,6 @@ from pathlib import Path
 
 import param
 from nbsite.shared_conf import *  # noqa: F403
-from panel.io.convert import BOKEH_VERSION, PY_VERSION, PYODIDE_VERSION
-from panel.io.resources import CDN_DIST
 
 import holonote as hn
 
@@ -32,9 +30,7 @@ os.environ["BRANCH"] = f"v{release}"
 
 html_static_path += ["_static"]
 
-html_css_files += [
-    "css/custom.css",
-]
+html_css_files += ["css/custom.css"]
 
 html_theme = "pydata_sphinx_theme"
 # html_favicon = "_static/icons/favicon.ico"
@@ -62,85 +58,23 @@ html_theme_options = {
     "header_links_before_dropdown": 5,
     "secondary_sidebar_items": [
         "github-stars-button",
-        # "jupyterlitelink",
+        "jupyterlitelink",
         "page-toc",
     ],
 }
 
-extensions += ["sphinx.ext.napoleon", "nbsite.gallery", "sphinx_copybutton", "nbsite.pyodide"]
+extensions += ["sphinx.ext.napoleon", "nbsite.gallery"]
 napoleon_numpy_docstring = True
 
 myst_enable_extensions = ["colon_fence", "deflist"]
 
-# gallery_endpoint = "panel-gallery-dev" if is_dev else "panel-gallery"
-# gallery_url = f"https://{gallery_endpoint}.pyviz.demo.anaconda.com"
-jlite_url = (
-    "https://pyviz-dev.github.io/jupyterlite-dev" if is_dev else "https://jupyterlite.holoviz.org"
-)
-# pyodide_url = (
-#     "https://pyviz-dev.github.io/panel/pyodide" if is_dev else "https://panel.holoviz.org/pyodide"
-# )
+jupyterlite_url = "https://holoviz-dev.github.io/holonote-jupyterlite"
 
 nbsite_gallery_conf = {
     "github_org": "holoviz",
     "github_project": "holonote",
+    "jupyterlite_url": jupyterlite_url,
     "galleries": {},
-    #     "reference": {
-    #         "title": "Component Gallery",
-    #         "sections": [
-    #             "panes",
-    #             "widgets",
-    #             "layouts",
-    #             # 3 most important by expected usage. Rest alphabetically
-    #             "chat",
-    #             "global",
-    #             "indicators",
-    #             "templates",
-    #         ],
-    #         "titles": {
-    #             "Vega": "Altair & Vega",
-    #             "DeckGL": "PyDeck & Deck.gl",
-    #             "ECharts": "PyEcharts & ECharts",
-    #             "IPyWidget": "ipywidgets",
-    #             "PanelCallbackHandler": "LangChain CallbackHandler",
-    #         },
-    #         "as_pyodide": True,
-    #         "normalize_titles": False,
-    #     }
-    # },
-    # "thumbnail_url": "https://assets.holoviz.org/panel/thumbnails",
-    # "deployment_url": gallery_url,
-    # "jupyterlite_url": jlite_url,
-}
-
-# if panel.__version__ != version and (PANEL_ROOT / "dist" / "wheels").is_dir():
-#     py_version = panel.__version__.replace("-dirty", "")
-#     panel_req = f"./wheels/panel-{py_version}-py3-none-any.whl"
-#     bokeh_req = f"./wheels/bokeh-{BOKEH_VERSION}-py3-none-any.whl"
-# else:
-panel_req = f"{CDN_DIST}wheels/panel-{PY_VERSION}-py3-none-any.whl"
-bokeh_req = f"{CDN_DIST}wheels/bokeh-{BOKEH_VERSION}-py3-none-any.whl"
-
-
-# def get_requirements():
-#     with open("pyodide_dependencies.json") as deps:
-#         dependencies = json.load(deps)
-#     requirements = {}
-#     for src, deps in dependencies.items():
-#         if deps is None:
-#             continue
-#         src = src.replace(".ipynb", "").replace(".md", "")
-#         for name, min_version in MINIMUM_VERSIONS.items():
-#             if any(name in req for req in deps):
-#                 deps = [f"{name}>={min_version}" if name in req else req for req in deps]
-#         requirements[src] = deps
-#     return requirements
-
-
-nbsite_pyodide_conf = {
-    "PYODIDE_URL": f"https://cdn.jsdelivr.net/pyodide/{PYODIDE_VERSION}/full/pyodide.js",
-    "requirements": [bokeh_req, panel_req, "pyodide-http", "holonote"],
-    # "requires": get_requirements(),
 }
 
 templates_path += ["_templates"]
@@ -151,9 +85,7 @@ html_context.update(
         "github_user": "holoviz",
         "github_repo": "holonote",
         "default_mode": "light",
-        # "jupyterlite_endpoint": jlite_url,
-        # "gallery_url": gallery_url,
-        # "pyodide_url": pyodide_url,
+        "jupyterlite_endpoint": jupyterlite_url,
     }
 )
 
@@ -201,26 +133,6 @@ html_title = f"{project} v{version}"
 # CardDirective.run = patched_card_run
 
 
-# def _get_pyodide_version():
-#     if PYODIDE_VERSION.startswith("v"):
-#         return PYODIDE_VERSION[1:]
-#     msg = f"{PYODIDE_VERSION=} is not valid"
-#     raise NotImplementedError(msg)
-
-
-# def update_versions(app, docname, source):
-#     # Inspired by: https://stackoverflow.com/questions/8821511
-#     version_replace = {
-#         "{{PANEL_VERSION}}": PY_VERSION,
-#         "{{BOKEH_VERSION}}": BOKEH_VERSION,
-#         "{{PYSCRIPT_VERSION}}": PYSCRIPT_VERSION,
-#         "{{PYODIDE_VERSION}}": _get_pyodide_version(),
-#     }
-
-#     for old, new in version_replace.items():
-#         source[0] = source[0].replace(old, new)
-
-
 def setup(app) -> None:
     try:
         from nbsite.paramdoc import param_formatter, param_skip
@@ -230,9 +142,5 @@ def setup(app) -> None:
     except ImportError:
         print("no param_formatter (no param?)")
 
-    # app.connect("source-read", update_versions)
     nbbuild.setup(app)
     app.add_config_value("grid_item_link_domain", "", "html")
-
-
-# grid_item_link_domain = gallery_endpoint

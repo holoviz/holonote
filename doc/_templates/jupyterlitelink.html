@@ -1,0 +1,8 @@
+{# Custom template to include a link to Panelite #}
+<div class="tocsection">
+{% if title and pagename != root_doc and (pagename.startswith("tutorial") or pagename.startswith("basics")) %}
+  <a href="{{ jupyterlite_endpoint + '/lab' + ('' if pagename.endswith('index') else '?path=' + pagename + '.ipynb') }}" target=”_blank”>
+    <img src="{{ pathto('_static/assets/jupyterlite.svg', 1) }}" alt="launch jupyterlite"></img>
+  </a>
+{% endif %}
+</div>
