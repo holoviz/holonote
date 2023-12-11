@@ -52,7 +52,8 @@ matrix = [{ python = ["3.9", "3.10", "3.11", "3.12"] }]
 [tool.hatch.envs.docs]
 dependencies = ["holonote[dev]", "nbsite", "myst-nb <1", "matplotlib"]
 scripts.build = [
-    "nbsite generate-rst --org holoviz --project-name holonote",
+    "nbsite generate-rst --keep-numbers --org holoviz --project-name holonote",
+    "python ./doc/no_header_tutorial.py",
     "python ./doc/generate_modules.py holonote -d ./doc/reference_manual -n holonote -e tests",
     "nbsite build --what=html --output=builtdocs --org holoviz --project-name holonote",
 ]

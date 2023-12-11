@@ -9,10 +9,10 @@ The tutorial will walk you through the basic functionality of the HoloNote libra
 :hidden:
 :maxdepth: 1
 
-Overview
-First_Annotation
-Multiple_Annotations
-Styling_of_Annotations
-Make_an_App
+Overview <00_Overview>
+First Annotation <01_First_Annotation>
+Multiple Annotations <02_Multiple_Annotations>
+Styling of Annotations <03_Styling_of_Annotations>
+Make an App <04_Make_an_App>
 
 ```
