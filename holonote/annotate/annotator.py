@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import namedtuple
 from typing import TYPE_CHECKING, Any
 
 import holoviews as hv
@@ -13,6 +14,17 @@ from .table import AnnotationTable
 
 if TYPE_CHECKING:
     from .typing import SpecDict
+
+
+event_info = namedtuple("event_info", ["type", "index", "region", "fields"])
+
+
+class AnnotationEvent(param.Event):
+    def _validate(self, val) -> None:
+        if isinstance(val, (event_info, bool)):
+            return
+        msg = "AnnotationEvent must be a event_info or bool"
+        raise ValueError(msg)
 
 
 class AnnotatorInterface(param.Parameterized):
@@ -42,6 +54,10 @@ class AnnotatorInterface(param.Parameterized):
     connector = param.ClassSelector(class_=Connector, allow_None=False)
 
     connector_class = SQLiteDB
+
+    event = AnnotationEvent(
+        doc="Event that is triggered when an annotation is created, updated, or deleted"
+    )
 
     def __init__(self, spec, **params):
         if "connector" not in params:
@@ -158,19 +174,25 @@ class AnnotatorInterface(param.Parameterized):
                 self._region, spec=self.spec, **fields, **self.static_fields
             )
             self._last_region = self._region.copy()
+            self.event = event_info(
+                "create", fields[self.connector.primary_key.field_name], self._region, fields
+            )
 
     def add_annotation(self, **fields):
         self._add_annotation(**fields)
 
     def update_annotation_region(self, index):
         self.annotation_table.update_annotation_region(self._region, index)
+        self.event = event_info("update", index, self._region, None)
 
     def update_annotation_fields(self, index, **fields):
         self.annotation_table.update_annotation_fields(index, **fields, **self.static_fields)
+        self.event = event_info("update", index, None, fields)
 
     def delete_annotation(self, index):
         try:
             self.annotation_table.delete_annotation(index)
+            self.event = event_info("delete", index, None, None)
         except KeyError:
             msg = f"Annotation with index {index!r} does not exist."
             raise ValueError(msg) from None
@@ -384,3 +406,12 @@ class Annotator(AnnotatorInterface):
     @param.depends("fields", watch=True, on_init=True)
     def _set_groupby_objects(self) -> None:
         self.param.groupby.objects = [*self.fields, None]
+
+
+def annotator_transform(obj):
+    if isinstance(obj, AnnotatorInterface):
+        return obj.param.event
+    return obj
+
+
+param.reactive.register_reference_transform(annotator_transform)
