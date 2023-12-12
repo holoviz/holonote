@@ -174,25 +174,29 @@ class AnnotatorInterface(param.Parameterized):
                 self._region, spec=self.spec, **fields, **self.static_fields
             )
             self._last_region = self._region.copy()
-            self.event = event_info(
-                "create", fields[self.connector.primary_key.field_name], self._region, fields
-            )
+            if "event" in self.param.watchers:
+                self.event = event_info(
+                    "create", fields[self.connector.primary_key.field_name], self._region, fields
+                )
 
     def add_annotation(self, **fields):
         self._add_annotation(**fields)
 
     def update_annotation_region(self, index):
         self.annotation_table.update_annotation_region(self._region, index)
-        self.event = event_info("update", index, self._region, None)
+        if "event" in self.param.watchers:
+            self.event = event_info("update", index, self._region, None)
 
     def update_annotation_fields(self, index, **fields):
         self.annotation_table.update_annotation_fields(index, **fields, **self.static_fields)
-        self.event = event_info("update", index, None, fields)
+        if "event" in self.param.watchers:
+            self.event = event_info("update", index, None, fields)
 
     def delete_annotation(self, index):
         try:
             self.annotation_table.delete_annotation(index)
-            self.event = event_info("delete", index, None, None)
+            if "event" in self.param.watchers:
+                self.event = event_info("delete", index, None, None)
         except KeyError:
             msg = f"Annotation with index {index!r} does not exist."
             raise ValueError(msg) from None
