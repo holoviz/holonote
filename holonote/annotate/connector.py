@@ -172,6 +172,7 @@ class Connector(param.Parameterized):
         str: "TEXT",
         float: "REAL",
         int: "INTEGER",
+        np.datetime64: "TIMESTAMP",
         dt.date: "TIMESTAMP",
         dt.datetime: "TIMESTAMP",
         pd.Timedelta: "INTEGER",
