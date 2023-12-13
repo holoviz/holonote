@@ -279,6 +279,19 @@ class AnnotatorInterface(param.Parameterized):
         if return_commits:
             return commits
 
+    def on_event(self, callback) -> None:
+        """Register a callback to be called when an annotation event is triggered
+        this can be either when an annotation is created, updated, or deleted.
+
+        This is a wrapper around param.bind with watch=True.
+
+        Parameters
+        ----------
+        callback : function
+            function to be called when an annotation event is triggered
+        """
+        param.bind(callback, self.param.event, watch=True)
+
 
 class Annotator(AnnotatorInterface):
     """
