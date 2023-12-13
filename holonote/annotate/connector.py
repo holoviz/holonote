@@ -6,6 +6,7 @@ import os
 import sqlite3
 import sys
 import uuid
+from functools import cache
 from pathlib import Path
 from shutil import copyfile
 from typing import TYPE_CHECKING
@@ -14,10 +15,80 @@ import numpy as np
 import pandas as pd
 import param
 
-from .util import sqlite_date_adapters
-
 if TYPE_CHECKING:
     from .typing import SpecDict
+
+
+@cache
+def _sqlite_adapters() -> None:
+    # Most of the following code has been copied here from in Python 3.11:
+    # `sqlite3.dbapi2.register_adapters_and_converters`.
+    # Including minor modifications to source code to pass linting
+    # https://docs.python.org/3/license.html#psf-license
+    # Extra adapters have been added for dt.time, numpy.datetime64, and pd.Timestamp.
+
+    def adapt_date(val):
+        return val.isoformat()
+
+    def adapt_datetime(val):
+        return val.isoformat(" ")
+
+    def adapt_time(t) -> str:
+        return f"{t.hour:02d}:{t.minute:02d}:{t.second:02d}.{t.microsecond:06d}"
+
+    def adapt_np_datetime64(val):
+        return np.datetime_as_string(val, unit="us").replace("T", " ")
+
+    def convert_date(val):
+        return dt.date(*map(int, val.split(b"-")))
+
+    def convert_timestamp(val):
+        datepart, timepart = val.split(b" ")
+        year, month, day = map(int, datepart.split(b"-"))
+        timepart_full = timepart.split(b".")
+        hours, minutes, seconds = map(int, timepart_full[0].split(b":"))
+        microseconds = int(f"{timepart_full[1].decode():0<6.6}") if len(timepart_full) == 2 else 0
+
+        val = dt.datetime(year, month, day, hours, minutes, seconds, microseconds)
+        return val
+
+    if sys.version_info >= (3, 12):
+        # Python 3.12 has removed datetime support from sqlite3
+        # https://github.com/python/cpython/pull/93095
+        sqlite3.register_adapter(dt.date, adapt_date)
+        sqlite3.register_adapter(dt.datetime, adapt_datetime)
+        sqlite3.register_converter("date", convert_date)
+        sqlite3.register_converter("timestamp", convert_timestamp)
+
+    sqlite3.register_adapter(dt.time, adapt_time)
+    sqlite3.register_adapter(np.datetime64, adapt_np_datetime64)
+    sqlite3.register_adapter(pd.Timestamp, adapt_datetime)
+
+
+def _get_valid_sqlite_name(name: object):
+    # See https://stackoverflow.com/questions/6514274/how-do-you-escape-strings\
+    # -for-sqlite-table-column-names-in-python
+    # Ensure the string can be encoded as UTF-8.
+    # Ensure the string does not include any NUL characters.
+    # Replace all " with "".
+    # Wrap the entire thing in double quotes.
+    # Inspired from pandas.io.sql._get_valid_sqlite_name
+
+    try:
+        uname = str(name).encode("utf-8", "strict").decode("utf-8")
+    except UnicodeError as err:
+        msg = f"Cannot convert identifier to UTF-8: '{name}'"
+        raise ValueError(msg) from err
+
+    if not len(uname):
+        msg = "Empty table or column name specified"
+        raise ValueError(msg)
+
+    nul_index = uname.find("\x00")
+    if nul_index >= 0:
+        msg = "SQLite identifier cannot contain NULs"
+        raise ValueError(msg)
+    return '"' + uname.replace('"', '""') + '"'
 
 
 class PrimaryKey(param.Parameterized):
@@ -170,6 +241,7 @@ class Connector(param.Parameterized):
 
     operation_mapping = {}  # Mapping from operation type to corresponding connector method
 
+    # iterate on all the possible types
     type_mapping = {
         bool: "BOOLEAN",
         str: "TEXT",
@@ -178,14 +250,21 @@ class Connector(param.Parameterized):
         np.datetime64: "TIMESTAMP",
         dt.date: "TIMESTAMP",
         dt.datetime: "TIMESTAMP",
-        param.Integer: "INTEGER",
-        param.Number: "REAL",
-        param.String: "TEXT",
-        param.Boolean: "BOOLEAN",
+        dt.time: "TIME",
+        pd.Timedelta: "INTEGER",
+        pd.Timestamp: "TIMESTAMP",
         np.dtype("datetime64[ns]"): "TIMESTAMP",
         np.dtype("<M8"): "TIMESTAMP",
         np.float64: "REAL",
+        np.float32: "REAL",
+        np.float16: "REAL",
+        np.int8: "INTEGER",
+        np.int16: "INTEGER",
+        np.int32: "INTEGER",
         np.int64: "INTEGER",
+        np.uint8: "INTEGER",
+        np.uint16: "INTEGER",
+        np.uint32: "INTEGER",
     }
 
     @classmethod
@@ -313,7 +392,7 @@ class _SQLiteDB(Connector):
             self._initialize(column_schema, create_table=False)
 
     def _initialize(self, column_schema, create_table=True):
-        sqlite_date_adapters()
+        _sqlite_adapters()
         if self.con is None:
             self.con = self._create_database_connection()
             self.cursor = self.con.cursor()  # should be context manager
@@ -326,6 +405,10 @@ class _SQLiteDB(Connector):
         return sqlite3.connect(
             self.filename, detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES
         )
+
+    @property
+    def _safe_table_name(self) -> str:
+        return _get_valid_sqlite_name(self.table_name)
 
     def _generate_table_name(self, column_schema) -> str:
         "Given the column_schema outputs a deterministic table name"
@@ -359,7 +442,7 @@ class _SQLiteDB(Connector):
         if uninitialized:
             self._initialize({}, create_table=False)
 
-        raw_df = pd.read_sql_query(f"SELECT * FROM {self.table_name}", self.con)
+        raw_df = pd.read_sql_query(f"SELECT * FROM {self._safe_table_name}", self.con)
         # dtype={self.primary_key.field_name:self.primary_key.dtype})
         df = raw_df.set_index(self.primary_key.field_name)
         if uninitialized:
@@ -372,13 +455,15 @@ class _SQLiteDB(Connector):
 
     def create_table(self, column_schema=None):
         column_schema = column_schema if column_schema else self.column_schema
-        column_spec = ",\n".join([f'"{name}" {spec}' for name, spec in column_schema.items()])
-        create_table_sql = f"CREATE TABLE IF NOT EXISTS {self.table_name} (" + column_spec + ");"
+        column_spec = ",\n".join(
+            [f"{_get_valid_sqlite_name(name)} {spec}" for name, spec in column_schema.items()]
+        )
+        create_table_sql = f"CREATE TABLE IF NOT EXISTS {self._safe_table_name} ({column_spec});"
         self.cursor.execute(create_table_sql)
         self.con.commit()
 
     def delete_table(self):
-        self.cursor.execute(f"DROP TABLE IF EXISTS {self.table_name}")
+        self.cursor.execute(f"DROP TABLE IF EXISTS {self._safe_table_name}")
         self.con.commit()
 
     def add_rows(self, field_list):  # Used execute_many
@@ -389,32 +474,28 @@ class _SQLiteDB(Connector):
         # Note, missing fields will be set as NULL
         columns = self.columns
         field_values = [fields.get(col, None) for col in self.columns]
-        field_values = [
-            pd.to_datetime(el) if isinstance(el, np.datetime64) else el for el in field_values
-        ]
-        field_values = [
-            el.to_pydatetime() if isinstance(el, pd.Timestamp) else el for el in field_values
-        ]
 
         if self.primary_key.policy != "insert":
             field_values = field_values[1:]
             columns = columns[1:]
 
         placeholders = ", ".join(["?"] * len(field_values))
+        column_str = ", ".join(map(_get_valid_sqlite_name, columns))
         self.cursor.execute(
-            f"INSERT INTO {self.table_name} {columns!s} VALUES({placeholders});", field_values
+            f"INSERT INTO {self._safe_table_name} ({column_str}) VALUES({placeholders});",
+            field_values,
         )
         self.primary_key.validate(self.cursor.lastrowid, fields[self.primary_key.field_name])
         self.con.commit()
 
     def delete_all_rows(self):
         "Obviously a destructive operation!"
-        self.cursor.execute(f"DELETE FROM {self.table_name};")
+        self.cursor.execute(f"DELETE FROM {self._safe_table_name};")
         self.con.commit()
 
     def delete_row(self, id_val):
         self.cursor.execute(
-            f"DELETE FROM {self.table_name} WHERE {self.primary_key.field_name} = ?",
+            f"DELETE FROM {self._safe_table_name} WHERE {self.primary_key.field_name} = ?",
             (self.primary_key.cast(id_val),),
         )
         self.con.commit()
@@ -423,7 +504,7 @@ class _SQLiteDB(Connector):
         assert self.primary_key.field_name in updates
         id_val = updates.pop(self.primary_key.field_name)
         set_updates = ", ".join('"' + k + '"' + " = ?" for k in updates)
-        query = f'UPDATE {self.table_name} SET {set_updates} WHERE "{self.primary_key.field_name}" = ?;'
+        query = f'UPDATE {self._safe_table_name} SET {set_updates} WHERE "{self.primary_key.field_name}" = ?;'
         self.cursor.execute(query, [*updates.values(), id_val])
         self.con.commit()
 

@@ -64,15 +64,6 @@ class AnnotationTable:
 
         self.clear_edits()
 
-    def update_annotation_region(self, region, index):
-        value = region["value"]
-        mask = self._region_df[self._region_df._id == index]
-        assert len(mask) == 1, "TODO: Handle multiple region updates for single index"
-        self._region_df.at[mask.index.values[0], "value"] = value
-        self._edits.append(
-            {"operation": "update", "id": index, "fields": None, "region_fields": []}
-        )
-
     @property
     def has_snapshot(self) -> bool:
         return self._field_df_snapshot is not None
@@ -211,6 +202,20 @@ class AnnotationTable:
         self._edits.append(
             {"operation": "update", "id": index, "fields": list(fields), "region_fields": []}
         )
+
+    def update_annotation_region(self, region, index):
+        index_mask = self._region_df._id == index
+        for kdim, value in region.items():
+            mask = self._region_df[index_mask & (self._region_df.dim == kdim)]
+            if mask.shape[0] != 1:
+                msg = (
+                    f"Expected one region for {kdim} with index {index} but found {mask.shape[0]}"
+                )
+                raise ValueError(msg)
+            self._region_df.loc[mask.index.values[0], "value"] = value
+            self._edits.append(
+                {"operation": "update", "id": index, "fields": None, "region_fields": kdim}
+            )
 
     def define_fields(self, fields_df, index_mapping):
         # Need a staging area to hold everything till initialized
