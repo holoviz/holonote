@@ -78,6 +78,15 @@ class AnnotatorInterface(param.Parameterized):
         self.connector._initialize(self.connector.column_schema)
         self.annotation_table.load(self.connector, fields=self.connector.fields, spec=self.spec)
 
+    def __repr__(self):
+        settings = [
+            f"{name}={type(val).__name__}()"
+            if isinstance(val, param.Parameterized)
+            else f"{name}={val!r}"
+            for name, val in self.param.values().items()
+        ]
+        return f'{self.__class__.__name__}({", ".join(settings)})'
+
     @property
     def all_fields(self) -> list:
         """Return a list of all fields including static fields"""
