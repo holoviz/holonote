@@ -179,6 +179,7 @@ class Connector(param.Parameterized):
         np.datetime64: "TIMESTAMP",
         dt.date: "TIMESTAMP",
         dt.datetime: "TIMESTAMP",
+        dt.time: "TIME",
         pd.Timedelta: "INTEGER",
         pd.Timestamp: "TIMESTAMP",
         np.dtype("datetime64[ns]"): "TIMESTAMP",
@@ -396,12 +397,6 @@ class _SQLiteDB(Connector):
         # Note, missing fields will be set as NULL
         columns = self.columns
         field_values = [fields.get(col, None) for col in self.columns]
-        field_values = [
-            pd.to_datetime(el) if isinstance(el, np.datetime64) else el for el in field_values
-        ]
-        field_values = [
-            el.to_pydatetime() if isinstance(el, pd.Timestamp) else el for el in field_values
-        ]
 
         if self.primary_key.policy != "insert":
             field_values = field_values[1:]
