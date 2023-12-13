@@ -14,5 +14,6 @@ First Annotation <01_First_Annotation>
 Multiple Annotations <02_Multiple_Annotations>
 Styling of Annotations <03_Styling_of_Annotations>
 Make an App <04_Make_an_App>
+Watch Events <05_Watch_Events>
 
 ```
