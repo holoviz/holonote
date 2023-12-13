@@ -455,10 +455,10 @@ class _SQLiteDB(Connector):
 
     def create_table(self, column_schema=None):
         column_schema = column_schema if column_schema else self.column_schema
-        column_spec = ",\n".join([f'"{name}" {spec}' for name, spec in column_schema.items()])
-        create_table_sql = (
-            f"CREATE TABLE IF NOT EXISTS {self._safe_table_name} (" + column_spec + ");"
+        column_spec = ",\n".join(
+            [f"{_get_valid_sqlite_name(name)} {spec}" for name, spec in column_schema.items()]
         )
+        create_table_sql = f"CREATE TABLE IF NOT EXISTS {self._safe_table_name} ({column_spec});"
         self.cursor.execute(create_table_sql)
         self.con.commit()
 
@@ -480,8 +480,9 @@ class _SQLiteDB(Connector):
             columns = columns[1:]
 
         placeholders = ", ".join(["?"] * len(field_values))
+        column_str = ", ".join(map(_get_valid_sqlite_name, columns))
         self.cursor.execute(
-            f"INSERT INTO {self._safe_table_name} {columns!s} VALUES({placeholders});",
+            f"INSERT INTO {self._safe_table_name} ({column_str}) VALUES({placeholders});",
             field_values,
         )
         self.primary_key.validate(self.cursor.lastrowid, fields[self.primary_key.field_name])
