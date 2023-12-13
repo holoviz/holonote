@@ -254,6 +254,13 @@ def test_update_region(multiple_annotators, conn_sqlite_uuid) -> None:
     annotator.add_annotation(description="test")
     annotator.commit()
 
+    # In the Annotation Table
+    df = annotator.df
+    assert df.shape[0] == 1
+    assert (df["start[TIME]"] == first[0]).all()
+    assert (df["end[TIME]"] == first[1]).all()
+
+    # In the database
     df = conn_sqlite_uuid.load_dataframe()
     assert df.shape[0] == 1
     assert (df["start_TIME"] == first[0]).all()
@@ -265,6 +272,13 @@ def test_update_region(multiple_annotators, conn_sqlite_uuid) -> None:
     annotator.update_annotation_region(df.index[0])
     annotator.commit()
 
+    # In the Annotation Table
+    df = annotator.df
+    assert df.shape[0] == 1
+    assert (df["start[TIME]"] == second[0]).all()
+    assert (df["end[TIME]"] == second[1]).all()
+
+    # In the database
     df = conn_sqlite_uuid.load_dataframe()
     assert df.shape[0] == 1
     assert (df["start_TIME"] == second[0]).all()
