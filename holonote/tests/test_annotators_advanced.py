@@ -243,3 +243,29 @@ def test_define_annotations_clear_region(conn_sqlite_uuid) -> None:
     annotator.define_annotations(pd.DataFrame(data), x=("start_number", "end_number"))
     assert annotator.region == {}
     assert annotator._last_region == {}
+
+
+def test_update_region(multiple_annotators, conn_sqlite_uuid) -> None:
+    annotator = multiple_annotators
+
+    # Add one annotation and commit
+    first = pd.Timestamp("2020-01-01"), pd.Timestamp("2020-01-02")
+    annotator.set_regions(TIME=first)
+    annotator.add_annotation(description="test")
+    annotator.commit()
+
+    df = conn_sqlite_uuid.load_dataframe()
+    assert df.shape[0] == 1
+    assert (df["start_TIME"] == first[0]).all()
+    assert (df["end_TIME"] == first[1]).all()
+
+    # Update annotation region and commit
+    second = pd.Timestamp("2022-01-01"), pd.Timestamp("2022-01-02")
+    annotator.set_regions(TIME=second)
+    annotator.update_annotation_region(df.index[0])
+    annotator.commit()
+
+    df = conn_sqlite_uuid.load_dataframe()
+    assert df.shape[0] == 1
+    assert (df["start_TIME"] == second[0]).all()
+    assert (df["end_TIME"] == second[1]).all()
