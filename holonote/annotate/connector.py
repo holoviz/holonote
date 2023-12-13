@@ -6,6 +6,7 @@ import os
 import sqlite3
 import sys
 import uuid
+from functools import cache
 from pathlib import Path
 from shutil import copyfile
 from typing import TYPE_CHECKING
@@ -14,10 +15,54 @@ import numpy as np
 import pandas as pd
 import param
 
-from .util import sqlite_date_adapters
-
 if TYPE_CHECKING:
     from .typing import SpecDict
+
+
+@cache
+def _sqlite_adapters() -> None:
+    # Most of the following code has been copied here from in Python 3.11:
+    # `sqlite3.dbapi2.register_adapters_and_converters`.
+    # Including minor modifications to source code to pass linting
+    # https://docs.python.org/3/license.html#psf-license
+    # Extra adapters have been added for dt.time, numpy.datetime64, and pd.Timestamp.
+
+    def adapt_date(val):
+        return val.isoformat()
+
+    def adapt_datetime(val):
+        return val.isoformat(" ")
+
+    def adapt_time(t) -> str:
+        return f"{t.hour:02d}:{t.minute:02d}:{t.second:02d}.{t.microsecond:06d}"
+
+    def adapt_np_datetime64(val):
+        return np.datetime_as_string(val, unit="us").replace("T", " ")
+
+    def convert_date(val):
+        return dt.date(*map(int, val.split(b"-")))
+
+    def convert_timestamp(val):
+        datepart, timepart = val.split(b" ")
+        year, month, day = map(int, datepart.split(b"-"))
+        timepart_full = timepart.split(b".")
+        hours, minutes, seconds = map(int, timepart_full[0].split(b":"))
+        microseconds = int(f"{timepart_full[1].decode():0<6.6}") if len(timepart_full) == 2 else 0
+
+        val = dt.datetime(year, month, day, hours, minutes, seconds, microseconds)
+        return val
+
+    if sys.version_info >= (3, 12):
+        # Python 3.12 has removed datetime support from sqlite3
+        # https://github.com/python/cpython/pull/93095
+        sqlite3.register_adapter(dt.date, adapt_date)
+        sqlite3.register_adapter(dt.datetime, adapt_datetime)
+        sqlite3.register_converter("date", convert_date)
+        sqlite3.register_converter("timestamp", convert_timestamp)
+
+    sqlite3.register_adapter(dt.time, adapt_time)
+    sqlite3.register_adapter(np.datetime64, adapt_np_datetime64)
+    sqlite3.register_adapter(pd.Timestamp, adapt_datetime)
 
 
 class PrimaryKey(param.Parameterized):
@@ -321,7 +366,7 @@ class _SQLiteDB(Connector):
             self._initialize(column_schema, create_table=False)
 
     def _initialize(self, column_schema, create_table=True):
-        sqlite_date_adapters()
+        _sqlite_adapters()
         if self.con is None:
             self.con = self._create_database_connection()
             self.cursor = self.con.cursor()  # should be context manager
