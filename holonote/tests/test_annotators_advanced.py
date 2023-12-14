@@ -283,3 +283,61 @@ def test_update_region(multiple_annotators, conn_sqlite_uuid) -> None:
     assert df.shape[0] == 1
     assert (df["start_TIME"] == second[0]).all()
     assert (df["end_TIME"] == second[1]).all()
+
+
+class TestEvent:
+    @pytest.fixture(autouse=True)
+    def _setup_count(self, multiple_annotators):
+        self.count = {"create": 0, "update": 0, "delete": 0}
+
+        def count(event) -> None:
+            self.count[event.type] += 1
+
+        multiple_annotators.on_event(count)
+
+    def check(self, create=0, update=0, delete=0):
+        assert self.count["create"] == create
+        assert self.count["update"] == update
+        assert self.count["delete"] == delete
+
+    def test_create(self, multiple_annotators):
+        annotator = multiple_annotators
+        annotator.set_regions(x=(0, 1))
+        self.check(create=0, update=0, delete=0)
+        annotator.add_annotation(description="test")
+        self.check(create=1, update=0, delete=0)
+        annotator.commit()
+
+    def test_update_fields(self, multiple_annotators):
+        annotator = multiple_annotators
+        annotator.set_regions(x=(0, 1))
+        self.check(create=0, update=0, delete=0)
+        annotator.add_annotation(description="test")
+        self.check(create=1, update=0, delete=0)
+
+        index = annotator.df.index[0]
+        annotator.update_annotation_fields(index, description="updated")
+        self.check(create=1, update=1, delete=0)
+
+    def test_update_regions(self, multiple_annotators):
+        annotator = multiple_annotators
+        annotator.set_regions(x=(0, 1))
+        self.check(create=0, update=0, delete=0)
+        annotator.add_annotation(description="test")
+        self.check(create=1, update=0, delete=0)
+
+        index = annotator.df.index[0]
+        annotator.set_regions(x=(1, 2))
+        annotator.update_annotation_region(index)
+        self.check(create=1, update=1, delete=0)
+
+    def test_delete(self, multiple_annotators):
+        annotator = multiple_annotators
+        annotator.set_regions(x=(0, 1))
+        self.check(create=0, update=0, delete=0)
+        annotator.add_annotation(description="test")
+        self.check(create=1, update=0, delete=0)
+
+        index = annotator.df.index[0]
+        annotator.delete_annotation(index)
+        self.check(create=1, update=0, delete=1)

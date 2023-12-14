@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import namedtuple
 from typing import TYPE_CHECKING, Any
 
 import holoviews as hv
@@ -13,6 +14,17 @@ from .table import AnnotationTable
 
 if TYPE_CHECKING:
     from .typing import SpecDict
+
+
+event_info = namedtuple("event_info", ["type", "index", "region", "fields"])
+
+
+class AnnotationEvent(param.Event):
+    def _validate(self, val) -> None:
+        if isinstance(val, (event_info, bool)):
+            return
+        msg = "AnnotationEvent must be a event_info or bool"
+        raise ValueError(msg)
 
 
 class AnnotatorInterface(param.Parameterized):
@@ -43,6 +55,10 @@ class AnnotatorInterface(param.Parameterized):
 
     connector_class = SQLiteDB
 
+    event = AnnotationEvent(
+        doc="Event that is triggered when an annotation is created, updated, or deleted"
+    )
+
     def __init__(self, spec, **params):
         if "connector" not in params:
             params["connector"] = self.connector_class()
@@ -61,6 +77,15 @@ class AnnotatorInterface(param.Parameterized):
         self.connector._create_column_schema(self.spec, self.all_fields)
         self.connector._initialize(self.connector.column_schema)
         self.annotation_table.load(self.connector, fields=self.connector.fields, spec=self.spec)
+
+    def __repr__(self):
+        settings = [
+            f"{name}={type(val).__name__}()"
+            if isinstance(val, param.Parameterized)
+            else f"{name}={val!r}"
+            for name, val in self.param.values().items()
+        ]
+        return f'{self.__class__.__name__}({", ".join(settings)})'
 
     @property
     def all_fields(self) -> list:
@@ -158,19 +183,29 @@ class AnnotatorInterface(param.Parameterized):
                 self._region, spec=self.spec, **fields, **self.static_fields
             )
             self._last_region = self._region.copy()
+            if "event" in self.param.watchers:
+                self.event = event_info(
+                    "create", fields[self.connector.primary_key.field_name], self._region, fields
+                )
 
     def add_annotation(self, **fields):
         self._add_annotation(**fields)
 
     def update_annotation_region(self, index):
         self.annotation_table.update_annotation_region(self._region, index)
+        if "event" in self.param.watchers:
+            self.event = event_info("update", index, self._region, None)
 
     def update_annotation_fields(self, index, **fields):
         self.annotation_table.update_annotation_fields(index, **fields, **self.static_fields)
+        if "event" in self.param.watchers:
+            self.event = event_info("update", index, None, fields)
 
     def delete_annotation(self, index):
         try:
             self.annotation_table.delete_annotation(index)
+            if "event" in self.param.watchers:
+                self.event = event_info("delete", index, None, None)
         except KeyError:
             msg = f"Annotation with index {index!r} does not exist."
             raise ValueError(msg) from None
@@ -243,6 +278,19 @@ class AnnotatorInterface(param.Parameterized):
         commits = self.annotation_table.commits(self.connector)
         if return_commits:
             return commits
+
+    def on_event(self, callback) -> None:
+        """Register a callback to be called when an annotation event is triggered
+        this can be either when an annotation is created, updated, or deleted.
+
+        This is a wrapper around param.bind with watch=True.
+
+        Parameters
+        ----------
+        callback : function
+            function to be called when an annotation event is triggered
+        """
+        param.bind(callback, self.param.event, watch=True)
 
 
 class Annotator(AnnotatorInterface):
@@ -384,3 +432,12 @@ class Annotator(AnnotatorInterface):
     @param.depends("fields", watch=True, on_init=True)
     def _set_groupby_objects(self) -> None:
         self.param.groupby.objects = [*self.fields, None]
+
+
+def annotator_transform(obj):
+    if isinstance(obj, AnnotatorInterface):
+        return obj.param.event
+    return obj
+
+
+param.reactive.register_reference_transform(annotator_transform)
