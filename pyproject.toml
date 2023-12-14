@@ -41,7 +41,7 @@ build.hooks.vcs.version-file = "holonote/_version.py"
 
 [tool.hatch.envs.conda]
 detached = true
-scripts.build = "bash conda/build.sh"
+scripts.build = "bash scripts/conda/build.sh"
 
 [tool.hatch.envs.test]
 dependencies = ["holonote[dev]", "pytest-github-actions-annotate-failures"]
