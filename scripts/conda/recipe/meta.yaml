@@ -1,4 +1,4 @@
-{% set data = load_file_data('../../pyproject.toml', from_recipe_dir=True) %}
+{% set data = load_file_data('../../../pyproject.toml', from_recipe_dir=True) %}
 
 
 package:
@@ -6,7 +6,7 @@ package:
   version: {{ VERSION }}
 
 source:
-  url: ../../dist/holonote-{{ VERSION }}-py3-none-any.whl
+  url: ../../../dist/holonote-{{ VERSION }}-py3-none-any.whl
 
 build:
   noarch: python
