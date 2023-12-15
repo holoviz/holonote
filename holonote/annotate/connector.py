@@ -498,11 +498,10 @@ class _SQLiteDB(Connector):
 
         placeholders = ", ".join(["?"] * len(field_values))
         column_str = ", ".join(map(_get_valid_sqlite_name, columns))
-        self.execute(
-            f"INSERT INTO {self._safe_table_name} ({column_str}) VALUES({placeholders});",
-            field_values,
-        )
-        # self.primary_key.validate(self.cursor.lastrowid, fields[self.primary_key.field_name])
+        query = f"INSERT INTO {self._safe_table_name} ({column_str}) VALUES({placeholders});"
+        with self.run_transaction() as cursor:
+            cursor.execute(query, field_values)
+            self.primary_key.validate(cursor.lastrowid, fields[self.primary_key.field_name])
 
     def delete_all_rows(self):
         "Obviously a destructive operation!"
