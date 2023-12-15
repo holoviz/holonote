@@ -404,9 +404,9 @@ class _SQLiteDB(Connector):
         finally:
             cur.close()
 
-    def execute(self, query, *args):
+    def execute(self, query, *args) -> None:
         with self.run_transaction() as cursor:
-            return cursor.execute(query, *args)
+            cursor.execute(query, *args)
 
     def close(self):
         self.con.close()
@@ -465,16 +465,8 @@ class _SQLiteDB(Connector):
         self._initialize(column_schema)
 
     def load_dataframe(self):
-        # uninitialized = self.cursor is None
-        # if uninitialized:
-        #     self._initialize({}, create_table=False)
-
         raw_df = pd.read_sql_query(f"SELECT * FROM {self._safe_table_name}", self.con)
-        # dtype={self.primary_key.field_name:self.primary_key.dtype})
-        df = raw_df.set_index(self.primary_key.field_name)
-        # if uninitialized:
-        #     self.con, self.cursor = None, None
-        return df
+        return raw_df.set_index(self.primary_key.field_name)
 
     def get_tables(self):
         with self.run_transaction() as cursor:
