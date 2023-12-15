@@ -365,3 +365,11 @@ def test_multiple_regions_one_first(multiple_annotators):
         "description",
         "uuid",
     }
+
+
+def test_clear_region(multiple_annotators):
+    annotator = multiple_annotators
+
+    annotator.set_regions(TIME=(pd.Timestamp("2022-06-06"), pd.Timestamp("2022-06-08")))
+    annotator.add_annotation(description="Only time")
+    assert annotator._region == {}
