@@ -386,7 +386,7 @@ class _SQLiteDB(Connector):
             column_schema = {}
 
         params["column_schema"] = column_schema
-        self.con = None
+        self.con, self._columns = None, None
         super().__init__(**params)
 
         if connect:
@@ -411,6 +411,7 @@ class _SQLiteDB(Connector):
     def close(self):
         self.con.close()
         self.con = None
+        self._columns = None
 
     def _initialize(self, column_schema, create_table=True):
         _sqlite_adapters()
@@ -447,9 +448,13 @@ class _SQLiteDB(Connector):
     @property
     def columns(self):
         "Return names of columns"
+        if self._columns is not None:
+            return self._columns
+
         with self.run_transaction() as cursor:
             result = cursor.execute(f"PRAGMA table_info({self._safe_table_name})").fetchall()
-        return list(zip(*result))[1]
+        self._columns = list(zip(*result))[1]
+        return self._columns
 
     def max_rowid(self):
         with self.run_transaction() as cursor:
