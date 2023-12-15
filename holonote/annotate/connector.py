@@ -477,18 +477,17 @@ class _SQLiteDB(Connector):
             self.add_row(**field)
 
     def add_row(self, **fields):
-        columns = list(fields.keys())
-        field_values = list(fields.values())
+        columns, parameters = zip(*fields.items())
 
         if self.primary_key.policy != "insert":
-            field_values = field_values[1:]
             columns = columns[1:]
+            parameters = parameters[1:]
 
-        placeholders = ", ".join(["?"] * len(field_values))
+        placeholders = ", ".join(["?"] * len(parameters))
         column_str = ", ".join(map(_get_valid_sqlite_name, columns))
         query = f"INSERT INTO {self._safe_table_name} ({column_str}) VALUES({placeholders});"
         with self.run_transaction() as cursor:
-            cursor.execute(query, field_values)
+            cursor.execute(query, parameters)
             self.primary_key.validate(cursor.lastrowid, fields[self.primary_key.field_name])
 
     def delete_all_rows(self):
