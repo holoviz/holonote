@@ -344,3 +344,15 @@ def test_spec_datetime_date(conn_sqlite_uuid, dtype):
     output = annotator.df.dtypes
     assert output["start[time]"] == np.dtype("datetime64[ns]")
     assert output["end[time]"] == np.dtype("datetime64[ns]")
+
+
+def test_multiple_regions_one_first(multiple_annotators, conn_sqlite_uuid):
+    annotator = multiple_annotators
+
+    annotator.set_regions(TIME=(pd.Timestamp("2022-06-06"), pd.Timestamp("2022-06-08")))
+    annotator.add_annotation(description="Only time")
+    annotator.commit()
+
+    annotator.set_regions(x=(-0.25, 0.25), y=(-0.1, 0.1))
+    annotator.add_annotation(description="x and y")
+    annotator.commit()
