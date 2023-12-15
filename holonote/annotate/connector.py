@@ -408,6 +408,10 @@ class _SQLiteDB(Connector):
         with self.run_transaction() as cursor:
             return cursor.execute(query, *args)
 
+    def close(self):
+        self.con.close()
+        self.con = None
+
     def _initialize(self, column_schema, create_table=True):
         _sqlite_adapters()
         if self.con is None:
@@ -546,7 +550,7 @@ class _SQLiteDBJupyterLite(_SQLiteDB):
             factory=CopyConnection,
             detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES,
         )
-        con.execute("PRAGMA journal_mode=WAL;")
+        self.execute("PRAGMA journal_mode=WAL;")
         return con
 
 
