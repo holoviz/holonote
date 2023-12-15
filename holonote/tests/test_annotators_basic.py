@@ -26,7 +26,7 @@ class TestBasicRange1DAnnotator:
         assert len(commits) == 1, "Only one insertion commit made "
         annotator_range1d.commit(return_commits=True)
         assert commits[0]["operation"] == "insert"
-        assert set(commits[0]["kwargs"].keys()) == set(annotator_range1d.connector.columns)
+        assert set(commits[0]["kwargs"]) == set(annotator_range1d.connector.column_schema)
 
     def test_range_insertion_values(self, annotator_range1d) -> None:
         start, end = np.datetime64("2022-06-06"), np.datetime64("2022-06-08")
@@ -92,7 +92,7 @@ class TestBasicRange2DAnnotator:
         commits = annotator_range2d.commit(return_commits=True)
         assert len(commits) == 1, "Only one insertion commit made "
         assert commits[0]["operation"] == "insert"
-        assert set(commits[0]["kwargs"].keys()) == set(annotator_range2d.connector.columns)
+        assert set(commits[0]["kwargs"]) == set(annotator_range2d.connector.column_schema)
 
     def test_range_insertion_values(self, annotator_range2d):
         startx, endx, starty, endy = -0.25, 0.25, -0.1, 0.1
@@ -160,7 +160,7 @@ class TestBasicPoint1DAnnotator:
         assert len(commits) == 1, "Only one insertion commit made "
         annotator_point1d.commit(return_commits=True)
         assert commits[0]["operation"] == "insert"
-        assert set(commits[0]["kwargs"].keys()) == set(annotator_point1d.connector.columns)
+        assert set(commits[0]["kwargs"]) == set(annotator_point1d.connector.column_schema)
 
     @pytest.mark.skip("Need to add validation to set_regions")
     def test_range_insertion_exception(self, annotator_point1d):
@@ -225,7 +225,7 @@ class TestBasicPoint2DAnnotator:
         commits = annotator_point2d.commit(return_commits=True)
         assert len(commits) == 1, "Only one insertion commit made "
         assert commits[0]["operation"] == "insert"
-        assert set(commits[0]["kwargs"].keys()) == set(annotator_point2d.connector.columns)
+        assert set(commits[0]["kwargs"]) == set(annotator_point2d.connector.column_schema)
 
     @pytest.mark.skip("Need to add validation to set_regions")
     def test_range_insertion_exception(self, annotator_point2d):
