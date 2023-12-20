@@ -11,7 +11,7 @@ export VERSION
 
 # Update lockfiles
 rm -rf node_modules
-npm install pyodide
+npm install pyodide@0.24.1
 node update_lock.js
 python patch_lock.py
 rm node_modules/pyodide/*.whl
