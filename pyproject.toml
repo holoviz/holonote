@@ -83,6 +83,8 @@ filterwarnings = [
     "error",
     # 2023-10: Datetime's utctimestamp() and utcnow() is deprecated in Python 3.12
     "ignore:datetime.datetime.utcfromtimestamp():DeprecationWarning:dateutil.tz.tz",  # https://github.com/dateutil/dateutil/pull/1285
+    # 2024-01
+    "ignore:\\s+Pyarrow will become a required dependency of pandas",  # Will fix itself
 ]
 
 [tool.ruff]
