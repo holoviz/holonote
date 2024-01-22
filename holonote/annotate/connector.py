@@ -547,7 +547,6 @@ class _SQLiteDBJupyterLite(_SQLiteDB):
             factory=CopyConnection,
             detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES,
         )
-        self.execute("PRAGMA journal_mode=WAL;")
         return con
 
 
