@@ -6,6 +6,7 @@ import os
 import sqlite3
 import sys
 import uuid
+from contextlib import contextmanager
 from functools import cache
 from pathlib import Path
 from shutil import copyfile
@@ -385,17 +386,37 @@ class _SQLiteDB(Connector):
             column_schema = {}
 
         params["column_schema"] = column_schema
-        self.con, self.cursor = None, None
+        self.con, self._columns = None, None
         super().__init__(**params)
 
         if connect:
             self._initialize(column_schema, create_table=False)
 
+    @contextmanager
+    def run_transaction(self):
+        cur = self.con.cursor()
+        try:
+            yield cur
+            self.con.commit()
+        except Exception:
+            self.con.rollback()
+            raise
+        finally:
+            cur.close()
+
+    def execute(self, query, *args) -> None:
+        with self.run_transaction() as cursor:
+            cursor.execute(query, *args)
+
+    def close(self):
+        self.con.close()
+        self.con = None
+        self._columns = None
+
     def _initialize(self, column_schema, create_table=True):
         _sqlite_adapters()
         if self.con is None:
             self.con = self._create_database_connection()
-            self.cursor = self.con.cursor()  # should be context manager
         if create_table:
             if self.table_name is None:
                 self.table_name = self._generate_table_name(column_schema)
@@ -427,44 +448,41 @@ class _SQLiteDB(Connector):
     @property
     def columns(self):
         "Return names of columns"
-        result = self.cursor.execute("PRAGMA table_info('%s')" % self.table_name).fetchall()
-        return list(zip(*result))[1]
+        if self._columns is not None:
+            return self._columns
+
+        with self.run_transaction() as cursor:
+            result = cursor.execute(f"PRAGMA table_info({self._safe_table_name})").fetchall()
+        self._columns = list(zip(*result))[1]
+        return self._columns
 
     def max_rowid(self):
-        return self.cursor.execute(f"SELECT max(ROWID) from {self.table_name}").fetchone()[0]
+        with self.run_transaction() as cursor:
+            return cursor.execute(f"SELECT max(ROWID) from {self._safe_table_name}").fetchone()[0]
 
     def initialize(self, column_schema):
         self.column_schema = column_schema
         self._initialize(column_schema)
 
     def load_dataframe(self):
-        uninitialized = self.cursor is None
-        if uninitialized:
-            self._initialize({}, create_table=False)
-
         raw_df = pd.read_sql_query(f"SELECT * FROM {self._safe_table_name}", self.con)
-        # dtype={self.primary_key.field_name:self.primary_key.dtype})
-        df = raw_df.set_index(self.primary_key.field_name)
-        if uninitialized:
-            self.con, self.cursor = None, None
-        return df
+        return raw_df.set_index(self.primary_key.field_name)
 
     def get_tables(self):
-        res = self.cursor.execute("SELECT name FROM sqlite_master")
-        return [el[0] for el in res.fetchmany()]
+        with self.run_transaction() as cursor:
+            res = cursor.execute("SELECT name FROM sqlite_master").fetchmany()
+        return [el[0] for el in res]
 
     def create_table(self, column_schema=None):
         column_schema = column_schema if column_schema else self.column_schema
         column_spec = ",\n".join(
             [f"{_get_valid_sqlite_name(name)} {spec}" for name, spec in column_schema.items()]
         )
-        create_table_sql = f"CREATE TABLE IF NOT EXISTS {self._safe_table_name} ({column_spec});"
-        self.cursor.execute(create_table_sql)
-        self.con.commit()
+        query = f"CREATE TABLE IF NOT EXISTS {self._safe_table_name} ({column_spec});"
+        self.execute(query)
 
     def delete_table(self):
-        self.cursor.execute(f"DROP TABLE IF EXISTS {self._safe_table_name}")
-        self.con.commit()
+        self.execute(f"DROP TABLE IF EXISTS {self._safe_table_name}")
 
     def add_rows(self, field_list):  # Used execute_many
         for field in field_list:
@@ -481,32 +499,27 @@ class _SQLiteDB(Connector):
 
         placeholders = ", ".join(["?"] * len(field_values))
         column_str = ", ".join(map(_get_valid_sqlite_name, columns))
-        self.cursor.execute(
-            f"INSERT INTO {self._safe_table_name} ({column_str}) VALUES({placeholders});",
-            field_values,
-        )
-        self.primary_key.validate(self.cursor.lastrowid, fields[self.primary_key.field_name])
-        self.con.commit()
+        query = f"INSERT INTO {self._safe_table_name} ({column_str}) VALUES({placeholders});"
+        with self.run_transaction() as cursor:
+            cursor.execute(query, field_values)
+            self.primary_key.validate(cursor.lastrowid, fields[self.primary_key.field_name])
 
     def delete_all_rows(self):
         "Obviously a destructive operation!"
-        self.cursor.execute(f"DELETE FROM {self._safe_table_name};")
-        self.con.commit()
+        self.execute(f"DELETE FROM {self._safe_table_name};")
 
     def delete_row(self, id_val):
-        self.cursor.execute(
+        self.execute(
             f"DELETE FROM {self._safe_table_name} WHERE {self.primary_key.field_name} = ?",
             (self.primary_key.cast(id_val),),
         )
-        self.con.commit()
 
     def update_row(self, **updates):  # updates as a dictionary OR remove posarg?
         assert self.primary_key.field_name in updates
         id_val = updates.pop(self.primary_key.field_name)
         set_updates = ", ".join('"' + k + '"' + " = ?" for k in updates)
         query = f'UPDATE {self._safe_table_name} SET {set_updates} WHERE "{self.primary_key.field_name}" = ?;'
-        self.cursor.execute(query, [*updates.values(), id_val])
-        self.con.commit()
+        self.execute(query, [*updates.values(), id_val])
 
 
 class _SQLiteDBJupyterLite(_SQLiteDB):
