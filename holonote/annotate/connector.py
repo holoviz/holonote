@@ -386,7 +386,7 @@ class _SQLiteDB(Connector):
             column_schema = {}
 
         params["column_schema"] = column_schema
-        self.con, self._columns = None, None
+        self.con = None
         super().__init__(**params)
 
         if connect:
@@ -411,7 +411,6 @@ class _SQLiteDB(Connector):
     def close(self):
         self.con.close()
         self.con = None
-        self._columns = None
 
     def _initialize(self, column_schema, create_table=True):
         _sqlite_adapters()
@@ -444,17 +443,6 @@ class _SQLiteDB(Connector):
         if self.con is not None:
             return self.table_name not in self.get_tables()
         return True
-
-    @property
-    def columns(self):
-        "Return names of columns"
-        if self._columns is not None:
-            return self._columns
-
-        with self.run_transaction() as cursor:
-            result = cursor.execute(f"PRAGMA table_info({self._safe_table_name})").fetchall()
-        self._columns = list(zip(*result))[1]
-        return self._columns
 
     def max_rowid(self):
         with self.run_transaction() as cursor:
@@ -489,19 +477,17 @@ class _SQLiteDB(Connector):
             self.add_row(**field)
 
     def add_row(self, **fields):
-        # Note, missing fields will be set as NULL
-        columns = self.columns
-        field_values = [fields.get(col, None) for col in self.columns]
+        columns, parameters = zip(*fields.items())
 
         if self.primary_key.policy != "insert":
-            field_values = field_values[1:]
             columns = columns[1:]
+            parameters = parameters[1:]
 
-        placeholders = ", ".join(["?"] * len(field_values))
+        placeholders = ", ".join(["?"] * len(parameters))
         column_str = ", ".join(map(_get_valid_sqlite_name, columns))
         query = f"INSERT INTO {self._safe_table_name} ({column_str}) VALUES({placeholders});"
         with self.run_transaction() as cursor:
-            cursor.execute(query, field_values)
+            cursor.execute(query, parameters)
             self.primary_key.validate(cursor.lastrowid, fields[self.primary_key.field_name])
 
     def delete_all_rows(self):

@@ -190,6 +190,7 @@ class AnnotatorInterface(param.Parameterized):
 
     def add_annotation(self, **fields):
         self._add_annotation(**fields)
+        self.clear_regions()
 
     def update_annotation_region(self, index):
         self.annotation_table.update_annotation_region(self._region, index)
