@@ -351,7 +351,8 @@ class Annotator(AnnotatorInterface):
                 kdims = next(k for el in other.values() if (k := el.kdims))
             return (other * self.get_element(*kdims)).opts(**opts)
         elif isinstance(other, hv.Layout):
-            return hv.Layout([el * self.get_element(*el.kdims) for el in other])
+            opts = other.opts.get().kwargs
+            return hv.Layout([el * self.get_element(*el.kdims) for el in other]).opts(**opts)
         else:
             return other * self.get_element(*other.kdims)
 
