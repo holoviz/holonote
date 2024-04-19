@@ -343,8 +343,17 @@ class Annotator(AnnotatorInterface):
             self._displays[element_key] = self._create_annotation_element(element_key)
         return self._displays[element_key]
 
-    def __mul__(self, other: hv.Element) -> hv.Overlay:
-        return other * self.get_element(*other.kdims)
+    def __mul__(self, other: hv.Element | hv.Layout | hv.Overlay | hv.NdOverlay) -> hv.Overlay:
+        if isinstance(other, (hv.Overlay, hv.NdOverlay)):
+            kdims, opts = other.kdims, other.opts.get().kwargs
+            if not kdims or kdims == ["Element"]:  # overlay and ndoverlay with no added kdims
+                # If no kdims in the overlay we use the first available
+                kdims = next(k for el in other.values() if (k := el.kdims))
+            return (other * self.get_element(*kdims)).opts(**opts)
+        elif isinstance(other, hv.Layout):
+            return hv.Layout([el * self.get_element(*el.kdims) for el in other])
+        else:
+            return other * self.get_element(*other.kdims)
 
     def __rmul__(self, other: hv.Element) -> hv.Overlay:
         return self.__mul__(other)
