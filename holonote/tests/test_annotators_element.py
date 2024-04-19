@@ -182,3 +182,48 @@ def test_groupby_visible(cat_annotator):
 
     with pytest.raises(StopIteration):
         next(iter_indicator)
+
+
+def test_multiply_overlay(annotator_range1d):
+    el1 = hv.Curve([], kdims=["TIME"])
+    el2 = hv.Curve([], kdims=["TIME"])
+    el = el1 * el2
+    assert isinstance(el, hv.Overlay)
+
+    el = el * annotator_range1d
+    hv.render(el)
+    assert isinstance(el.last, hv.Overlay)
+
+    el.opts(width=100)
+    hv.render(el)
+    assert el.last.opts.get().kwargs.get("width") == 100
+
+
+def test_multiply_ndoverlay(annotator_range1d):
+    el1 = hv.Curve([], kdims=["TIME"])
+    el2 = hv.Curve([], kdims=["TIME"])
+    el = hv.NdOverlay({1: el1, 2: el2})
+    assert isinstance(el, hv.NdOverlay)
+
+    el = el * annotator_range1d
+    hv.render(el)
+    assert isinstance(el.last, hv.Overlay)
+
+    el.opts(width=100)
+    hv.render(el)
+    assert el.last.opts.get().kwargs.get("width") == 100
+
+
+def test_multiply_layout(annotator_range1d):
+    el1 = hv.Curve([], kdims=["TIME"])
+    el2 = hv.Curve([], kdims=["TIME"])
+    el = el1 + el2
+    assert isinstance(el, hv.Layout)
+
+    el = el * annotator_range1d
+    hv.render(el)
+    assert isinstance(el, hv.Layout)
+
+    el.opts(width=100)
+    hv.render(el)
+    assert el.opts.get().kwargs.get("width") == 100
