@@ -344,7 +344,7 @@ class Annotator(AnnotatorInterface):
         return self._displays[element_key]
 
     def __mul__(self, other: hv.Element | hv.Layout | hv.Overlay | hv.NdOverlay) -> hv.Overlay:
-        if isinstance(other, (hv.Overlay, hv.NdOverlay, hv.DynamicMap)):
+        if isinstance(other, (hv.Overlay, hv.NdOverlay)):
             kdims, opts = other.kdims, other.opts.get().kwargs
             if not kdims or kdims == ["Element"]:  # overlay and ndoverlay with no added kdims
                 # If no kdims in the overlay we use the first available
@@ -363,7 +363,10 @@ class Annotator(AnnotatorInterface):
             layout._max_cols = other._max_cols
             return layout
         else:
-            return other * self.get_element(*other.kdims)
+            kdims = other.kdims
+            if not kdims or kdims == ["Element"]:  # element with no direct kdims (e.g. DynamicMap via rasterize)
+                kdims = next(k for el in other.values() if (k := el.kdims))
+            return other * self.get_element(*[kdim for kdim in kdims if kdim.name in self.spec])
 
     def __rmul__(self, other: hv.Element) -> hv.Overlay:
         return self.__mul__(other)
