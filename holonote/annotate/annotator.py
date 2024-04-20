@@ -344,7 +344,7 @@ class Annotator(AnnotatorInterface):
         return self._displays[element_key]
 
     def __mul__(self, other: hv.Element | hv.Layout | hv.Overlay | hv.NdOverlay) -> hv.Overlay:
-        if isinstance(other, (hv.Overlay, hv.NdOverlay)):
+        if isinstance(other, (hv.Overlay, hv.NdOverlay, hv.DynamicMap)):
             kdims, opts = other.kdims, other.opts.get().kwargs
             if not kdims or kdims == ["Element"]:  # overlay and ndoverlay with no added kdims
                 # If no kdims in the overlay we use the first available
