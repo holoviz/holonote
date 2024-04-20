@@ -349,7 +349,7 @@ class Annotator(AnnotatorInterface):
             if not kdims or kdims == ["Element"]:  # overlay and ndoverlay with no added kdims
                 # If no kdims in the overlay we use the first available
                 kdims = next(k for el in other.values() if (k := el.kdims))
-            return (other * self.get_element(*kdims)).opts(**opts)
+            return (other * self.get_element(*[kdim for kdim in kdims if kdim.name in self.spec])).opts(**opts)
         elif isinstance(other, hv.Layout):
             opts = other.opts.get().kwargs
             return hv.Layout([el * self.get_element(*el.kdims) for el in other]).opts(**opts)
