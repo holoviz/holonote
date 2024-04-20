@@ -342,14 +342,16 @@ class Annotator(AnnotatorInterface):
         if element_key not in self._displays:
             self._displays[element_key] = self._create_annotation_element(element_key)
         return self._displays[element_key]
-        
+
     def __mul__(self, other: hv.Element | hv.Layout | hv.Overlay | hv.NdOverlay) -> hv.Overlay:
         if isinstance(other, (hv.Overlay, hv.NdOverlay)):
             kdims, opts = other.kdims, other.opts.get().kwargs
             if not kdims or kdims == ["Element"]:  # overlay and ndoverlay with no added kdims
                 # If no kdims in the overlay we use the first available
                 kdims = next(k for el in other.values() if (k := el.kdims))
-            return (other * self.get_element(*[kdim for kdim in kdims if kdim.name in self.spec])).opts(**opts)
+            return (
+                other * self.get_element(*[kdim for kdim in kdims if kdim.name in self.spec])
+            ).opts(**opts)
         elif isinstance(other, hv.Layout):
             opts = other.opts.get().kwargs
             to_layout = []
@@ -357,15 +359,33 @@ class Annotator(AnnotatorInterface):
                 kdims = el.kdims
                 el_opts = el.opts.get().kwargs
                 if not el.kdims or el.kdims == ["Element"]:
-                    kdims = next(k for el in other.values() if (k := el.kdims))
-                to_layout.append((el * self.get_element(*[kdim for kdim in kdims if kdim.name in self.spec]))) #.opts(**el_opts)
+                    try:
+                        kdims = next(k for sub_el in el.values() if (k := sub_el.kdims))
+                    except (
+                        StopIteration
+                    ):  # if the dmap hasn't been rendered yet, render to access kdims
+                        hv.render(el)
+                        kdims = next(k for sub_el in el.values() if (k := sub_el.kdims))
+                to_layout.append(
+                    (
+                        el * self.get_element(*[kdim for kdim in kdims if kdim.name in self.spec])
+                    ).opts(**el_opts)
+                )
             layout = hv.Layout(to_layout).opts(**opts)
             layout._max_cols = other._max_cols
             return layout
         else:
             kdims = other.kdims
-            if not kdims or kdims == ["Element"]:  # element with no direct kdims (e.g. DynamicMap via rasterize)
-                kdims = next(k for el in other.values() if (k := el.kdims))
+            if not kdims or kdims == [
+                "Element"
+            ]:  # element with no direct kdims (e.g. DynamicMap via rasterize)
+                try:
+                    kdims = next(k for el in other.values() if (k := el.kdims))
+                except (
+                    StopIteration
+                ):  # if the dmap hasn't been rendered yet, render to access kdims
+                    hv.render(other)
+                    kdims = next(k for el in other.values() if (k := el.kdims))
             return other * self.get_element(*[kdim for kdim in kdims if kdim.name in self.spec])
 
     def __rmul__(self, other: hv.Element) -> hv.Overlay:
