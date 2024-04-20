@@ -28,6 +28,8 @@ dev = [
     "hvplot",
     "fastparquet",
     "scipy",
+    "datashader",
+    "dask[dataframe]",
 ]
 examples = [
     "holonote[dev]",
