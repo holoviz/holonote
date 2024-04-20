@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import holoviews as hv
 import pytest
+from holoviews.operation.datashader import rasterize
 
 from holonote.tests.util import get_editor, get_indicator
 
@@ -227,3 +228,25 @@ def test_multiply_layout(annotator_range1d):
     el.opts(width=100)
     hv.render(el)
     assert el.opts.get().kwargs.get("width") == 100
+
+
+def test_multiply_dynamicmap(annotator_range1d):
+    # rasterize creates a dynamicmap
+    el1 = rasterize(hv.Curve([], kdims=["TIME"]))
+    assert isinstance(el1, hv.DynamicMap)
+
+    el = el1 * annotator_range1d
+    hv.render(el)
+    # an overlay including a dynamicmap is still a dynamicmap
+    assert isinstance(el, hv.DynamicMap)
+
+
+def test_multiply_dynamicmap_layout(annotator_range1d):
+    el1 = rasterize(hv.Curve([], kdims=["TIME"]))
+    el2 = hv.Curve([], kdims=["TIME"])
+    el = el1 + el2
+    assert isinstance(el, hv.Layout)
+
+    el = el * annotator_range1d
+    hv.render(el)
+    assert isinstance(el, hv.Layout)
