@@ -342,7 +342,7 @@ class Annotator(AnnotatorInterface):
         if element_key not in self._displays:
             self._displays[element_key] = self._create_annotation_element(element_key)
         return self._displays[element_key]
-
+        
     def __mul__(self, other: hv.Element | hv.Layout | hv.Overlay | hv.NdOverlay) -> hv.Overlay:
         if isinstance(other, (hv.Overlay, hv.NdOverlay)):
             kdims, opts = other.kdims, other.opts.get().kwargs
@@ -358,7 +358,7 @@ class Annotator(AnnotatorInterface):
                 el_opts = el.opts.get().kwargs
                 if not el.kdims or el.kdims == ["Element"]:
                     kdims = next(k for el in other.values() if (k := el.kdims))
-                to_layout.append((el * self.get_element(*[kdim for kdim in kdims if kdim.name in self.spec])).opts(**el_opts))
+                to_layout.append((el * self.get_element(*[kdim for kdim in kdims if kdim.name in self.spec]))) #.opts(**el_opts)
             layout = hv.Layout(to_layout).opts(**opts)
             layout._max_cols = other._max_cols
             return layout
