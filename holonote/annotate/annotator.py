@@ -352,7 +352,16 @@ class Annotator(AnnotatorInterface):
             return (other * self.get_element(*[kdim for kdim in kdims if kdim.name in self.spec])).opts(**opts)
         elif isinstance(other, hv.Layout):
             opts = other.opts.get().kwargs
-            return hv.Layout([el * self.get_element(*el.kdims) for el in other]).opts(**opts)
+            to_layout = []
+            for el in other:
+                kdims = el.kdims
+                el_opts = el.opts.get().kwargs
+                if not el.kdims or el.kdims == ["Element"]:
+                    kdims = next(k for el in other.values() if (k := el.kdims))
+                to_layout.append((el * self.get_element(*[kdim for kdim in kdims if kdim.name in self.spec])).opts(**el_opts))
+            layout = hv.Layout(to_layout).opts(**opts)
+            layout._max_cols = other._max_cols
+            return layout
         else:
             return other * self.get_element(*other.kdims)
 
