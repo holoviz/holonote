@@ -9,7 +9,7 @@ import param
 
 from .._warnings import warn
 from .connector import Connector, SQLiteDB
-from .display import AnnotationDisplay, Indicator, Style  # noqa: F401
+from .display import AnnotationDisplay, Indicator, Style, _valid_element_opts  # noqa: F401
 from .table import AnnotationTable
 
 if TYPE_CHECKING:
@@ -343,8 +343,40 @@ class Annotator(AnnotatorInterface):
             self._displays[element_key] = self._create_annotation_element(element_key)
         return self._displays[element_key]
 
-    def __mul__(self, other: hv.Element) -> hv.Overlay:
-        return other * self.get_element(*other.kdims)
+    def _get_kdims_from_other_element(self, other):
+        if isinstance(other, hv.DynamicMap):
+            if other.last is None:
+                hv.plotting.util.initialize_dynamic(other)
+            other = other.last
+        kdims = other.kdims
+        if not kdims or kdims == ["Element"]:
+            kdims = next(k for el in other.values() if (k := el.kdims))
+        kdims = [kdim for kdim in kdims if kdim.name in self.spec]
+        if kdims:
+            return kdims
+        else:
+            msg = "No valid kdims found in element"
+            raise ValueError(msg)
+
+    def __mul__(self, other: hv.Element | hv.Layout | hv.Overlay | hv.NdOverlay) -> hv.Overlay:
+        if isinstance(other, (hv.Overlay, hv.NdOverlay)):
+            kdims = self._get_kdims_from_other_element(other)
+            opts = other.opts.get().kwargs
+            return (other * self.get_element(*kdims)).opts(**opts)
+        elif isinstance(other, hv.Layout):
+            opts = other.opts.get().kwargs
+            to_layout = []
+            overlay_opts = _valid_element_opts()["Overlay"]
+            for el in other:
+                kdims = self._get_kdims_from_other_element(el)
+                el_opts = {k: v for k, v in el.opts.get().kwargs.items() if k in overlay_opts}
+                to_layout.append((el * self.get_element(*kdims)).opts(**el_opts))
+            layout = hv.Layout(to_layout).opts(**opts)
+            layout._max_cols = other._max_cols
+            return layout
+        else:
+            kdims = self._get_kdims_from_other_element(other)
+            return other * self.get_element(*kdims)
 
     def __rmul__(self, other: hv.Element) -> hv.Overlay:
         return self.__mul__(other)

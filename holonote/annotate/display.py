@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import weakref
-from functools import reduce
+from functools import cache, reduce
 from typing import TYPE_CHECKING, Any
 
 import colorcet as cc
@@ -29,6 +29,13 @@ _default_opts = {"apply_ranges": False, "show_legend": False}
 # Make red the first color
 _default_color = cc.palette["glasbey_category10"].copy()
 _default_color[:4] = [_default_color[3], *_default_color[:3]]
+
+
+@cache
+def _valid_element_opts():
+    if not hv.extension._loaded:
+        hv.extension("bokeh")
+    return hv.opts._element_keywords("bokeh")
 
 
 class Style(param.Parameterized):
