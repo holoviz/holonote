@@ -343,17 +343,17 @@ class Annotator(AnnotatorInterface):
             self._displays[element_key] = self._create_annotation_element(element_key)
         return self._displays[element_key]
 
-    def _get_kdims_from_other(self, other):
+    def _get_kdims_from_other_element(self, other):
+        if isinstance(other, hv.DynamicMap):
+            other = other.last if other.last is not None else other.callback()
         kdims = other.kdims
         if not kdims or kdims == ["Element"]:
-            if isinstance(other, hv.DynamicMap):
-                hv.render(other)
             kdims = next(k for el in other.values() if (k := el.kdims))
         return [kdim for kdim in kdims if kdim.name in self.spec]
 
     def __mul__(self, other: hv.Element | hv.Layout | hv.Overlay | hv.NdOverlay) -> hv.Overlay:
         if isinstance(other, (hv.Overlay, hv.NdOverlay)):
-            kdims = self._get_kdims_from_other(other)
+            kdims = self._get_kdims_from_other_element(other)
             opts = other.opts.get().kwargs
             return (other * self.get_element(*kdims)).opts(**opts)
         elif isinstance(other, hv.Layout):
@@ -367,7 +367,7 @@ class Annotator(AnnotatorInterface):
             layout._max_cols = other._max_cols
             return layout
         else:
-            kdims = self._get_kdims_from_other(other)
+            kdims = self._get_kdims_from_other_element(other)
             return other * self.get_element(*kdims)
 
     def __rmul__(self, other: hv.Element) -> hv.Overlay:
