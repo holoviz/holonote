@@ -345,7 +345,9 @@ class Annotator(AnnotatorInterface):
 
     def _get_kdims_from_other_element(self, other):
         if isinstance(other, hv.DynamicMap):
-            other = other.last if other.last is not None else other.callback()
+            if other.last is None:
+                hv.plotting.util.initialize_dynamic(other)
+            other = other.last
         kdims = other.kdims
         if not kdims or kdims == ["Element"]:
             kdims = next(k for el in other.values() if (k := el.kdims))
