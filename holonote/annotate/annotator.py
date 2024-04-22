@@ -349,7 +349,12 @@ class Annotator(AnnotatorInterface):
         kdims = other.kdims
         if not kdims or kdims == ["Element"]:
             kdims = next(k for el in other.values() if (k := el.kdims))
-        return [kdim for kdim in kdims if kdim.name in self.spec]
+        kdims = [kdim for kdim in kdims if kdim.name in self.spec]
+        if kdims:
+            return kdims
+        else:
+            msg = "No valid kdims found in element"
+            raise ValueError(msg)
 
     def __mul__(self, other: hv.Element | hv.Layout | hv.Overlay | hv.NdOverlay) -> hv.Overlay:
         if isinstance(other, (hv.Overlay, hv.NdOverlay)):
@@ -360,7 +365,7 @@ class Annotator(AnnotatorInterface):
             opts = other.opts.get().kwargs
             to_layout = []
             for el in other:
-                kdims = self._get_kdims_from_other(el)
+                kdims = self._get_kdims_from_other_element(el)
                 el_opts = {}  # el.opts.get().kwargs
                 to_layout.append((el * self.get_element(*kdims)).opts(**el_opts))
             layout = hv.Layout(to_layout).opts(**opts)
