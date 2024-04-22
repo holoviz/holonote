@@ -9,7 +9,7 @@ import param
 
 from .._warnings import warn
 from .connector import Connector, SQLiteDB
-from .display import AnnotationDisplay, Indicator, Style  # noqa: F401
+from .display import AnnotationDisplay, Indicator, Style, _valid_element_opts  # noqa: F401
 from .table import AnnotationTable
 
 if TYPE_CHECKING:
@@ -364,9 +364,10 @@ class Annotator(AnnotatorInterface):
         elif isinstance(other, hv.Layout):
             opts = other.opts.get().kwargs
             to_layout = []
+            overlay_opts = _valid_element_opts()["Overlay"]
             for el in other:
                 kdims = self._get_kdims_from_other_element(el)
-                el_opts = {}  # el.opts.get().kwargs
+                el_opts = {k: v for k, v in el.opts.get().kwargs.items() if k in overlay_opts}
                 to_layout.append((el * self.get_element(*kdims)).opts(**el_opts))
             layout = hv.Layout(to_layout).opts(**opts)
             layout._max_cols = other._max_cols
