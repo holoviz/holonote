@@ -60,13 +60,9 @@ class PanelWidgets(Viewer):
         self._as_popup = as_popup
         if self._as_popup:
             for display in self.annotator._displays.values():
-                if display.region_format == "range":
+                if display.region_format == "range" or display.region_format == "range-range":
                     stream = display._edit_streams[0]
-                elif display.region_format == "range-range":
-                    stream = display._edit_streams[0]
-                elif display.region_format == "point":
-                    stream = display._edit_streams[1]
-                elif display.region_format == "point-point":
+                elif display.region_format == "point" or display.region_format == "point-point":
                     stream = display._edit_streams[1]
                 self._register_popup(stream)
                 self._register_tap(display)
@@ -216,12 +212,13 @@ class PanelWidgets(Viewer):
 
         if self._as_popup:
             self._layout.visible = False
-    
+
     def _register_popup(self, stream):
         def on_event(*args, **kwargs):
             if not self._layout.visible:
                 self._layout.visible = True
                 self._widget_mode_group.value = "+"
+
         stream.add_subscriber(on_event)
         stream.popup = self._layout
 
@@ -235,6 +232,7 @@ class PanelWidgets(Viewer):
                 self._widget_mode_group.value = "-"
             else:
                 self._widget_mode_group.value = "+"
+
         display._tap_stream.add_subscriber(tap_select_or_clear)
         display._tap_stream.popup = self._layout
 
