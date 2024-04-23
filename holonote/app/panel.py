@@ -9,6 +9,8 @@ import param
 from packaging.version import Version
 from panel.viewable import Viewer
 
+from ..annotate.display import _default_color
+
 if TYPE_CHECKING:
     from holonote.annotate import Annotator
 
@@ -50,7 +52,13 @@ class PanelWidgets(Viewer):
         if self.annotator.groupby is None:
             self.visible_widget = None
             return
-        if isinstance(colormap := self.annotator.style._colormap, dict):
+        style = self.annotator.style
+        if style.color is None and style._colormap is None:
+            data = sorted(self.annotator.df[self.annotator.groupby].unique())
+            colormap = dict(zip(data, _default_color))
+        else:
+            colormap = style._colormap
+        if isinstance(colormap, dict):
             stylesheet = """
             option:after {
               content: "";
