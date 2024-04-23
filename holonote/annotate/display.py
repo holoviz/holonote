@@ -77,9 +77,7 @@ class Style(param.Parameterized):
         default=0.4, bounds=(0, 1), allow_refs=True, doc="Alpha value for editing regions"
     )
 
-    color = param.Parameter(
-        default=hv.Cycle(_default_color), doc="Color of the indicator", allow_refs=True
-    )
+    color = param.Parameter(default=None, doc="Color of the indicator", allow_refs=True)
     edit_color = param.Parameter(default="blue", doc="Color of the editor", allow_refs=True)
     selection_color = param.Parameter(
         default=None, doc="Color of selection, by the default the same as color", allow_refs=True
@@ -97,19 +95,38 @@ class Style(param.Parameterized):
     edit_span_opts = _StyleOpts(default={})
     edit_rectangle_opts = _StyleOpts(default={})
 
+    _groupby = ()
+    _colormap = None
+
+    @property
+    def _color(self):
+        if self.color is None:
+            if self._groupby:
+                # This is the main point of this method
+                # we use this to be able to memorize the colormap
+                # so the color are the same no matter what
+                # the order of the groupby is
+                dim = hv.dim(self._groupby[0])
+                self._colormap = dict(zip(self._groupby[1], _default_color))
+                return dim.categorize(self._colormap)
+            else:
+                return _default_color[0]
+
+        return self.color
+
     @property
     def _indicator_selection(self) -> dict[str, tuple]:
         select = {"alpha": (self.selection_alpha, self.alpha)}
         if self.selection_color is not None:
-            if isinstance(self.color, hv.dim):
+            if isinstance(self._color, hv.dim):
                 msg = "'Style.color' cannot be a `hv.dim` when 'Style.selection_color' is not None"
                 raise ValueError(msg)
             else:
-                select["color"] = (self.selection_color, self.color)
+                select["color"] = (self.selection_color, self._color)
         return select
 
     def indicator(self, **select_opts) -> tuple[hv.Options, ...]:
-        opts = {**_default_opts, "color": self.color, **select_opts, **self.opts}
+        opts = {**_default_opts, "color": self._color, **select_opts, **self.opts}
         return (
             hv.opts.Rectangles(**opts, **self.rectangle_opts),
             hv.opts.VSpans(**opts, **self.span_opts),
@@ -134,6 +151,7 @@ class Style(param.Parameterized):
         )
 
     def reset(self) -> None:
+        self._colormap = None
         params = self.param.objects().items()
         self.param.update(**{k: v.default for k, v in params if k != "name"})
 
@@ -253,6 +271,11 @@ class AnnotationDisplay(param.Parameterized):
     def _update_data(self):
         with param.edit_constant(self):
             self.data = self.annotator.get_dataframe(dims=self.kdims)
+        if self.annotator.groupby:
+            self.annotator.style._groupby = (
+                self.annotator.groupby,
+                sorted(self.data[self.annotator.groupby].unique()),
+            )
 
     @property
     def element(self):
