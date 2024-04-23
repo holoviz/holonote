@@ -47,14 +47,38 @@ class PanelWidgets(Viewer):
         self._set_standard_callbacks()
 
     def _create_visible_widget(self):
-        if self.annotator.groupby is not None:
-            options = sorted(self.annotator.df[self.annotator.groupby].unique())
-            self.visible_widget = pn.widgets.MultiSelect(
-                name="Visible", options=options, value=self.annotator.visible or options
-            )
-            self.annotator.visible = self.visible_widget
-        else:
+        if self.annotator.groupby is None:
             self.visible_widget = None
+            return
+        if isinstance(colormap := self.annotator.style._colormap, dict):
+            stylesheet = """
+            option:after {
+              content: "";
+              width: 10px;
+              height: 10px;
+              position: absolute;
+              border-radius: 50%;
+              left: calc(100% - var(--design-unit, 4) * 2px - 3px);
+              top: 20%;
+              border: 1px solid black;
+              opacity: 0.5;
+            }"""
+            for i, color in enumerate(colormap.values()):
+                stylesheet += f"""
+            option:nth-child({i + 1}):after {{
+                background-color: {color};
+            }}"""
+        else:
+            stylesheet = ""
+
+        options = list(colormap)
+        self.visible_widget = pn.widgets.MultiSelect(
+            name="Visible",
+            options=options,
+            value=self.annotator.visible or options,
+            stylesheets=[stylesheet],
+        )
+        self.annotator.visible = self.visible_widget
 
     def _add_button_description(self):
         from bokeh.models import Tooltip
