@@ -297,7 +297,7 @@ class AnnotationDisplay(param.Parameterized):
     @classmethod
     def _infer_kdim_dtypes(cls, element):
         if not isinstance(element, hv.Element):
-            msg = "Supplied object {element} is not a bare HoloViews Element"
+            msg = f"Supplied object {element} is not a bare HoloViews Element"
             raise ValueError(msg)
         kdim_dtypes = {}
         for kdim in element.dimensions(selection="key"):

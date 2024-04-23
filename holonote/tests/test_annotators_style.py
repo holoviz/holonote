@@ -117,7 +117,7 @@ def test_style_error_color_dim_and_selection(cat_annotator):
         categories={"B": "red", "A": "blue", "C": "green"}, default="grey"
     )
     style.selection_color = "blue"
-    msg = r"'Style\.color' cannot be a `hv.dim` when 'Style.selection_color' is not None"
+    msg = "'Style.color' cannot be a `hv.dim` / `None` when 'Style.selection_color' is not None"
     with pytest.raises(ValueError, match=msg):
         compare_style(cat_annotator)
 
