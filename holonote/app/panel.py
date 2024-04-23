@@ -239,6 +239,7 @@ class PanelWidgets(Viewer):
     def _register_double_tap_clear(self, display):
         def double_tap_clear(x, y):
             self._layout.visible = False
+
         display._double_tap_stream.add_subscriber(double_tap_clear)
 
     def _callback_commit(self, event):
