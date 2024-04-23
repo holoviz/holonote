@@ -27,7 +27,7 @@ class PanelWidgets(Viewer):
         float: pn.widgets.FloatSlider,
     }
 
-    def __init__(self, annotator: Annotator, field_values: dict[str, Any] | None = None):
+    def __init__(self, annotator: Annotator, field_values: dict[str, Any] | None = None, as_popup: bool = False):
         self.annotator = annotator
         self.annotator.snapshot()
         self._widget_mode_group = pn.widgets.RadioButtonGroup(
@@ -47,6 +47,16 @@ class PanelWidgets(Viewer):
         self._create_visible_widget()
 
         self._set_standard_callbacks()
+
+        self._layout = pn.Column(self.fields_widgets, self.tool_widgets)
+        if self.visible_widget is not None:
+            self._layout.insert(0, self.visible_widget)
+
+        self._as_popup = as_popup
+        if self._as_popup:
+            for display in annotator._displays.values():
+                for stream in display._edit_streams:
+                    stream.popup = self.__panel__()
 
     def _create_visible_widget(self):
         if self.annotator.groupby is None:
@@ -191,6 +201,9 @@ class PanelWidgets(Viewer):
         elif self._widget_mode_group.value == "-" and selected_ind is not None:
             self.annotator.delete_annotation(selected_ind)
 
+        if self._as_popup:
+            self._layout.visible = False
+
     def _callback_commit(self, event):
         self.annotator.commit()
 
@@ -224,6 +237,4 @@ class PanelWidgets(Viewer):
         self._widget_mode_group.param.watch(self._watcher_mode_group, "value")
 
     def __panel__(self):
-        if self.visible_widget is None:
-            return pn.Column(self.fields_widgets, self.tool_widgets)
-        return pn.Column(self.visible_widget, self.fields_widgets, self.tool_widgets)
+        return self._layout
