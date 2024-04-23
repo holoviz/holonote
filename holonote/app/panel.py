@@ -59,13 +59,15 @@ class PanelWidgets(Viewer):
 
         self._as_popup = as_popup
         if self._as_popup:
+            self._layout.visible = False
             for display in self.annotator._displays.values():
                 if display.region_format == "range" or display.region_format == "range-range":
                     stream = display._edit_streams[0]
                 elif display.region_format == "point" or display.region_format == "point-point":
                     stream = display._edit_streams[1]
-                self._register_popup(stream)
-                self._register_tap(display)
+                self._register_stream_popup(stream)
+                self._register_tap_popup(display)
+                self._register_double_tap_clear(display)
 
     def _create_visible_widget(self):
         if self.annotator.groupby is None:
@@ -213,28 +215,31 @@ class PanelWidgets(Viewer):
         if self._as_popup:
             self._layout.visible = False
 
-    def _register_popup(self, stream):
-        def on_event(*args, **kwargs):
-            if not self._layout.visible:
-                self._layout.visible = True
-                self._widget_mode_group.value = "+"
-
-        stream.add_subscriber(on_event)
-        stream.popup = self._layout
-
-    def _register_tap(self, display):
-        def tap_select_or_clear(x, y) -> None:  # Tap tool must be enabled on the element
+    def _register_stream_popup(self, stream):
+        def _popup(*args, **kwargs):
+            self._widget_mode_group.value = "+"
             self._layout.visible = True
-            # Only select the first
+            return self._layout
+
+        stream.popup = _popup
+
+    def _register_tap_popup(self, display):
+        def tap_popup(x, y) -> None:  # Tap tool must be enabled on the element
             inputs = {str(k): v for k, v in zip(display.kdims, (x, y))}
             indices = display.get_indices_by_position(**inputs)
             if indices:
                 self._widget_mode_group.value = "-"
             else:
                 self._widget_mode_group.value = "+"
+            self._layout.visible = True
+            return self._layout
 
-        display._tap_stream.add_subscriber(tap_select_or_clear)
-        display._tap_stream.popup = self._layout
+        display._tap_stream.popup = tap_popup
+
+    def _register_double_tap_clear(self, display):
+        def double_tap_clear(x, y):
+            self._layout.visible = False
+        display._double_tap_stream.add_subscriber(double_tap_clear)
 
     def _callback_commit(self, event):
         self.annotator.commit()
