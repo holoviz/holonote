@@ -9,6 +9,8 @@ import param
 from packaging.version import Version
 from panel.viewable import Viewer
 
+from ..annotate.display import _default_color
+
 if TYPE_CHECKING:
     from holonote.annotate import Annotator
 
@@ -42,8 +44,49 @@ class PanelWidgets(Viewer):
         else:
             self._fields_values = {k: field_values.get(k, "") for k in self.annotator.fields}
         self._fields_widgets = self._create_fields_widgets(self._fields_values)
+        self._create_visible_widget()
 
         self._set_standard_callbacks()
+
+    def _create_visible_widget(self):
+        if self.annotator.groupby is None:
+            self.visible_widget = None
+            return
+        style = self.annotator.style
+        if style.color is None and style._colormap is None:
+            data = sorted(self.annotator.df[self.annotator.groupby].unique())
+            colormap = dict(zip(data, _default_color))
+        else:
+            colormap = style._colormap
+        if isinstance(colormap, dict):
+            stylesheet = """
+            option:after {
+              content: "";
+              width: 10px;
+              height: 10px;
+              position: absolute;
+              border-radius: 50%;
+              left: calc(100% - var(--design-unit, 4) * 2px - 3px);
+              top: 20%;
+              border: 1px solid black;
+              opacity: 0.5;
+            }"""
+            for i, color in enumerate(colormap.values()):
+                stylesheet += f"""
+            option:nth-child({i + 1}):after {{
+                background-color: {color};
+            }}"""
+        else:
+            stylesheet = ""
+
+        options = list(colormap)
+        self.visible_widget = pn.widgets.MultiSelect(
+            name="Visible",
+            options=options,
+            value=self.annotator.visible or options,
+            stylesheets=[stylesheet],
+        )
+        self.annotator.visible = self.visible_widget
 
     def _add_button_description(self):
         from bokeh.models import Tooltip
@@ -181,4 +224,6 @@ class PanelWidgets(Viewer):
         self._widget_mode_group.param.watch(self._watcher_mode_group, "value")
 
     def __panel__(self):
-        return pn.Column(self.fields_widgets, self.tool_widgets)
+        if self.visible_widget is None:
+            return pn.Column(self.fields_widgets, self.tool_widgets)
+        return pn.Column(self.visible_widget, self.fields_widgets, self.tool_widgets)

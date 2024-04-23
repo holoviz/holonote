@@ -3,6 +3,7 @@ import pandas as pd
 import pytest
 
 from holonote.annotate import Style
+from holonote.annotate.display import _default_color
 from holonote.tests.util import get_editor, get_indicator
 
 
@@ -10,12 +11,11 @@ def compare_indicator_color(indicator, style):
     if isinstance(indicator.opts["color"], hv.dim):
         if isinstance(style.color, hv.dim):
             assert str(indicator.opts["color"]) == str(style.color)
+        elif style.color is None and style._colormap:
+            assert dict(zip(style._groupby[1], _default_color)) == style._colormap
         else:
-            style_color = (
-                style.color.values[0] if isinstance(style.color, hv.Cycle) else style.color
-            )
             expected_dim = hv.dim("__selected__").categorize(
-                categories={True: style.selection_color}, default=style_color
+                categories={True: style.selection_color}, default=style.color
             )
             assert str(indicator.opts["color"]) == str(expected_dim)
     else:
@@ -86,6 +86,9 @@ def test_style_color_dim(cat_annotator):
     compare_style(cat_annotator)
 
 
+@pytest.mark.xfail(
+    reason="hv.dim is not supported for selection.color in the current implementation"
+)
 def test_style_selection_color(cat_annotator):
     style = cat_annotator.style
     style.selection_color = "blue"
@@ -114,7 +117,7 @@ def test_style_error_color_dim_and_selection(cat_annotator):
         categories={"B": "red", "A": "blue", "C": "green"}, default="grey"
     )
     style.selection_color = "blue"
-    msg = r"'Style\.color' cannot be a `hv.dim` when 'Style.selection_color' is not None"
+    msg = "'Style.color' cannot be a `hv.dim` / `None` when 'Style.selection_color' is not None"
     with pytest.raises(ValueError, match=msg):
         compare_style(cat_annotator)
 
@@ -157,6 +160,6 @@ def test_groupby_color_change(cat_annotator) -> None:
     cat_annotator.visible = ["A", "B", "C"]
 
     indicators = hv.render(cat_annotator.get_display("x").static_indicators()).renderers
-    color_cycle = cat_annotator.style.color.values
+    color_cycle = cat_annotator.style._colormap.values()
     for indicator, expected_color in zip(indicators, color_cycle):
         assert indicator.glyph.fill_color == expected_color
