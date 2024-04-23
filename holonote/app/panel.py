@@ -27,7 +27,12 @@ class PanelWidgets(Viewer):
         float: pn.widgets.FloatSlider,
     }
 
-    def __init__(self, annotator: Annotator, field_values: dict[str, Any] | None = None, as_popup: bool = False):
+    def __init__(
+        self,
+        annotator: Annotator,
+        field_values: dict[str, Any] | None = None,
+        as_popup: bool = False,
+    ):
         self.annotator = annotator
         self.annotator.snapshot()
         self._widget_mode_group = pn.widgets.RadioButtonGroup(
