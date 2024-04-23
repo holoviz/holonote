@@ -42,8 +42,19 @@ class PanelWidgets(Viewer):
         else:
             self._fields_values = {k: field_values.get(k, "") for k in self.annotator.fields}
         self._fields_widgets = self._create_fields_widgets(self._fields_values)
+        self._create_visible_widget()
 
         self._set_standard_callbacks()
+
+    def _create_visible_widget(self):
+        if self.annotator.groupby is not None:
+            options = sorted(self.annotator.df[self.annotator.groupby].unique())
+            self.visible_widget = pn.widgets.MultiSelect(
+                name="Visible", options=options, value=self.annotator.visible or options
+            )
+            self.annotator.visible = self.visible_widget
+        else:
+            self.visible_widget = None
 
     def _add_button_description(self):
         from bokeh.models import Tooltip
@@ -181,4 +192,6 @@ class PanelWidgets(Viewer):
         self._widget_mode_group.param.watch(self._watcher_mode_group, "value")
 
     def __panel__(self):
-        return pn.Column(self.fields_widgets, self.tool_widgets)
+        if self.visible_widget is None:
+            return pn.Column(self.fields_widgets, self.tool_widgets)
+        return pn.Column(self.visible_widget, self.fields_widgets, self.tool_widgets)
