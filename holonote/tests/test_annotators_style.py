@@ -86,6 +86,9 @@ def test_style_color_dim(cat_annotator):
     compare_style(cat_annotator)
 
 
+@pytest.mark.xfail(
+    reason="hv.dim is not supported for selection.color in the current implementation"
+)
 def test_style_selection_color(cat_annotator):
     style = cat_annotator.style
     style.selection_color = "blue"

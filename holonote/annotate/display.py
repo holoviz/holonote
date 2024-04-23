@@ -119,7 +119,7 @@ class Style(param.Parameterized):
         select = {"alpha": (self.selection_alpha, self.alpha)}
         if self.selection_color is not None:
             if isinstance(self._color, hv.dim):
-                msg = "'Style.color' cannot be a `hv.dim` when 'Style.selection_color' is not None"
+                msg = "'Style.color' cannot be a `hv.dim` / `None` when 'Style.selection_color' is not None"
                 raise ValueError(msg)
             else:
                 select["color"] = (self.selection_color, self._color)
