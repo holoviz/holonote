@@ -225,12 +225,6 @@ class PanelWidgets(Viewer):
 
     def _register_tap_popup(self, display):
         def tap_popup(x, y) -> None:  # Tap tool must be enabled on the element
-            inputs = {str(k): v for k, v in zip(display.kdims, (x, y))}
-            indices = display.get_indices_by_position(**inputs)
-            if indices:
-                self._widget_mode_group.value = "-"
-            else:
-                self._widget_mode_group.value = "+"
             self._layout.visible = True
             return self._layout
 
@@ -262,8 +256,8 @@ class PanelWidgets(Viewer):
                 self.annotator.editable_enabled = True
                 self.annotator.selection_enabled = False
 
-        for widget in self._fields_widgets.values():
-            widget.disabled = event.new == "-"
+            for widget in self._fields_widgets.values():
+                widget.disabled = event.new == "-"
 
     def _set_standard_callbacks(self):
         self._widget_apply_button.on_click(self._callback_apply)
