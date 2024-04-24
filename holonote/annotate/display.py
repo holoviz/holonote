@@ -335,8 +335,6 @@ class AnnotationDisplay(param.Parameterized):
     @editable_enabled.setter
     def editable_enabled(self, enabled: bool) -> None:
         self._editable_enabled = enabled
-        if not enabled:
-            self.clear_indicated_region()
 
     def _filter_stream_values(self, bounds, x, y, geometry):
         if not self._editable_enabled:
