@@ -33,9 +33,9 @@ class PanelWidgets(Viewer):
         self._widget_mode_group = pn.widgets.RadioButtonGroup(
             name="Mode", options=["+", "-", "✏"], width=90
         )
-        self._widget_apply_button = pn.widgets.Button(icon="device-floppy", width=20)
+        self._widget_apply_button = pn.widgets.Button(icon="check", width=20)
         self._widget_revert_button = pn.widgets.Button(name="↺", width=20)
-        self._widget_commit_button = pn.widgets.Button(icon="database", width=20)
+        self._widget_commit_button = pn.widgets.Button(icon="device-floppy", width=20)
         if PN13:
             self._add_button_description()
 
