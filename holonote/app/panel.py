@@ -267,4 +267,4 @@ class PanelWidgets(Viewer):
         self._widget_mode_group.param.watch(self._watcher_mode_group, "value")
 
     def __panel__(self):
-        return self._layout
+        return self._layout.clone(visible=True)
