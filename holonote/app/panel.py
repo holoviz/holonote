@@ -217,8 +217,9 @@ class PanelWidgets(Viewer):
 
     def _register_stream_popup(self, stream):
         def _popup(*args, **kwargs):
-            self._widget_mode_group.value = "+"
-            self._layout.visible = True
+            with param.parameterized.batch_call_watchers(self):
+                self._widget_mode_group.value = "+"
+                self._layout.visible = True
             return self._layout
 
         stream.popup = _popup
