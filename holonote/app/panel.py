@@ -251,8 +251,12 @@ class PanelWidgets(Viewer):
 
     def _watcher_mode_group(self, event):
         with param.parameterized.batch_call_watchers(self):
-            if event.new in ["-", "✏"]:
+            if event.new == "-":
                 self.annotator.selection_enabled = True
+            elif event.new == "✏":
+                self.annotator.selection_enabled = True
+                self.annotator.select_by_index()
+                self.annotator.editable_enabled = False
             elif event.new == "+":
                 self.annotator.editable_enabled = True
                 self.annotator.selection_enabled = False
