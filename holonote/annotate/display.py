@@ -429,7 +429,7 @@ class AnnotationDisplay(param.Parameterized):
             else:
                 self.annotator.select_by_index()
 
-        self._tap_stream = hv.streams.Tap(source=element, transient=True)
+        self._tap_stream = hv.streams.Tap(source=element)
         self._tap_stream.add_subscriber(tap_selector)
         return element
 
