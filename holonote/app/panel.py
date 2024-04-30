@@ -66,6 +66,7 @@ class PanelWidgets(Viewer):
                 elif display.region_format in ("point", "point-point"):
                     stream = display._edit_streams[1]
                 self._register_stream_popup(stream)
+                self._register_tap_popup(display)
                 self._register_double_tap_clear(display)
 
     def _create_visible_widget(self):
@@ -223,6 +224,14 @@ class PanelWidgets(Viewer):
 
         stream.popup = _popup
 
+    def _register_tap_popup(self, display):
+        def tap_popup(x, y) -> None:  # Tap tool must be enabled on the element
+            if self.annotator.selection_enabled:
+                self._layout.visible = True
+            return self._layout
+
+        display._tap_stream.popup = tap_popup
+
     def _register_double_tap_clear(self, display):
         def double_tap_toggle(x, y):
             if self._layout.visible:
@@ -249,9 +258,8 @@ class PanelWidgets(Viewer):
 
     def _watcher_mode_group(self, event):
         with param.parameterized.batch_call_watchers(self):
-            if event.new == ("-", "✏"):
+            if event.new in ("-", "✏"):
                 self.annotator.selection_enabled = True
-                self.annotator.editable_enabled = False
             elif event.new == "+":
                 self.annotator.editable_enabled = True
                 self.annotator.selection_enabled = False
