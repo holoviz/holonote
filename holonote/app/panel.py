@@ -188,6 +188,8 @@ class PanelWidgets(Viewer):
         for widget_name, default in self._fields_values.items():
             if isinstance(default, param.Parameter):
                 default = default.default
+            if isinstance(default, list):
+                default = default[0]
             with contextlib.suppress(Exception):
                 # TODO: Fix when lists (for categories, not the same as the default!)
                 self._fields_widgets[widget_name].value = default
