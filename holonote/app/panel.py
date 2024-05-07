@@ -33,6 +33,7 @@ class PanelWidgets(Viewer):
         field_values: dict[str, Any] | None = None,
         as_popup: bool = False,
     ):
+        self._layouts = {}
         self.annotator = annotator
         self.annotator.snapshot()
         self._widget_mode_group = pn.widgets.RadioButtonGroup(
@@ -219,36 +220,51 @@ class PanelWidgets(Viewer):
         elif self._widget_mode_group.value == "-" and selected_ind is not None:
             self.annotator.delete_annotation(selected_ind)
 
-        if self._as_popup:
-            self._layout.visible = False
+    def _get_layout(self, name):
+        def close_layout(event):
+            layout.visible = False
+
+        layout = self._layouts.get(name)
+        if not layout:
+            layout = self._layout.clone(visible=False)
+            self._widget_apply_button.on_click(close_layout)
+            self._layouts[name] = layout
+        return layout
+
+    def _hide_layouts(self):
+        for layout in self._layouts.values():
+            layout.visible = False
 
     def _register_stream_popup(self, stream):
         def _popup(*args, **kwargs):
-            if self._layout.visible:
-                self._layout.visible = False
-
-            self._widget_mode_group.value = "+"
-            self._layout.visible = True
-            return self._layout
+            layout = self._get_layout(stream.name)
+            with param.parameterized.batch_call_watchers(self):
+                self._hide_layouts()
+                self._widget_mode_group.value = "+"
+                layout.visible = True
+                return layout
 
         stream.popup = _popup
 
     def _register_tap_popup(self, display):
         def tap_popup(x, y) -> None:  # Tap tool must be enabled on the element
-            if self._layout.visible:
-                return
-
+            layout = self._get_layout("tap")
             if self.annotator.selection_enabled:
-                self._layout.visible = True
-            return self._layout
+                with param.parameterized.batch_call_watchers(self):
+                    self._hide_layouts()
+                    layout.visible = True
+                    return layout
 
         display._tap_stream.popup = tap_popup
 
     def _register_double_tap_clear(self, display):
         def double_tap_toggle(x, y):
-            self._layout.visible = not self._layout.visible
-            if self._layout.visible:
-                return self._layout
+            layout = self._get_layout("doubletap")
+            if layout.visible:
+                with param.parameterized.batch_call_watchers(self):
+                    self._hide_layouts()
+                    layout.visible = True
+                    return layout
 
         try:
             tools = display._element.opts["tools"]
