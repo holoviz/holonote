@@ -60,7 +60,12 @@ class PanelWidgets(Viewer):
         self._as_popup = as_popup
         if self._as_popup:
             self._layout.visible = False
-            for display in self.annotator._displays.values():
+            displays = self.annotator._displays
+            if not displays:
+                kdims = list(self.annotator.spec.keys())
+                display = self.annotator.get_display(*kdims)
+                display.indicators()
+            for display in displays.values():
                 if display.region_format in ("range", "range-range"):
                     stream = display._edit_streams[0]
                 elif display.region_format in ("point", "point-point"):
@@ -242,7 +247,10 @@ class PanelWidgets(Viewer):
             self._layout.visible = True
             return self._layout
 
-        tools = display._element.opts["tools"]
+        try:
+            tools = display._element.opts["tools"]
+        except KeyError:
+            tools = []
         display._element.opts(tools=[*tools, "doubletap"])
         display._double_tap_stream.popup = double_tap_toggle
 
