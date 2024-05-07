@@ -337,6 +337,8 @@ class AnnotationDisplay(param.Parameterized):
     @selection_enabled.setter
     def selection_enabled(self, enabled: bool) -> None:
         self._selection_enabled = enabled
+        if not enabled:
+            self.clear_indicated_region()
 
     @property
     def editable_enabled(self) -> bool:
