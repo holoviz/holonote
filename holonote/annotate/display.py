@@ -252,6 +252,13 @@ class AnnotationDisplay(param.Parameterized):
         self._selection_enabled = True
         self._editable_enabled = True
 
+        transient = False
+        self._edit_streams = [
+            hv.streams.BoundsXY(transient=transient),
+            hv.streams.SingleTap(transient=transient),
+            hv.streams.Lasso(transient=transient),
+        ]
+
         self.annotator = weakref.proxy(annotator)
         self.style = weakref.proxy(annotator.style)
         self._update_data()
@@ -275,6 +282,15 @@ class AnnotationDisplay(param.Parameterized):
         return self.overlay()
 
     @property
+    def edit_streams(self) -> dict[str, hv.streams.Stream]:
+        edit_streams = {}
+        if self.region_format in ("range", "range-range"):
+            edit_streams["box_select"] = self._edit_streams[0]
+        elif self.region_format in ("point", "point-point"):
+            edit_streams["tap"] = self._edit_streams[1]
+        return edit_streams
+
+    @property
     def edit_tools(self) -> list[Tool]:
         tools = []
         if self.region_format == "range":
@@ -286,16 +302,6 @@ class AnnotationDisplay(param.Parameterized):
         elif self.region_format == "point-point":
             tools.append("tap")
         return tools
-
-    @property
-    def edit_streams(self) -> dict[str, hv.streams.Stream]:
-        transient = False
-        edit_streams = {
-            "box_select": hv.streams.BoundsXY(transient=transient),
-            "tap": hv.streams.SingleTap(transient=transient),
-            "lasso_select": hv.streams.Lasso(transient=transient),
-        }
-        return edit_streams
 
     @classmethod
     def _infer_kdim_dtypes(cls, element):
@@ -309,9 +315,9 @@ class AnnotationDisplay(param.Parameterized):
 
     def clear_indicated_region(self):
         "Clear any region currently indicated on the plot by the editor"
-        self.edit_streams["box_select"].event(bounds=None)
-        self.edit_streams["tap"].event(x=None, y=None)
-        self.edit_streams["lasso_select"].event(geometry=None)
+        self._edit_streams[0].event(bounds=None)
+        self._edit_streams[1].event(x=None, y=None)
+        self._edit_streams[2].event(geometry=None)
         self.annotator.clear_regions()
 
     def _make_empty_element(self) -> hv.Curve | hv.Image:
@@ -339,8 +345,6 @@ class AnnotationDisplay(param.Parameterized):
     @editable_enabled.setter
     def editable_enabled(self, enabled: bool) -> None:
         self._editable_enabled = enabled
-        if not enabled:
-            self.clear_indicated_region()
 
     def _filter_stream_values(self, bounds, x, y, geometry):
         if not self._editable_enabled:
@@ -395,7 +399,7 @@ class AnnotationDisplay(param.Parameterized):
 
             return region_element.opts(*self.style.editor())
 
-        return hv.DynamicMap(inner, streams=list(self.edit_streams.values()))
+        return hv.DynamicMap(inner, streams=self._edit_streams)
 
     def region_editor(self) -> hv.DynamicMap:
         if not hasattr(self, "_region_editor"):
@@ -434,16 +438,16 @@ class AnnotationDisplay(param.Parameterized):
             else:
                 self.annotator.select_by_index()
 
-        tap_stream = hv.streams.Tap(source=element, transient=True)
-        tap_stream.add_subscriber(tap_selector)
+        self._tap_stream = hv.streams.Tap(source=element, transient=True)
+        self._tap_stream.add_subscriber(tap_selector)
         return element
 
     def register_double_tap_clear(self, element: hv.Element) -> hv.Element:
         def double_tap_clear(x, y):
             self.clear_indicated_region()
 
-        double_tap_stream = hv.streams.DoubleTap(source=element, transient=True)
-        double_tap_stream.add_subscriber(double_tap_clear)
+        self._double_tap_stream = hv.streams.DoubleTap(source=element, transient=True)
+        self._double_tap_stream.add_subscriber(double_tap_clear)
         return element
 
     def indicators(self) -> hv.DynamicMap:
@@ -547,4 +551,4 @@ class AnnotationDisplay(param.Parameterized):
             bounds = False
 
         if bounds:
-            self.edit_streams["box_select"].event(bounds=bounds)
+            self.edit_streams[0].event(bounds=bounds)
