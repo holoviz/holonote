@@ -252,13 +252,6 @@ class AnnotationDisplay(param.Parameterized):
         self._selection_enabled = True
         self._editable_enabled = True
 
-        transient = False
-        self._edit_streams = [
-            hv.streams.BoundsXY(transient=transient),
-            hv.streams.SingleTap(transient=transient),
-            hv.streams.Lasso(transient=transient),
-        ]
-
         self.annotator = weakref.proxy(annotator)
         self.style = weakref.proxy(annotator.style)
         self._update_data()
@@ -294,6 +287,16 @@ class AnnotationDisplay(param.Parameterized):
             tools.append("tap")
         return tools
 
+    @property
+    def edit_streams(self) -> dict[str, hv.streams.Stream]:
+        transient = False
+        edit_streams = {
+            "box_select": hv.streams.BoundsXY(transient=transient),
+            "tap": hv.streams.SingleTap(transient=transient),
+            "lasso_select": hv.streams.Lasso(transient=transient),
+        }
+        return edit_streams
+
     @classmethod
     def _infer_kdim_dtypes(cls, element):
         if not isinstance(element, hv.Element):
@@ -306,9 +309,9 @@ class AnnotationDisplay(param.Parameterized):
 
     def clear_indicated_region(self):
         "Clear any region currently indicated on the plot by the editor"
-        self._edit_streams[0].event(bounds=None)
-        self._edit_streams[1].event(x=None, y=None)
-        self._edit_streams[2].event(geometry=None)
+        self.edit_streams["box_select"].event(bounds=None)
+        self.edit_streams["tap"].event(x=None, y=None)
+        self.edit_streams["lasso_select"].event(geometry=None)
         self.annotator.clear_regions()
 
     def _make_empty_element(self) -> hv.Curve | hv.Image:
@@ -392,7 +395,7 @@ class AnnotationDisplay(param.Parameterized):
 
             return region_element.opts(*self.style.editor())
 
-        return hv.DynamicMap(inner, streams=self._edit_streams)
+        return hv.DynamicMap(inner, streams=list(self.edit_streams.values()))
 
     def region_editor(self) -> hv.DynamicMap:
         if not hasattr(self, "_region_editor"):
@@ -544,4 +547,4 @@ class AnnotationDisplay(param.Parameterized):
             bounds = False
 
         if bounds:
-            self._edit_streams[0].event(bounds=bounds)
+            self.edit_streams["box_select"].event(bounds=bounds)
