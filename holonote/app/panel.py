@@ -18,6 +18,8 @@ PN13 = Version(pn.__version__) >= Version("1.3.0")
 
 
 class PanelWidgets(Viewer):
+    reset_on_apply = param.Boolean(default=True, doc="Reset fields widgets on apply")
+
     mapping = {
         str: pn.widgets.TextInput,
         bool: pn.widgets.Checkbox,
@@ -32,7 +34,9 @@ class PanelWidgets(Viewer):
         annotator: Annotator,
         field_values: dict[str, Any] | None = None,
         as_popup: bool = False,
+        **params,
     ):
+        super().__init__(**params)
         self._layouts = {}
         self.annotator = annotator
         self.annotator.snapshot()
@@ -212,7 +216,8 @@ class PanelWidgets(Viewer):
             fields_values = {k: v.value for k, v in self._fields_widgets.items()}
             if self._widget_mode_group.value == "+":
                 self.annotator.add_annotation(**fields_values)
-                self._reset_fields_widgets()
+                if self.reset_on_apply:
+                    self._reset_fields_widgets()
             elif (self._widget_mode_group.value == "✏") and (selected_ind is not None):
                 self.annotator.update_annotation_fields(
                     selected_ind, **fields_values
