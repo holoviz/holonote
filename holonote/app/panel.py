@@ -224,15 +224,20 @@ class PanelWidgets(Viewer):
 
     def _register_stream_popup(self, stream):
         def _popup(*args, **kwargs):
-            with param.parameterized.batch_call_watchers(self):
-                self._widget_mode_group.value = "+"
-                self._layout.visible = True
+            if self._layout.visible:
+                self._layout.visible = False
+
+            self._widget_mode_group.value = "+"
+            self._layout.visible = True
             return self._layout
 
         stream.popup = _popup
 
     def _register_tap_popup(self, display):
         def tap_popup(x, y) -> None:  # Tap tool must be enabled on the element
+            if self._layout.visible:
+                return
+
             if self.annotator.selection_enabled:
                 self._layout.visible = True
             return self._layout
@@ -241,11 +246,9 @@ class PanelWidgets(Viewer):
 
     def _register_double_tap_clear(self, display):
         def double_tap_toggle(x, y):
+            self._layout.visible = not self._layout.visible
             if self._layout.visible:
-                self._layout.visible = False
-                return
-            self._layout.visible = True
-            return self._layout
+                return self._layout
 
         try:
             tools = display._element.opts["tools"]
