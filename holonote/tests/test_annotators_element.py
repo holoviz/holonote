@@ -47,6 +47,15 @@ def test_set_regions_range1d(annotator_range1d) -> None:
     assert output2 == expected2
 
 
+def test_edit_streams(annotator_range1d) -> None:
+    annotator = annotator_range1d
+    edit_streams = annotator.get_display("TIME").edit_streams
+    assert len(edit_streams) == 1
+    assert "box_select" in edit_streams
+    assert "tap" not in edit_streams
+    assert "lasso_select" not in edit_streams
+
+
 def test_set_regions_range2d(annotator_range2d) -> None:
     annotator = annotator_range2d
     annotator.get_display("x", "y")

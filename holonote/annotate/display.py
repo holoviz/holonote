@@ -282,6 +282,15 @@ class AnnotationDisplay(param.Parameterized):
         return self.overlay()
 
     @property
+    def edit_streams(self) -> dict[str, hv.streams.Stream]:
+        edit_streams = {}
+        if self.region_format in ("range", "range-range"):
+            edit_streams["box_select"] = self._edit_streams[0]
+        elif self.region_format in ("point", "point-point"):
+            edit_streams["tap"] = self._edit_streams[1]
+        return edit_streams
+
+    @property
     def edit_tools(self) -> list[Tool]:
         tools = []
         if self.region_format == "range":
@@ -328,6 +337,8 @@ class AnnotationDisplay(param.Parameterized):
     @selection_enabled.setter
     def selection_enabled(self, enabled: bool) -> None:
         self._selection_enabled = enabled
+        if not enabled:
+            self.clear_indicated_region()
 
     @property
     def editable_enabled(self) -> bool:
@@ -336,8 +347,6 @@ class AnnotationDisplay(param.Parameterized):
     @editable_enabled.setter
     def editable_enabled(self, enabled: bool) -> None:
         self._editable_enabled = enabled
-        if not enabled:
-            self.clear_indicated_region()
 
     def _filter_stream_values(self, bounds, x, y, geometry):
         if not self._editable_enabled:
