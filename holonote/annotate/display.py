@@ -551,4 +551,4 @@ class AnnotationDisplay(param.Parameterized):
             bounds = False
 
         if bounds:
-            self.edit_streams[0].event(bounds=bounds)
+            self._edit_streams[0].event(bounds=bounds)
