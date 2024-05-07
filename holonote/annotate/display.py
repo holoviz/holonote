@@ -350,7 +350,8 @@ class AnnotationDisplay(param.Parameterized):
         if not self._editable_enabled:
             return (None, None, None, None)
         if self.region_format == "point" and bounds:
-            x = (bounds[0] + bounds[2]) / 2
+            #  x is calculated this way to handle datetime
+            x = bounds[0] + (bounds[2] - bounds[0]) / 2
             y = None
             bounds = (x, 0, x, 0)
         elif "range" not in self.region_format:
