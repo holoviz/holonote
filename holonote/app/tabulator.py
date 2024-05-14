@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import numpy as np
 import panel as pn
 import param
@@ -31,10 +33,17 @@ class AnnotatorTabulator(pn.viewable.Viewer):
             row = self.tabulator.value.iloc[event.row]
             self.changed.append(row.name)
 
-            # Hard-coded for now
-            TIME = tuple(row.iloc[:2])
-            self.annotator.annotation_table.update_annotation_region({"TIME": TIME}, row.name)
-            self.annotator.update_annotation_fields(row.name, **dict(row.iloc[2:]))
+            # Extracting specs and fields from row
+            spec_dct, field_dct = defaultdict(list), {}
+            for k, v in row.items():
+                if "[" in k:
+                    k = k.split("[")[1][:-1]  # Getting the spec name
+                    spec_dct[k].append(v)
+                else:
+                    field_dct[k] = v
+
+            self.annotator.annotation_table.update_annotation_region(spec_dct, row.name)
+            self.annotator.update_annotation_fields(row.name, **field_dct)
             self.annotator.refresh(clear=True)
 
             # So it is still reactive, as editing overwrites the table
