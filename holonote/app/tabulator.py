@@ -30,8 +30,7 @@ class AnnotatorTabulator(pn.viewable.Viewer):
 
             # Hard-coded for now
             TIME = tuple(row.iloc[:2])
-            self.annotator._set_regions(TIME=TIME)
-            self.annotator.update_annotation_region(row.name)
+            self.annotator.annotation_table.update_annotation_region({"TIME": TIME}, row.name)
             self.annotator.update_annotation_fields(row.name, **dict(row.iloc[2:]))
             self.annotator.refresh(clear=True)
 
