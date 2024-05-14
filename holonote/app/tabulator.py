@@ -78,6 +78,8 @@ class AnnotatorTabulator(pn.viewable.Viewer):
             self.annotator.selected_indices = list(
                 self.tabulator.value.iloc[self.tabulator.selection].index
             )
+        except IndexError:
+            pass  # when we delete we select and get an index error if it is the last
         finally:
             self._updating = False
 
