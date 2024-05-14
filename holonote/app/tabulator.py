@@ -35,6 +35,9 @@ class AnnotatorTabulator(pn.viewable.Viewer):
             self.annotator.update_annotation_fields(row.name, **dict(row.iloc[2:]))
             self.annotator.refresh(clear=True)
 
+            # So it is still reactive, as editing overwrites the table
+            self.tabulator.value = pn.bind(inner, self.annotator)
+
         def on_click(event):
             if event.column != "delete":
                 return
