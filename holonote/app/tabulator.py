@@ -2,7 +2,10 @@ import numpy as np
 import panel as pn
 import param
 
-pn.extension("tabulator")
+pn.extension(
+    "tabulator",
+    css_files=["https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"],
+)
 
 
 class AnnotatorTabulator(pn.viewable.Viewer):
