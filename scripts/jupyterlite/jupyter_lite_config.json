@@ -1,6 +1,6 @@
 {
   "LiteBuildConfig": {
-    "contents": ["../../examples"],
+    "contents": ["../../examples", "files"],
     "output_dir": "../../jupyterlite"
   }
 }
