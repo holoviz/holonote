@@ -1,4 +1,4 @@
-const { loadPyodide } = require(`pyodide`);
+const { loadPyodide } = require("pyodide");
 const fs = require("fs");
 
 async function main() {
