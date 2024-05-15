@@ -16,7 +16,7 @@ def calculate_sha256(file_path):
 
 with open("package.json") as f:
     package = json.load(f)
-pyodide_version = package["dependencies"]["pyodide"]
+pyodide_version = package["dependencies"]["pyodide"].removeprefix("^")
 
 path = "pyodide-lock.json"
 url = f"https://cdn.jsdelivr.net/pyodide/v{pyodide_version}/full"
