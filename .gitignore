@@ -17,3 +17,4 @@ doc/**/*.ipynb
 jupyterlite/
 !scripts/jupyterlite
 scripts/jupyterlite/.jupyterlite.doit.db
+node_modules
