@@ -177,8 +177,6 @@ class Indicator:
         cls, data, region_labels, fields_labels, invert_axes=False, groupby: str | None = None
     ):
         "Vectorizes point regions to VLines * HLines. Note does not support hover info"
-        msg = "2D point regions not supported yet"
-        raise NotImplementedError(msg)
         vdims = [*fields_labels, "__selected__"]
         element = hv.Points(data, kdims=region_labels, vdims=vdims)
         hover = cls._build_hover_tool(data)
@@ -316,8 +314,8 @@ class AnnotationDisplay(param.Parameterized):
     def clear_indicated_region(self):
         "Clear any region currently indicated on the plot by the editor"
         self._edit_streams[0].event(bounds=None)
-        self._edit_streams[1].event(x=None, y=None)
-        self._edit_streams[2].event(geometry=None)
+        # self._edit_streams[1].event(x=None, y=None)
+        # self._edit_streams[2].event(geometry=None)
         self.annotator.clear_regions()
 
     def _make_empty_element(self) -> hv.Curve | hv.Image:
@@ -423,13 +421,21 @@ class AnnotationDisplay(param.Parameterized):
             iter_mask = (
                 (df[f"start[{k}]"] <= v) & (v < df[f"end[{k}]"]) for k, v in inputs.items()
             )
+            subset = reduce(np.logical_and, iter_mask)
+            out = list(df[subset].index)
         elif "point" in self.region_format:
-            iter_mask = ((df[f"point[{k}]"] - v).abs().argmin() for k, v in inputs.items())
+            xk, yk = list(inputs.keys())
+            distance = (
+                (df[f"point[{xk}]"] - inputs[xk]) ** 2 + (df[f"point[{yk}]"] - inputs[yk]) ** 2
+            ) ** 0.5
+            if (distance > inputs[xk] / 1e2).all():
+                return []
+            out = [df.loc[distance.idxmin()].name]  # index == name of series
         else:
             msg = f"{self.region_format} not implemented"
             raise NotImplementedError(msg)
 
-        return list(df[reduce(np.logical_and, iter_mask)].index)
+        return out
 
     def register_tap_selector(self, element: hv.Element) -> hv.Element:
         def tap_selector(x, y) -> None:  # Tap tool must be enabled on the element
@@ -481,7 +487,9 @@ class AnnotationDisplay(param.Parameterized):
 
     def static_indicators(self, **events):
         fields_labels = self.annotator.all_fields
-        region_labels = [k for k in self.data.columns if k not in fields_labels]
+        region_labels = [
+            k for k in self.data.columns if k not in fields_labels and k != "__selected__"
+        ]
 
         self.data["__selected__"] = self.data.index.isin(self.annotator.selected_indices)
 
