@@ -314,8 +314,8 @@ class AnnotationDisplay(param.Parameterized):
     def clear_indicated_region(self):
         "Clear any region currently indicated on the plot by the editor"
         self._edit_streams[0].event(bounds=None)
-        # self._edit_streams[1].event(x=None, y=None)
-        # self._edit_streams[2].event(geometry=None)
+        self._edit_streams[1].event(x=None, y=None)
+        self._edit_streams[2].event(geometry=None)
         self.annotator.clear_regions()
 
     def _make_empty_element(self) -> hv.Curve | hv.Image:
