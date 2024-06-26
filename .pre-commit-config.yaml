@@ -20,19 +20,19 @@ repos:
       - id: check-json
       - id: detect-private-key
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.4.0
+    rev: v0.4.10
     hooks:
       - id: ruff
         files: holonote/
       - id: ruff-format
         files: holonote/
   - repo: https://github.com/hoxbro/clean_notebook
-    rev: v0.1.14
+    rev: v0.1.15
     hooks:
       - id: clean-notebook
         args: [--strip-trailing-newlines]
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.2.6
+    rev: v2.3.0
     hooks:
     - id: codespell
       additional_dependencies:
