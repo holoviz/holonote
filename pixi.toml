@@ -10,12 +10,12 @@ install = 'python -m pip install --no-deps --disable-pip-version-check -e .'
 PYTHONIOENCODING = "utf-8"
 
 [environments]
-test-39 = ["py39", "test-core", "test", "example", "test-example"]
-test-310 = ["py310", "test-core", "test", "example", "test-example"]
-test-311 = ["py311", "test-core", "test", "example", "test-example"]
-test-312 = ["py312", "test-core", "test", "example", "test-example"]
+test-39 = ["py39", "test-core", "test", "test-unit-task", "example", "test-example"]
+test-310 = ["py310", "test-core", "test", "test-unit-task", "example", "test-example"]
+test-311 = ["py311", "test-core", "test", "test-unit-task", "example", "test-example"]
+test-312 = ["py312", "test-core", "test", "test-unit-task", "example", "test-example"]
 test-core = ["py312", "test-core"]
-test-benchmark = ["py312", "test-benchmark"]
+test-benchmark = ["py312", "test-benchmark", "test"]
 docs = ["py311", "example", "doc"]
 build = ["py311", "build"]
 lint = ["py311", "lint"]
@@ -42,8 +42,6 @@ python = "3.12.*"
 dask = "*"
 datashader = "*"
 hvplot = "*"
-jupyterlab-myst= "*"
-jupyterlab= "*"
 scipy = "*"
 
 # =============================================
@@ -54,7 +52,7 @@ pytest = "*"
 pytest-cov = "*"
 pytest-github-actions-annotate-failures = "*"
 
-[feature.test-core.tasks]
+[feature.test-unit-task.tasks] # So it is not showing up in the test-benchmark
 test-unit = 'pytest holonote/tests'
 
 [feature.test.dependencies]
