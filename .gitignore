@@ -18,6 +18,7 @@ jupyterlite/
 !scripts/jupyterlite
 scripts/jupyterlite/.jupyterlite.doit.db
 scripts/jupyterlite/*.json
+node_modules/
 
 # Pixi
 .pixi
