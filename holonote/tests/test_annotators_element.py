@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from importlib.util import find_spec
+
 import holoviews as hv
 import numpy as np
 import pytest
-from holoviews.operation.datashader import rasterize
 
 from holonote.tests.util import (
     get_display_data_from_plot,
@@ -11,6 +12,8 @@ from holonote.tests.util import (
     get_indicator,
     get_indicator_data,
 )
+
+datashader = find_spec("datashader")
 
 
 def test_set_regions_range1d(annotator_range1d) -> None:
@@ -293,7 +296,10 @@ def test_multiply_layout(annotator_range1d):
     assert el.opts.get().kwargs.get("width") == 100
 
 
+@pytest.mark.skipif(datashader is None, reason="Datashader is not installed")
 def test_multiply_dynamicmap(annotator_range1d):
+    from holoviews.operation.datashader import rasterize
+
     # rasterize creates a dynamicmap
     el1 = rasterize(hv.Curve([], kdims=["TIME"]))
     assert isinstance(el1, hv.DynamicMap)
@@ -304,7 +310,10 @@ def test_multiply_dynamicmap(annotator_range1d):
     assert isinstance(el, hv.DynamicMap)
 
 
+@pytest.mark.skipif(datashader is None, reason="Datashader is not installed")
 def test_multiply_dynamicmap_layout(annotator_range1d):
+    from holoviews.operation.datashader import rasterize
+
     el1 = rasterize(hv.Curve([], kdims=["TIME"]))
     el2 = hv.Curve([], kdims=["TIME"])
     el = el1 + el2
