@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import weakref
-from functools import reduce
+from functools import cache, reduce
 from typing import TYPE_CHECKING, Any
 
 import colorcet as cc
@@ -29,6 +29,13 @@ _default_opts = {"apply_ranges": False, "show_legend": False}
 # Make red the first color
 _default_color = cc.palette["glasbey_category10"].copy()
 _default_color[:4] = [_default_color[3], *_default_color[:3]]
+
+
+@cache
+def _valid_element_opts():
+    if not hv.extension._loaded:
+        hv.extension("bokeh")
+    return hv.opts._element_keywords("bokeh")
 
 
 class Style(param.Parameterized):
@@ -70,9 +77,7 @@ class Style(param.Parameterized):
         default=0.4, bounds=(0, 1), allow_refs=True, doc="Alpha value for editing regions"
     )
 
-    color = param.Parameter(
-        default=hv.Cycle(_default_color), doc="Color of the indicator", allow_refs=True
-    )
+    color = param.Parameter(default=None, doc="Color of the indicator", allow_refs=True)
     edit_color = param.Parameter(default="blue", doc="Color of the editor", allow_refs=True)
     selection_color = param.Parameter(
         default=None, doc="Color of selection, by the default the same as color", allow_refs=True
@@ -90,19 +95,38 @@ class Style(param.Parameterized):
     edit_span_opts = _StyleOpts(default={})
     edit_rectangle_opts = _StyleOpts(default={})
 
+    _groupby = ()
+    _colormap = None
+
+    @property
+    def _color(self):
+        if self.color is None:
+            if self._groupby:
+                # This is the main point of this method
+                # we use this to be able to memorize the colormap
+                # so the color are the same no matter what
+                # the order of the groupby is
+                dim = hv.dim(self._groupby[0])
+                self._colormap = dict(zip(self._groupby[1], _default_color))
+                return dim.categorize(self._colormap)
+            else:
+                return _default_color[0]
+
+        return self.color
+
     @property
     def _indicator_selection(self) -> dict[str, tuple]:
         select = {"alpha": (self.selection_alpha, self.alpha)}
         if self.selection_color is not None:
-            if isinstance(self.color, hv.dim):
-                msg = "'Style.color' cannot be a `hv.dim` when 'Style.selection_color' is not None"
+            if isinstance(self._color, hv.dim):
+                msg = "'Style.color' cannot be a `hv.dim` / `None` when 'Style.selection_color' is not None"
                 raise ValueError(msg)
             else:
-                select["color"] = (self.selection_color, self.color)
+                select["color"] = (self.selection_color, self._color)
         return select
 
     def indicator(self, **select_opts) -> tuple[hv.Options, ...]:
-        opts = {**_default_opts, "color": self.color, **select_opts, **self.opts}
+        opts = {**_default_opts, "color": self._color, **select_opts, **self.opts}
         return (
             hv.opts.Rectangles(**opts, **self.rectangle_opts),
             hv.opts.VSpans(**opts, **self.span_opts),
@@ -127,6 +151,7 @@ class Style(param.Parameterized):
         )
 
     def reset(self) -> None:
+        self._colormap = None
         params = self.param.objects().items()
         self.param.update(**{k: v.default for k, v in params if k != "name"})
 
@@ -246,10 +271,24 @@ class AnnotationDisplay(param.Parameterized):
     def _update_data(self):
         with param.edit_constant(self):
             self.data = self.annotator.get_dataframe(dims=self.kdims)
+        if self.annotator.groupby:
+            self.annotator.style._groupby = (
+                self.annotator.groupby,
+                sorted(self.data[self.annotator.groupby].unique()),
+            )
 
     @property
     def element(self):
         return self.overlay()
+
+    @property
+    def edit_streams(self) -> dict[str, hv.streams.Stream]:
+        edit_streams = {}
+        if self.region_format in ("range", "range-range"):
+            edit_streams["box_select"] = self._edit_streams[0]
+        elif self.region_format in ("point", "point-point"):
+            edit_streams["tap"] = self._edit_streams[1]
+        return edit_streams
 
     @property
     def edit_tools(self) -> list[Tool]:
@@ -267,7 +306,7 @@ class AnnotationDisplay(param.Parameterized):
     @classmethod
     def _infer_kdim_dtypes(cls, element):
         if not isinstance(element, hv.Element):
-            msg = "Supplied object {element} is not a bare HoloViews Element"
+            msg = f"Supplied object {element} is not a bare HoloViews Element"
             raise ValueError(msg)
         kdim_dtypes = {}
         for kdim in element.dimensions(selection="key"):
@@ -298,6 +337,8 @@ class AnnotationDisplay(param.Parameterized):
     @selection_enabled.setter
     def selection_enabled(self, enabled: bool) -> None:
         self._selection_enabled = enabled
+        if not enabled:
+            self.clear_indicated_region()
 
     @property
     def editable_enabled(self) -> bool:
@@ -306,14 +347,13 @@ class AnnotationDisplay(param.Parameterized):
     @editable_enabled.setter
     def editable_enabled(self, enabled: bool) -> None:
         self._editable_enabled = enabled
-        if not enabled:
-            self.clear_indicated_region()
 
     def _filter_stream_values(self, bounds, x, y, geometry):
         if not self._editable_enabled:
             return (None, None, None, None)
         if self.region_format == "point" and bounds:
-            x = (bounds[0] + bounds[2]) / 2
+            #  x is calculated this way to handle datetime
+            x = bounds[0] + (bounds[2] - bounds[0]) / 2
             y = None
             bounds = (x, 0, x, 0)
         elif "range" not in self.region_format:
@@ -401,16 +441,16 @@ class AnnotationDisplay(param.Parameterized):
             else:
                 self.annotator.select_by_index()
 
-        tap_stream = hv.streams.Tap(source=element, transient=True)
-        tap_stream.add_subscriber(tap_selector)
+        self._tap_stream = hv.streams.Tap(source=element, transient=True)
+        self._tap_stream.add_subscriber(tap_selector)
         return element
 
     def register_double_tap_clear(self, element: hv.Element) -> hv.Element:
         def double_tap_clear(x, y):
             self.clear_indicated_region()
 
-        double_tap_stream = hv.streams.DoubleTap(source=element, transient=True)
-        double_tap_stream.add_subscriber(double_tap_clear)
+        self._double_tap_stream = hv.streams.DoubleTap(source=element, transient=True)
+        self._double_tap_stream.add_subscriber(double_tap_clear)
         return element
 
     def indicators(self) -> hv.DynamicMap:

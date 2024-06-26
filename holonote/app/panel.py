@@ -9,6 +9,8 @@ import param
 from packaging.version import Version
 from panel.viewable import Viewer
 
+from ..annotate.display import _default_color
+
 if TYPE_CHECKING:
     from holonote.annotate import Annotator
 
@@ -16,6 +18,8 @@ PN13 = Version(pn.__version__) >= Version("1.3.0")
 
 
 class PanelWidgets(Viewer):
+    reset_on_apply = param.Boolean(default=True, doc="Reset fields widgets on apply")
+
     mapping = {
         str: pn.widgets.TextInput,
         bool: pn.widgets.Checkbox,
@@ -25,7 +29,15 @@ class PanelWidgets(Viewer):
         float: pn.widgets.FloatSlider,
     }
 
-    def __init__(self, annotator: Annotator, field_values: dict[str, Any] | None = None):
+    def __init__(
+        self,
+        annotator: Annotator,
+        field_values: dict[str, Any] | None = None,
+        as_popup: bool = False,
+        **params,
+    ):
+        super().__init__(**params)
+        self._layouts = {}
         self.annotator = annotator
         self.annotator.snapshot()
         self._widget_mode_group = pn.widgets.RadioButtonGroup(
@@ -42,8 +54,70 @@ class PanelWidgets(Viewer):
         else:
             self._fields_values = {k: field_values.get(k, "") for k in self.annotator.fields}
         self._fields_widgets = self._create_fields_widgets(self._fields_values)
+        self._create_visible_widget()
 
         self._set_standard_callbacks()
+
+        self._layout = pn.Column(self.fields_widgets, self.tool_widgets)
+        if self.visible_widget is not None:
+            self._layout.insert(0, self.visible_widget)
+
+        self._as_popup = as_popup
+        if self._as_popup:
+            self._layout.visible = False
+            displays = self.annotator._displays
+            if not displays:
+                kdims = list(self.annotator.spec.keys())
+                display = self.annotator.get_display(*kdims)
+                display.indicators()
+            for display in displays.values():
+                if display.region_format in ("range", "range-range"):
+                    stream = display._edit_streams[0]
+                elif display.region_format in ("point", "point-point"):
+                    stream = display._edit_streams[1]
+                self._register_stream_popup(stream)
+                self._register_tap_popup(display)
+                self._register_double_tap_clear(display)
+
+    def _create_visible_widget(self):
+        if self.annotator.groupby is None:
+            self.visible_widget = None
+            return
+        style = self.annotator.style
+        if style.color is None and style._colormap is None:
+            data = sorted(self.annotator.df[self.annotator.groupby].unique())
+            colormap = dict(zip(data, _default_color))
+        else:
+            colormap = style._colormap
+        if isinstance(colormap, dict):
+            stylesheet = """
+            option:after {
+              content: "";
+              width: 10px;
+              height: 10px;
+              position: absolute;
+              border-radius: 50%;
+              left: calc(100% - var(--design-unit, 4) * 2px - 3px);
+              top: 20%;
+              border: 1px solid black;
+              opacity: 0.5;
+            }"""
+            for i, color in enumerate(colormap.values()):
+                stylesheet += f"""
+            option:nth-child({i + 1}):after {{
+                background-color: {color};
+            }}"""
+        else:
+            stylesheet = ""
+
+        options = list(colormap)
+        self.visible_widget = pn.widgets.MultiSelect(
+            name="Visible",
+            options=options,
+            value=self.annotator.visible or options,
+            stylesheets=[stylesheet],
+        )
+        self.annotator.visible = self.visible_widget
 
     def _add_button_description(self):
         from bokeh.models import Tooltip
@@ -124,6 +198,8 @@ class PanelWidgets(Viewer):
         for widget_name, default in self._fields_values.items():
             if isinstance(default, param.Parameter):
                 default = default.default
+            if isinstance(default, list):
+                default = default[0]
             with contextlib.suppress(Exception):
                 # TODO: Fix when lists (for categories, not the same as the default!)
                 self._fields_widgets[widget_name].value = default
@@ -140,13 +216,67 @@ class PanelWidgets(Viewer):
             fields_values = {k: v.value for k, v in self._fields_widgets.items()}
             if self._widget_mode_group.value == "+":
                 self.annotator.add_annotation(**fields_values)
-                self._reset_fields_widgets()
+                if self.reset_on_apply:
+                    self._reset_fields_widgets()
             elif (self._widget_mode_group.value == "✏") and (selected_ind is not None):
                 self.annotator.update_annotation_fields(
                     selected_ind, **fields_values
                 )  # TODO: Handle only changed
         elif self._widget_mode_group.value == "-" and selected_ind is not None:
             self.annotator.delete_annotation(selected_ind)
+
+    def _get_layout(self, name):
+        def close_layout(event):
+            layout.visible = False
+
+        layout = self._layouts.get(name)
+        if not layout:
+            layout = self._layout.clone(visible=False)
+            self._widget_apply_button.on_click(close_layout)
+            self._layouts[name] = layout
+        return layout
+
+    def _hide_layouts(self):
+        for layout in self._layouts.values():
+            layout.visible = False
+
+    def _register_stream_popup(self, stream):
+        def _popup(*args, **kwargs):
+            layout = self._get_layout(stream.name)
+            with param.parameterized.batch_call_watchers(self):
+                self._hide_layouts()
+                self._widget_mode_group.value = "+"
+                layout.visible = True
+                return layout
+
+        stream.popup = _popup
+
+    def _register_tap_popup(self, display):
+        def tap_popup(x, y) -> None:  # Tap tool must be enabled on the element
+            layout = self._get_layout("tap")
+            if self.annotator.selection_enabled:
+                with param.parameterized.batch_call_watchers(self):
+                    self._hide_layouts()
+                    layout.visible = True
+                    return layout
+
+        display._tap_stream.popup = tap_popup
+
+    def _register_double_tap_clear(self, display):
+        def double_tap_toggle(x, y):
+            layout = self._get_layout("doubletap")
+            if layout.visible:
+                with param.parameterized.batch_call_watchers(self):
+                    self._hide_layouts()
+                    layout.visible = True
+                    return layout
+
+        try:
+            tools = display._element.opts["tools"]
+        except KeyError:
+            tools = []
+        display._element.opts(tools=[*tools, "doubletap"])
+        display._double_tap_stream.popup = double_tap_toggle
 
     def _callback_commit(self, event):
         self.annotator.commit()
@@ -161,17 +291,15 @@ class PanelWidgets(Viewer):
             widget.value = value
 
     def _watcher_mode_group(self, event):
-        if event.new in ["-", "✏"]:
-            self.annotator.selection_enabled = True
-            self.annotator.select_by_index()
-            self.annotator.editable_enabled = False
-        elif event.new == "+":
-            self.annotator.editable_enabled = True
-            self.annotator.select_by_index()
-            self.annotator.selection_enabled = False
+        with param.parameterized.batch_call_watchers(self):
+            if event.new in ("-", "✏"):
+                self.annotator.selection_enabled = True
+            elif event.new == "+":
+                self.annotator.editable_enabled = True
+                self.annotator.selection_enabled = False
 
-        for widget in self._fields_widgets.values():
-            widget.disabled = event.new == "-"
+            for widget in self._fields_widgets.values():
+                widget.disabled = event.new == "-"
 
     def _set_standard_callbacks(self):
         self._widget_apply_button.on_click(self._callback_apply)
@@ -181,4 +309,4 @@ class PanelWidgets(Viewer):
         self._widget_mode_group.param.watch(self._watcher_mode_group, "value")
 
     def __panel__(self):
-        return pn.Column(self.fields_widgets, self.tool_widgets)
+        return self._layout.clone(visible=True)

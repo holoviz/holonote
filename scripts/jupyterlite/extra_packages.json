@@ -1,0 +1,6 @@
+[
+  "https://cdn.holoviz.org/panel/1.4.2/dist/wheels/bokeh-3.4.1-py3-none-any.whl",
+  "https://cdn.holoviz.org/panel/1.4.2/dist/wheels/panel-1.4.2-py3-none-any.whl",
+  "holonote",
+  "hvplot"
+]

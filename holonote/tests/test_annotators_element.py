@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import holoviews as hv
 import pytest
+from holoviews.operation.datashader import rasterize
 
 from holonote.tests.util import get_editor, get_indicator
 
@@ -44,6 +45,15 @@ def test_set_regions_range1d(annotator_range1d) -> None:
     output2 = output.iloc[0]["description"]
     expected2 = "Test"
     assert output2 == expected2
+
+
+def test_edit_streams(annotator_range1d) -> None:
+    annotator = annotator_range1d
+    edit_streams = annotator.get_display("TIME").edit_streams
+    assert len(edit_streams) == 1
+    assert "box_select" in edit_streams
+    assert "tap" not in edit_streams
+    assert "lasso_select" not in edit_streams
 
 
 def test_set_regions_range2d(annotator_range2d) -> None:
@@ -182,3 +192,70 @@ def test_groupby_visible(cat_annotator):
 
     with pytest.raises(StopIteration):
         next(iter_indicator)
+
+
+def test_multiply_overlay(annotator_range1d):
+    el1 = hv.Curve([], kdims=["TIME"])
+    el2 = hv.Curve([], kdims=["TIME"])
+    el = el1 * el2
+    assert isinstance(el, hv.Overlay)
+
+    el = el * annotator_range1d
+    hv.render(el)
+    assert isinstance(el.last, hv.Overlay)
+
+    el.opts(width=100)
+    hv.render(el)
+    assert el.last.opts.get().kwargs.get("width") == 100
+
+
+def test_multiply_ndoverlay(annotator_range1d):
+    el1 = hv.Curve([], kdims=["TIME"])
+    el2 = hv.Curve([], kdims=["TIME"])
+    el = hv.NdOverlay({1: el1, 2: el2})
+    assert isinstance(el, hv.NdOverlay)
+
+    el = el * annotator_range1d
+    hv.render(el)
+    assert isinstance(el.last, hv.Overlay)
+
+    el.opts(width=100)
+    hv.render(el)
+    assert el.last.opts.get().kwargs.get("width") == 100
+
+
+def test_multiply_layout(annotator_range1d):
+    el1 = hv.Curve([], kdims=["TIME"])
+    el2 = hv.Curve([], kdims=["TIME"])
+    el = el1 + el2
+    assert isinstance(el, hv.Layout)
+
+    el = el * annotator_range1d
+    hv.render(el)
+    assert isinstance(el, hv.Layout)
+
+    el.opts(width=100)
+    hv.render(el)
+    assert el.opts.get().kwargs.get("width") == 100
+
+
+def test_multiply_dynamicmap(annotator_range1d):
+    # rasterize creates a dynamicmap
+    el1 = rasterize(hv.Curve([], kdims=["TIME"]))
+    assert isinstance(el1, hv.DynamicMap)
+
+    el = el1 * annotator_range1d
+    hv.render(el)
+    # an overlay including a dynamicmap is still a dynamicmap
+    assert isinstance(el, hv.DynamicMap)
+
+
+def test_multiply_dynamicmap_layout(annotator_range1d):
+    el1 = rasterize(hv.Curve([], kdims=["TIME"]))
+    el2 = hv.Curve([], kdims=["TIME"])
+    el = el1 + el2
+    assert isinstance(el, hv.Layout)
+
+    el = el * annotator_range1d
+    hv.render(el)
+    assert isinstance(el, hv.Layout)

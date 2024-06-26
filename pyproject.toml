@@ -25,6 +25,11 @@ recommended = [
     "hvplot",
     "fastparquet",
     "scipy",
+    "datashader",
+    "dask[dataframe]",
+]
+examples = [
+    "holonote[dev]",
     "jupyterlab",
     "jupyterlab-myst",
 ]
