@@ -61,7 +61,7 @@ hvplot = "*"
 scipy = "*"
 
 [feature.test-example.tasks]
-test-examples = "python scripts/example_testing.py"
+test-example = "python scripts/example_testing.py"
 
 [feature.test-example.dependencies]
 nbval = "*"
