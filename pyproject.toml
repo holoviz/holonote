@@ -20,73 +20,34 @@ classifiers = [
 dependencies = ["holoviews >=1.18.0", "pandas"]
 
 [project.optional-dependencies]
-dev = [
-    "pre-commit",
-    "setuptools_scm",
-    "pytest",
-    "nbval",
-    "hvplot",
-    "fastparquet",
-    "scipy",
-    "datashader",
-    "dask[dataframe]",
-]
-examples = [
-    "holonote[dev]",
-    "jupyterlab",
-    "jupyterlab-myst",
-]
+tests = ["pytest"]
+recommended = ["hvplot", "fastparquet", "scipy", "datashader", "dask[dataframe]"]
+examples = ["holonote[recommended]", "jupyterlab", "jupyterlab-myst"]
 
-[tool.hatch]
-version.source = "vcs"
-build.hooks.vcs.version-file = "holonote/_version.py"
+[tool.hatch.version]
+source = "vcs"
+raw-options = { version_scheme = "no-guess-dev" }
 
-[tool.hatch.envs.conda]
-detached = true
-scripts.build = "bash scripts/conda/build.sh"
+[tool.hatch.build.targets.wheel]
+include = ["holonote"]
 
-[tool.hatch.envs.test]
-dependencies = ["holonote[dev]", "pytest-github-actions-annotate-failures"]
-scripts.run = "python -m pytest holonote/tests {args:.}"
-scripts.examples = "python scripts/example_testing.py"
-matrix = [{ python = ["3.9", "3.10", "3.11", "3.12"] }]
+[tool.hatch.build.targets.sdist]
+include = ["holonote", "scripts"]
 
-[tool.hatch.envs.docs]
-dependencies = ["holonote[dev]", "nbsite", "myst-nb <1", "matplotlib"]
-scripts.build = [
-    "nbsite generate-rst --keep-numbers --org holoviz --project-name holonote",
-    "python ./doc/no_header_tutorial.py",
-    "python ./doc/generate_modules.py holonote -d ./doc/reference_manual -n holonote -e tests",
-    "nbsite build --what=html --output=builtdocs --org holoviz --project-name holonote",
-]
-scripts.server = "python -m http.server 5500 --directory ./builtdocs"
-
-[tool.hatch.envs.lite]
-dependencies = ["holonote[examples]", "jupyterlab-open-url-parameter", "jupyterlite-core", "jupyterlite-pyodide-kernel"]
-scripts.build = "bash scripts/jupyterlite/build.sh"
-# Service worker only work on 127.0.0.1
-# https://jupyterlite.readthedocs.io/en/latest/howto/configure/advanced/service-worker.html#limitations
-scripts.server = "python -m http.server --directory ./jupyterlite --bind 127.0.0.1"
-
-[tool.hatch.envs.benchmark]
-dependencies = ["holonote[dev]", "pytest-codspeed", "pytest-xdist"]
-scripts.run = "pytest holonote --codspeed --benchmark -n auto {args:.}"
-
-[tool.hatch.envs.fmt]
-detached = true
-scripts.run = "pre-commit run --all"
-scripts.update = "pre-commit autoupdate"
+[tool.hatch.build.hooks.vcs]
+version-file = "holonote/_version.py"
 
 [tool.pytest.ini_options]
 addopts = ["--strict-config", "--strict-markers", "--color=yes"]
+log_cli_level = "INFO"
 minversion = "7"
 xfail_strict = true
 filterwarnings = [
     "error",
     # 2023-10: Datetime's utctimestamp() and utcnow() is deprecated in Python 3.12
-    "ignore:datetime.datetime.utcfromtimestamp():DeprecationWarning:dateutil.tz.tz",  # https://github.com/dateutil/dateutil/pull/1285
+    "ignore:datetime.datetime.utcfromtimestamp():DeprecationWarning:dateutil.tz.tz", # https://github.com/dateutil/dateutil/pull/1285
     # 2024-01
-    "ignore:\\s+Pyarrow will become a required dependency of pandas",  # Will fix itself
+    "ignore:\\s+Pyarrow will become a required dependency of pandas", # Will fix itself
 ]
 
 [tool.ruff]
@@ -118,22 +79,22 @@ select = [
 ]
 
 ignore = [
-    "E402",     # Module level import not at top of file
-    "E501",     # Line too long
-    "E712",     # Comparison to true should be is
-    "E731",     # Do not assign a lambda expression, use a def
-    "E741",     # Ambiguous variable name
-    "F405",     # From star imports
-    "PLE0604",  # Invalid object in `__all__`, must contain only strings
-    "PLE0605",  # Invalid format for `__all__`
-    "PLR091",   # Too many arguments/branches/statements
-    "PLR2004",  # Magic value used in comparison
-    "PLW2901",  # `for` loop variable is overwritten
-    "RUF012",   # Mutable class attributes should use `typing.ClassVar`
+    "E402", # Module level import not at top of file
+    "E501", # Line too long
+    "E712", # Comparison to true should be is
+    "E731", # Do not assign a lambda expression, use a def
+    "E741", # Ambiguous variable name
+    "F405", # From star imports
+    "PLE0604", # Invalid object in `__all__`, must contain only strings
+    "PLE0605", # Invalid format for `__all__`
+    "PLR091", # Too many arguments/branches/statements
+    "PLR2004", # Magic value used in comparison
+    "PLW2901", # `for` loop variable is overwritten
+    "RUF012", # Mutable class attributes should use `typing.ClassVar`
 ]
 
 unfixable = [
-    "F401",     # Unused imports
+    "F401", # Unused imports
 ]
 
 [tool.ruff.lint.per-file-ignores]
