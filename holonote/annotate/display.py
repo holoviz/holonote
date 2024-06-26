@@ -491,7 +491,7 @@ class AnnotationDisplay(param.Parameterized):
             "data": self.data,
             "region_labels": region_labels,
             "fields_labels": fields_labels,
-            "invert_axes": self.invert_axis,
+            "invert_axes": self.invert_axis,  # Only handled for range1D
             "groupby": self.annotator.groupby,
         }
 

@@ -141,7 +141,7 @@ def test_single_shared_axis_hspan(annotator_range2d):
     bounds = (-1, -1, 1, 1)
     data = np.array([[0, 1], [1, 0]])
     img = hv.Image(data, kdims=["x", "y"], bounds=bounds)
-    img_right = hv.Image(data, kdims=["z", "y"], bounds=bounds)  # y as second kdim! so HSpan
+    img_right = hv.Image(data, kdims=["z", "y"], bounds=bounds)
 
     left_plot = annotator * img
     right_plot = annotator * img_right
@@ -170,7 +170,7 @@ def test_single_shared_axis_vspan(annotator_range2d):
     bounds = (-1, -1, 1, 1)
     data = np.array([[0, 1], [1, 0]])
     img = hv.Image(data, kdims=["x", "y"], bounds=bounds)
-    img_right = hv.Image(data, kdims=["y", "z"], bounds=bounds)  # y as first kdim! so VSpan
+    img_right = hv.Image(data, kdims=["y", "z"], bounds=bounds)
 
     left_plot = annotator * img
     right_plot = annotator * img_right
