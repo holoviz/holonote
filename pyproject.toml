@@ -29,7 +29,7 @@ recommended = [
     "dask[dataframe]",
 ]
 examples = [
-    "holonote[dev]",
+    "holonote[recommended]",
     "jupyterlab",
     "jupyterlab-myst",
 ]

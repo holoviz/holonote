@@ -48,6 +48,7 @@ scipy = "*"
 # =============================================
 [feature.test-core.dependencies]
 pytest = "*"
+pytest-cov = "*"
 pytest-github-actions-annotate-failures = "*"
 
 [feature.test-core.tasks]
