@@ -17,4 +17,9 @@ doc/**/*.ipynb
 jupyterlite/
 !scripts/jupyterlite
 scripts/jupyterlite/.jupyterlite.doit.db
-node_modules
+scripts/jupyterlite/*.json
+node_modules/
+
+# Pixi
+.pixi
+pixi.lock

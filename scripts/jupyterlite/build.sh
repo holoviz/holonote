@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -euxo pipefail
 
-cd "$(dirname "${BASH_SOURCE[0]}")"
+PACKAGE="holonote"
 
-# Make new wheel
-hatch build --clean -t wheel
-VERSION=$(hatch version)
+python -m build -w .
+VERSION=$(python -c "import $PACKAGE; print($PACKAGE._version.__version__)")
 export VERSION
 
 # Update lockfiles
+cd "$(dirname "${BASH_SOURCE[0]}")"
 rm -rf node_modules
 npm install .
 node update_lock.js
