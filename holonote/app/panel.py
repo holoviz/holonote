@@ -98,7 +98,6 @@ class PanelWidgets(Viewer):
               position: absolute;
               border-radius: 50%;
               left: calc(100% - var(--design-unit, 4) * 2px - 3px);
-              top: 20%;
               border: 1px solid black;
               opacity: 0.5;
             }"""
