@@ -234,6 +234,15 @@ class AnnotationDisplay(param.Parameterized):
 
     data = param.DataFrame(doc="Combined dataframe of annotation data", constant=True)
 
+    nearest_2d_point_threshold = param.Number(
+        default=0.1,
+        bounds=(0, None),
+        doc="""
+        Threshold for selecting an existing 2D point; anything over
+        this threshold will create a new point instead.
+        """,
+    )
+
     _count = param.Integer(default=0, precedence=-1)
 
     def __init__(self, annotator: Annotator, **params) -> None:
@@ -423,14 +432,17 @@ class AnnotationDisplay(param.Parameterized):
             )
             subset = reduce(np.logical_and, iter_mask)
             out = list(df[subset].index)
-        elif "point" in self.region_format:
+        elif self.region_format == "point-point":
             xk, yk = list(inputs.keys())
             distance = (
                 (df[f"point[{xk}]"] - inputs[xk]) ** 2 + (df[f"point[{yk}]"] - inputs[yk]) ** 2
             ) ** 0.5
-            if (distance > inputs[xk] / 1e2).all():
+            if (distance > self.nearest_2d_point_threshold).all():
                 return []
             out = [df.loc[distance.idxmin()].name]  # index == name of series
+        elif "point" in self.region_format:
+            iter_mask = ((df[f"point[{k}]"] - v).abs().argmin() for k, v in inputs.items())
+            out = list(df[reduce(np.logical_and, iter_mask)].index)
         else:
             msg = f"{self.region_format} not implemented"
             raise NotImplementedError(msg)
