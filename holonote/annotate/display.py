@@ -251,7 +251,7 @@ class AnnotationDisplay(param.Parameterized):
 
         self._selection_info = {}
 
-        self._selection_enabled = True
+        self._selection_enabled = False
         self._editable_enabled = True
 
         transient = False
@@ -303,6 +303,7 @@ class AnnotationDisplay(param.Parameterized):
             tools.append(BoxSelectTool(dimensions="width"))
         elif self.region_format == "point-point":
             tools.append("tap")
+        tools.append("doubletap")
         return tools
 
     @classmethod
@@ -443,7 +444,7 @@ class AnnotationDisplay(param.Parameterized):
             else:
                 self.annotator.select_by_index()
 
-        self._tap_stream = hv.streams.Tap(source=element, transient=True)
+        self._tap_stream = hv.streams.Tap(source=element)
         self._tap_stream.add_subscriber(tap_selector)
         return element
 
@@ -451,7 +452,7 @@ class AnnotationDisplay(param.Parameterized):
         def double_tap_clear(x, y):
             self.clear_indicated_region()
 
-        self._double_tap_stream = hv.streams.DoubleTap(source=element, transient=True)
+        self._double_tap_stream = hv.streams.DoubleTap(source=element)
         self._double_tap_stream.add_subscriber(double_tap_clear)
         return element
 
@@ -473,6 +474,7 @@ class AnnotationDisplay(param.Parameterized):
             active_tools += ["box_select"]
         elif self.region_format == "point-point":
             active_tools += ["tap"]
+
         layers.append(self._element.opts(tools=self.edit_tools, active_tools=active_tools))
 
         if indicators:
