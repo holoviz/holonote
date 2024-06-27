@@ -1,20 +1,19 @@
 from __future__ import annotations
 
+from importlib.util import find_spec
+
 import holoviews as hv
+import numpy as np
 import pytest
-from holoviews.operation.datashader import rasterize
 
-from holonote.tests.util import get_editor, get_indicator
+from holonote.tests.util import (
+    get_display_data_from_plot,
+    get_editor_data,
+    get_indicator,
+    get_indicator_data,
+)
 
-
-def get_editor_data(annotator, element_type, kdims=None):
-    el = get_editor(annotator, element_type, kdims)
-    return getattr(el, "data", None)
-
-
-def get_indicator_data(annotator, element_type, kdims=None):
-    for el in get_indicator(annotator, element_type, kdims):
-        yield el.data
+datashader = find_spec("datashader")
 
 
 def test_set_regions_range1d(annotator_range1d) -> None:
@@ -137,6 +136,64 @@ def test_set_regions_multiple(multiple_annotators):
     assert output2 == expected2
 
 
+def test_single_shared_axis_hspan(annotator_range2d):
+    annotator = annotator_range2d
+    bounds = (-1, -1, 1, 1)
+    data = np.array([[0, 1], [1, 0]])
+    img = hv.Image(data, kdims=["x", "y"], bounds=bounds)
+    img_right = hv.Image(data, kdims=["z", "y"], bounds=bounds)
+
+    left_plot = annotator * img
+    right_plot = annotator * img_right
+    layout = left_plot + right_plot
+    hv.render(layout)
+
+    annotator.set_regions(x=(-0.15, 0.15), y=(-0.25, 0.25))
+    annotator.add_annotation(description="Test")
+
+    left_display_data = get_display_data_from_plot(left_plot, hv.Rectangles, ["x", "y"])
+    right_display_data = get_display_data_from_plot(right_plot, hv.HSpans, ["y"])
+
+    expected_left = [-0.15, -0.25, 0.15, 0.25]
+    assert (
+        left_display_data == expected_left
+    ), f"Expected {expected_left}, but got {left_display_data}"
+
+    expected_right = [-0.25, 0.25]
+    assert (
+        right_display_data == expected_right
+    ), f"Expected {expected_right}, but got {right_display_data}"
+
+
+def test_single_shared_axis_vspan(annotator_range2d):
+    annotator = annotator_range2d
+    bounds = (-1, -1, 1, 1)
+    data = np.array([[0, 1], [1, 0]])
+    img = hv.Image(data, kdims=["x", "y"], bounds=bounds)
+    img_right = hv.Image(data, kdims=["y", "z"], bounds=bounds)
+
+    left_plot = annotator * img
+    right_plot = annotator * img_right
+    layout = left_plot + right_plot
+    hv.render(layout)
+
+    annotator.set_regions(x=(-0.15, 0.15), y=(-0.25, 0.25))
+    annotator.add_annotation(description="Test")
+
+    left_display_data = get_display_data_from_plot(left_plot, hv.Rectangles, ["x", "y"])
+    right_display_data = get_display_data_from_plot(right_plot, hv.VSpans, ["y"])
+
+    expected_left = [-0.15, -0.25, 0.15, 0.25]
+    assert (
+        left_display_data == expected_left
+    ), f"Expected {expected_left}, but got {left_display_data}"
+
+    expected_right = [-0.25, 0.25]
+    assert (
+        right_display_data == expected_right
+    ), f"Expected {expected_right}, but got {right_display_data}"
+
+
 def test_editable_enabled(annotator_range1d):
     annotator_range1d.get_display("TIME")
     assert annotator_range1d._displays
@@ -239,7 +296,10 @@ def test_multiply_layout(annotator_range1d):
     assert el.opts.get().kwargs.get("width") == 100
 
 
+@pytest.mark.skipif(datashader is None, reason="Datashader is not installed")
 def test_multiply_dynamicmap(annotator_range1d):
+    from holoviews.operation.datashader import rasterize
+
     # rasterize creates a dynamicmap
     el1 = rasterize(hv.Curve([], kdims=["TIME"]))
     assert isinstance(el1, hv.DynamicMap)
@@ -250,7 +310,10 @@ def test_multiply_dynamicmap(annotator_range1d):
     assert isinstance(el, hv.DynamicMap)
 
 
+@pytest.mark.skipif(datashader is None, reason="Datashader is not installed")
 def test_multiply_dynamicmap_layout(annotator_range1d):
+    from holoviews.operation.datashader import rasterize
+
     el1 = rasterize(hv.Curve([], kdims=["TIME"]))
     el2 = hv.Curve([], kdims=["TIME"])
     el = el1 + el2

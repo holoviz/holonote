@@ -328,17 +328,21 @@ class Annotator(AnnotatorInterface):
         return AnnotationDisplay._infer_kdim_dtypes(element)
 
     def _create_annotation_element(self, element_key: tuple[str, ...]) -> AnnotationDisplay:
+        # Invert axis if first kdim is None, ensuring overlaying annotations align with underlying elements
+        invert_axis = element_key[0] is None
         for key in element_key:
-            if key not in self.spec:
+            if key is not None and key not in self.spec:
                 msg = f"Dimension {key!r} not in spec"
                 raise ValueError(msg)
-        return AnnotationDisplay(self, kdims=list(element_key))
+        return AnnotationDisplay(
+            self, kdims=[e for e in element_key if e is not None], invert_axis=invert_axis
+        )
 
     def get_element(self, *kdims: str | hv.Dimension) -> hv.DynamicMap:
         return self.get_display(*kdims).element
 
     def get_display(self, *kdims: str | hv.Dimension) -> AnnotationDisplay:
-        element_key = tuple(map(str, kdims))
+        element_key = tuple(str(x) if x is not None else None for x in kdims)
         if element_key not in self._displays:
             self._displays[element_key] = self._create_annotation_element(element_key)
         return self._displays[element_key]
@@ -351,8 +355,8 @@ class Annotator(AnnotatorInterface):
         kdims = other.kdims
         if not kdims or kdims == ["Element"]:
             kdims = next(k for el in other.values() if (k := el.kdims))
-        kdims = [kdim for kdim in kdims if kdim.name in self.spec]
-        if kdims:
+        kdims = [kdim if kdim.name in self.spec else None for kdim in kdims]
+        if any(kdims):
             return kdims
         else:
             msg = "No valid kdims found in element"
