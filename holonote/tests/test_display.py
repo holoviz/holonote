@@ -22,7 +22,7 @@ class TestPoint2D:
         indices = display.get_indices_by_position(x=x + 0.5, y=y + 0.5)
         assert len(indices) == 0
 
-        display.nearest_2d_point_threshold = 5
+        display._nearest_2d_point_threshold = 5
         indices = display.get_indices_by_position(x=x + 0.5, y=y + 0.5)
         assert len(indices) == 1
 
@@ -48,7 +48,7 @@ class TestPoint2D:
         annotator_point2d.add_annotation(description=description)
 
         display = annotator_point2d.get_display("x", "y")
-        display.nearest_2d_point_threshold = 1000
+        display._nearest_2d_point_threshold = 1000
 
         indices = display.get_indices_by_position(x=x, y=y)
         assert len(indices) == 1
