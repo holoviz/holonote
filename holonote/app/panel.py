@@ -245,13 +245,12 @@ class PanelWidgets(Viewer):
         Prevents multiple layouts from being visible at the same time.
         """
         desired_layout = None
-        with param.parameterized.batch_call_watchers(self):
-            for name, layout in self._layouts.items():
-                if name == desired_name:
-                    layout.visible = True
-                    desired_layout = layout
-                elif not name.startswith("panel"):
-                    layout.visible = False
+        for name, layout in self._layouts.items():
+            if name == desired_name:
+                layout.visible = True
+                desired_layout = layout
+            elif name != "__panel__":
+                layout.visible = False
 
         # If the desired layout is not found, create it
         if desired_name is not None and desired_layout is None:
@@ -260,9 +259,9 @@ class PanelWidgets(Viewer):
 
     def _register_stream_popup(self, stream):
         def _popup(*args, **kwargs):
-            # If the annotation widgets are laid out on the side,
-            # do not show the popup when in subtract or edit mode
-            widgets_on_side = any(name.startswith("panel") for name in self._layouts)
+            # If the annotation widgets are laid out on the side in a Column/Row/etc,
+            # while as_popup=True, do not show the popup during subtract or edit mode
+            widgets_on_side = any(name == "__panel__" for name in self._layouts)
             if widgets_on_side and self._widget_mode_group.value in ("-", "✏"):
                 return
             self._widget_mode_group.value = "+"
@@ -287,6 +286,11 @@ class PanelWidgets(Viewer):
                 # Open specifically the doubletap layout
                 return self._hide_layouts_except("doubletap")
 
+        try:
+            tools = display._element.opts["tools"]
+        except KeyError:
+            tools = []
+        display._element.opts(tools=[*tools, "doubletap"])
         display._double_tap_stream.popup = double_tap_toggle
 
     def _callback_commit(self, event):
@@ -321,5 +325,5 @@ class PanelWidgets(Viewer):
 
     def __panel__(self):
         layout = self._layout.clone(visible=True)
-        self._layouts["panel"] = layout
+        self._layouts["__panel__"] = layout
         return layout

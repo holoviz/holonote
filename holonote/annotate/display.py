@@ -303,7 +303,6 @@ class AnnotationDisplay(param.Parameterized):
             tools.append(BoxSelectTool(dimensions="width"))
         elif self.region_format == "point-point":
             tools.append("tap")
-        tools.append("doubletap")
         return tools
 
     @classmethod
