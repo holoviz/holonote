@@ -265,6 +265,7 @@ class PanelWidgets(Viewer):
             widgets_on_side = any(name.startswith("panel") for name in self._layouts)
             if widgets_on_side and self._widget_mode_group.value in ("-", "✏"):
                 return
+            self._widget_mode_group.value = "+"
             return self._hide_layouts_except(stream.name)
 
         stream.popup = _popup

@@ -444,7 +444,7 @@ class AnnotationDisplay(param.Parameterized):
             else:
                 self.annotator.select_by_index()
 
-        self._tap_stream = hv.streams.Tap(source=element)
+        self._tap_stream = hv.streams.Tap(source=element, transient=True)
         self._tap_stream.add_subscriber(tap_selector)
         return element
 
@@ -452,7 +452,7 @@ class AnnotationDisplay(param.Parameterized):
         def double_tap_clear(x, y):
             self.clear_indicated_region()
 
-        self._double_tap_stream = hv.streams.DoubleTap(source=element)
+        self._double_tap_stream = hv.streams.DoubleTap(source=element, transient=True)
         self._double_tap_stream.add_subscriber(double_tap_clear)
         return element
 
