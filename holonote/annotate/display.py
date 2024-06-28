@@ -473,6 +473,7 @@ class AnnotationDisplay(param.Parameterized):
             active_tools += ["box_select"]
         elif self.region_format == "point-point":
             active_tools += ["tap"]
+
         layers.append(self._element.opts(tools=self.edit_tools, active_tools=active_tools))
 
         if indicators:
