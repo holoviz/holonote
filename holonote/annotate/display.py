@@ -251,7 +251,7 @@ class AnnotationDisplay(param.Parameterized):
 
         self._selection_info = {}
 
-        self._selection_enabled = False
+        self._selection_enabled = True
         self._editable_enabled = True
 
         transient = False
