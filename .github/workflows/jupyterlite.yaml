@@ -44,7 +44,7 @@ jobs:
       - uses: holoviz-dev/holoviz_tasks/pixi_install@pixi
         with:
           environments: lite
-      - name: Build documentation
+      - name: Build
         run: pixi run -e lite lite-build
       - uses: actions/upload-artifact@v4
         if: always()

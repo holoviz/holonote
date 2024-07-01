@@ -98,7 +98,6 @@ class PanelWidgets(Viewer):
               position: absolute;
               border-radius: 50%;
               left: calc(100% - var(--design-unit, 4) * 2px - 3px);
-              top: 20%;
               border: 1px solid black;
               opacity: 0.5;
             }"""
@@ -225,51 +224,67 @@ class PanelWidgets(Viewer):
         elif self._widget_mode_group.value == "-" and selected_ind is not None:
             self.annotator.delete_annotation(selected_ind)
 
-    def _get_layout(self, name):
+    def _add_layout(self, name):
+        """
+        Add a layout to the panel, by cloning the root layout, linking the close button,
+        and returning it visibly.
+        """
+
         def close_layout(event):
             layout.visible = False
 
         layout = self._layouts.get(name)
         if not layout:
-            layout = self._layout.clone(visible=False)
+            layout = self._layout.clone(visible=True)
             self._widget_apply_button.on_click(close_layout)
             self._layouts[name] = layout
         return layout
 
-    def _hide_layouts(self):
-        for layout in self._layouts.values():
-            layout.visible = False
+    def _hide_layouts_except(self, desired_name) -> pn.Column:
+        """
+        Prevents multiple layouts from being visible at the same time.
+        """
+        desired_layout = None
+        for name, layout in self._layouts.items():
+            if name == desired_name:
+                layout.visible = True
+                desired_layout = layout
+            elif name != "__panel__":
+                layout.visible = False
+
+        # If the desired layout is not found, create it
+        if desired_name is not None and desired_layout is None:
+            desired_layout = self._add_layout(desired_name)
+        return desired_layout
 
     def _register_stream_popup(self, stream):
         def _popup(*args, **kwargs):
-            layout = self._get_layout(stream.name)
-            with param.parameterized.batch_call_watchers(self):
-                self._hide_layouts()
-                self._widget_mode_group.value = "+"
-                layout.visible = True
-                return layout
+            # If the annotation widgets are laid out on the side in a Column/Row/etc,
+            # while as_popup=True, do not show the popup during subtract or edit mode
+            widgets_on_side = any(name == "__panel__" for name in self._layouts)
+            if widgets_on_side and self._widget_mode_group.value in ("-", "✏"):
+                return
+            self._widget_mode_group.value = "+"
+            return self._hide_layouts_except(stream.name)
 
         stream.popup = _popup
 
     def _register_tap_popup(self, display):
         def tap_popup(x, y) -> None:  # Tap tool must be enabled on the element
-            layout = self._get_layout("tap")
-            if self.annotator.selection_enabled:
-                with param.parameterized.batch_call_watchers(self):
-                    self._hide_layouts()
-                    layout.visible = True
-                    return layout
+            if self.annotator.selected_indices:
+                return self._hide_layouts_except("tap")
 
         display._tap_stream.popup = tap_popup
 
     def _register_double_tap_clear(self, display):
         def double_tap_toggle(x, y):
-            layout = self._get_layout("doubletap")
-            if layout.visible:
-                with param.parameterized.batch_call_watchers(self):
-                    self._hide_layouts()
-                    layout.visible = True
-                    return layout
+            # Toggle the visibility of the doubletap layout
+            if any(layout.visible for layout in self._layouts.values()):
+                # Clear all open layouts
+                self._hide_layouts_except(None)
+            else:
+                # Open specifically the doubletap layout
+                return self._hide_layouts_except("doubletap")
 
         try:
             tools = display._element.opts["tools"]
@@ -285,7 +300,6 @@ class PanelWidgets(Viewer):
         if len(event.new) != 1:
             return
         selected_index = event.new[0]
-        # if self._widget_mode_group.value == '✏':
         for name, widget in self._fields_widgets.items():
             value = self.annotator.annotation_table._field_df.loc[selected_index][name]
             widget.value = value
@@ -294,6 +308,7 @@ class PanelWidgets(Viewer):
         with param.parameterized.batch_call_watchers(self):
             if event.new in ("-", "✏"):
                 self.annotator.selection_enabled = True
+                self.annotator.editable_enabled = False
             elif event.new == "+":
                 self.annotator.editable_enabled = True
                 self.annotator.selection_enabled = False
@@ -309,4 +324,6 @@ class PanelWidgets(Viewer):
         self._widget_mode_group.param.watch(self._watcher_mode_group, "value")
 
     def __panel__(self):
-        return self._layout.clone(visible=True)
+        layout = self._layout.clone(visible=True)
+        self._layouts["__panel__"] = layout
+        return layout

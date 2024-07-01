@@ -208,7 +208,7 @@ class Indicator:
         """
         vdims = [*fields_labels, "__selected__"]
         ds = hv.Dataset(data, kdims=region_labels, vdims=vdims)
-        element = ds.to(hv.VSpans, groupby=groupby)
+        element = ds.to(hv.HSpans if invert_axes else hv.VSpans, groupby=groupby)
         hover = cls._build_hover_tool(data)
         return element.opts(tools=[hover])
 
@@ -235,6 +235,8 @@ class AnnotationDisplay(param.Parameterized):
     )
 
     data = param.DataFrame(doc="Combined dataframe of annotation data", constant=True)
+
+    invert_axis = param.Boolean(default=False, doc="Switch the annotation axis")
 
     _count = param.Integer(default=0, precedence=-1)
 
@@ -471,6 +473,7 @@ class AnnotationDisplay(param.Parameterized):
             active_tools += ["box_select"]
         elif self.region_format == "point-point":
             active_tools += ["tap"]
+
         layers.append(self._element.opts(tools=self.edit_tools, active_tools=active_tools))
 
         if indicators:
@@ -489,7 +492,7 @@ class AnnotationDisplay(param.Parameterized):
             "data": self.data,
             "region_labels": region_labels,
             "fields_labels": fields_labels,
-            "invert_axes": False,  # Not yet handled
+            "invert_axes": self.invert_axis,  # Only handled for range1D
             "groupby": self.annotator.groupby,
         }
 
