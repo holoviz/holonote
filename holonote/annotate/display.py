@@ -88,12 +88,14 @@ class Style(param.Parameterized):
     line_opts = _StyleOpts(default={})
     span_opts = _StyleOpts(default={})
     rectangle_opts = _StyleOpts(default={})
+    points_opts = _StyleOpts(default={})
 
     # Editor opts
     edit_opts = _StyleOpts(default={"line_color": "black"})
     edit_line_opts = _StyleOpts(default={})
     edit_span_opts = _StyleOpts(default={})
     edit_rectangle_opts = _StyleOpts(default={})
+    edit_points_opts = _StyleOpts(default={})
 
     _groupby = ()
     _colormap = None
@@ -133,6 +135,7 @@ class Style(param.Parameterized):
             hv.opts.HSpans(**opts, **self.span_opts),
             hv.opts.VLines(**opts, **self.line_opts),
             hv.opts.HLines(**opts, **self.line_opts),
+            hv.opts.Points(**opts, **self.points_opts),
         )
 
     def editor(self) -> tuple[hv.Options, ...]:
@@ -148,6 +151,7 @@ class Style(param.Parameterized):
             hv.opts.HSpan(**opts, **self.edit_span_opts),
             hv.opts.VLine(**opts, **self.edit_line_opts),
             hv.opts.HLine(**opts, **self.edit_line_opts),
+            hv.opts.Points(**opts, **self.edit_points_opts),
         )
 
     def reset(self) -> None:
@@ -235,7 +239,7 @@ class AnnotationDisplay(param.Parameterized):
     data = param.DataFrame(doc="Combined dataframe of annotation data", constant=True)
 
     _nearest_2d_point_threshold = param.Number(
-        default=0.1,
+        default=1,
         bounds=(0, None),
         doc="""
         Threshold In the distance in data coordinates between the two dimensions;
@@ -438,12 +442,12 @@ class AnnotationDisplay(param.Parameterized):
             out = list(df[subset].index)
         elif self.region_format == "point-point":
             xk, yk = list(inputs.keys())
-            distance = (df[f"point[{xk}]"] - inputs[xk]) ** 2 + (
-                df[f"point[{yk}]"] - inputs[yk]
-            ) ** 2
-            if (distance > self._nearest_2d_point_threshold**2).all():
+            xdist = (df[f"point[{xk}]"] - inputs[xk]) ** 2
+            ydist = (df[f"point[{yk}]"] - inputs[yk]) ** 2
+            distance_squared = xdist + ydist
+            if (distance_squared > self._nearest_2d_point_threshold**2).all():
                 return []
-            out = [df.loc[distance.idxmin()].name]  # index == name of series
+            out = [df.loc[distance_squared.idxmin()].name]  # index == name of series
         elif "point" in self.region_format:
             iter_mask = ((df[f"point[{k}]"] - v).abs().argmin() for k, v in inputs.items())
             out = list(df[reduce(np.logical_and, iter_mask)].index)
