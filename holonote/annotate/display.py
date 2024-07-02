@@ -88,12 +88,14 @@ class Style(param.Parameterized):
     line_opts = _StyleOpts(default={})
     span_opts = _StyleOpts(default={})
     rectangle_opts = _StyleOpts(default={})
+    points_opts = _StyleOpts(default={})
 
     # Editor opts
     edit_opts = _StyleOpts(default={"line_color": "black"})
     edit_line_opts = _StyleOpts(default={})
     edit_span_opts = _StyleOpts(default={})
     edit_rectangle_opts = _StyleOpts(default={})
+    edit_points_opts = _StyleOpts(default={})
 
     _groupby = ()
     _colormap = None
@@ -133,6 +135,7 @@ class Style(param.Parameterized):
             hv.opts.HSpans(**opts, **self.span_opts),
             hv.opts.VLines(**opts, **self.line_opts),
             hv.opts.HLines(**opts, **self.line_opts),
+            hv.opts.Points(**opts, **self.points_opts),
         )
 
     def editor(self) -> tuple[hv.Options, ...]:
@@ -148,6 +151,7 @@ class Style(param.Parameterized):
             hv.opts.HSpan(**opts, **self.edit_span_opts),
             hv.opts.VLine(**opts, **self.edit_line_opts),
             hv.opts.HLine(**opts, **self.edit_line_opts),
+            hv.opts.Points(**opts, **self.edit_points_opts),
         )
 
     def reset(self) -> None:
@@ -177,8 +181,6 @@ class Indicator:
         cls, data, region_labels, fields_labels, invert_axes=False, groupby: str | None = None
     ):
         "Vectorizes point regions to VLines * HLines. Note does not support hover info"
-        msg = "2D point regions not supported yet"
-        raise NotImplementedError(msg)
         vdims = [*fields_labels, "__selected__"]
         element = hv.Points(data, kdims=region_labels, vdims=vdims)
         hover = cls._build_hover_tool(data)
@@ -235,6 +237,17 @@ class AnnotationDisplay(param.Parameterized):
     )
 
     data = param.DataFrame(doc="Combined dataframe of annotation data", constant=True)
+
+    nearest_2d_point_threshold = param.Number(
+        default=None,
+        bounds=(0, None),
+        doc="""
+        Threshold In the distance in data coordinates between the two dimensions;
+        it does not consider the unit and magnitude differences between the dimensions
+        for selecting an existing 2D point; anything over this threshold will create
+        a new point instead. This parameter is experimental and is subject to change.
+        """,
+    )
 
     invert_axis = param.Boolean(default=False, doc="Switch the annotation axis")
 
@@ -425,13 +438,27 @@ class AnnotationDisplay(param.Parameterized):
             iter_mask = (
                 (df[f"start[{k}]"] <= v) & (v < df[f"end[{k}]"]) for k, v in inputs.items()
             )
+            subset = reduce(np.logical_and, iter_mask)
+            out = list(df[subset].index)
+        elif self.region_format == "point-point":
+            xk, yk = list(inputs.keys())
+            xdist = (df[f"point[{xk}]"] - inputs[xk]) ** 2
+            ydist = (df[f"point[{yk}]"] - inputs[yk]) ** 2
+            distance_squared = xdist + ydist
+            if (
+                self.nearest_2d_point_threshold
+                and (distance_squared > self.nearest_2d_point_threshold**2).all()
+            ):
+                return []
+            out = [df.loc[distance_squared.idxmin()].name]  # index == name of series
         elif "point" in self.region_format:
             iter_mask = ((df[f"point[{k}]"] - v).abs().argmin() for k, v in inputs.items())
+            out = list(df[reduce(np.logical_and, iter_mask)].index)
         else:
             msg = f"{self.region_format} not implemented"
             raise NotImplementedError(msg)
 
-        return list(df[reduce(np.logical_and, iter_mask)].index)
+        return out
 
     def register_tap_selector(self, element: hv.Element) -> hv.Element:
         def tap_selector(x, y) -> None:  # Tap tool must be enabled on the element
@@ -484,7 +511,9 @@ class AnnotationDisplay(param.Parameterized):
 
     def static_indicators(self, **events):
         fields_labels = self.annotator.all_fields
-        region_labels = [k for k in self.data.columns if k not in fields_labels]
+        region_labels = [
+            k for k in self.data.columns if k not in fields_labels and k != "__selected__"
+        ]
 
         self.data["__selected__"] = self.data.index.isin(self.annotator.selected_indices)
 
