@@ -238,14 +238,14 @@ class AnnotationDisplay(param.Parameterized):
 
     data = param.DataFrame(doc="Combined dataframe of annotation data", constant=True)
 
-    _nearest_2d_point_threshold = param.Number(
-        default=1,
+    nearest_2d_point_threshold = param.Number(
+        default=None,
         bounds=(0, None),
         doc="""
         Threshold In the distance in data coordinates between the two dimensions;
         it does not consider the unit and magnitude differences between the dimensions
         for selecting an existing 2D point; anything over this threshold will create
-        a new point instead.
+        a new point instead. This parameter is experimental and is subject to change.
         """,
     )
 
@@ -445,7 +445,10 @@ class AnnotationDisplay(param.Parameterized):
             xdist = (df[f"point[{xk}]"] - inputs[xk]) ** 2
             ydist = (df[f"point[{yk}]"] - inputs[yk]) ** 2
             distance_squared = xdist + ydist
-            if (distance_squared > self._nearest_2d_point_threshold**2).all():
+            if (
+                self.nearest_2d_point_threshold
+                and (distance_squared > self.nearest_2d_point_threshold**2).all()
+            ):
                 return []
             out = [df.loc[distance_squared.idxmin()].name]  # index == name of series
         elif "point" in self.region_format:

@@ -15,6 +15,7 @@ class TestPoint2D:
 
     def test_get_indices_by_position_nearest_2d_point_threshold(self, annotator_point2d):
         x, y = 0.5, 0.3
+        annotator_point2d.get_display("x", "y").nearest_2d_point_threshold = 1
         description = "A test annotation!"
         annotator_point2d.set_regions(x=x, y=y)
         annotator_point2d.add_annotation(description=description)
@@ -22,7 +23,20 @@ class TestPoint2D:
         indices = display.get_indices_by_position(x=x + 1.5, y=y + 1.5)
         assert len(indices) == 0
 
-        display._nearest_2d_point_threshold = 5
+        display.nearest_2d_point_threshold = 5
+        indices = display.get_indices_by_position(x=x + 0.5, y=y + 0.5)
+        assert len(indices) == 1
+
+    def test_get_indices_by_position_nearest(self, annotator_point2d):
+        x, y = 0.5, 0.3
+        description = "A test annotation!"
+        annotator_point2d.set_regions(x=x, y=y)
+        annotator_point2d.add_annotation(description=description)
+        display = annotator_point2d.get_display("x", "y")
+        indices = display.get_indices_by_position(x=x + 1.5, y=y + 1.5)
+        assert len(indices) == 1
+
+        display.nearest_2d_point_threshold = 5
         indices = display.get_indices_by_position(x=x + 0.5, y=y + 0.5)
         assert len(indices) == 1
 
@@ -48,7 +62,7 @@ class TestPoint2D:
         annotator_point2d.add_annotation(description=description)
 
         display = annotator_point2d.get_display("x", "y")
-        display._nearest_2d_point_threshold = 1000
+        display.nearest_2d_point_threshold = 1000
 
         indices = display.get_indices_by_position(x=x, y=y)
         assert len(indices) == 1
