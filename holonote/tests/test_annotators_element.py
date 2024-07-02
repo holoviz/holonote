@@ -251,6 +251,25 @@ def test_groupby_visible(cat_annotator):
         next(iter_indicator)
 
 
+def test_groupby_with_overlay_from_empty_annotator(annotator_range2d, capsys):
+    # Test for https://github.com/holoviz/holonote/issues/119
+    annotator = annotator_range2d
+    annotator.groupby = "description"
+    bounds = (-1, -1, 1, 1)
+    data = np.array([[0, 1], [1, 0]])
+    img = hv.Image(data, kdims=["x", "y"], bounds=bounds)
+
+    plot = annotator * img
+    hv.render(plot)
+
+    annotator.set_regions(x=(-0.15, 0.15), y=(-0.25, 0.25))
+    annotator.add_annotation(description="Test")
+
+    captured = capsys.readouterr()
+    bad_output = "AssertionError: DynamicMap must only contain one type of object, not both Overlay and NdOverlay."
+    assert bad_output not in captured.out
+
+
 def test_multiply_overlay(annotator_range1d):
     el1 = hv.Curve([], kdims=["TIME"])
     el2 = hv.Curve([], kdims=["TIME"])
