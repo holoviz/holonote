@@ -549,6 +549,9 @@ class AnnotationDisplay(param.Parameterized):
         highlighters = {opt: self._selected_dim_expr(v[0], v[1]) for opt, v in highlight.items()}
         indicator = indicator.opts(*self.style.indicator(**highlighters))
 
+        if len(indicator.data) == 0:
+            return hv.NdOverlay({0: self._make_empty_element()})
+
         return indicator.overlay() if self.annotator.groupby else hv.NdOverlay({0: indicator})
 
     def _selected_dim_expr(self, selected_value, non_selected_value) -> hv.dim:
