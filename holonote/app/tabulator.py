@@ -14,7 +14,6 @@ class AnnotatorTabulator(pn.viewable.Viewer):
     annotator = param.Parameter(allow_refs=False)
     tabulator = param.Parameter(allow_refs=False)
     dataframe = param.DataFrame()
-    changed = param.List()
 
     _updating = False
 
@@ -25,13 +24,10 @@ class AnnotatorTabulator(pn.viewable.Viewer):
 
     def _create_tabulator(self):
         def inner(event, annotator=self.annotator):
-            if event:
-                self.changed.append(event.index)
             return annotator.df
 
         def on_edit(event):
             row = self.tabulator.value.iloc[event.row]
-            self.changed.append(row.name)
 
             # Extracting specs and fields from row
             spec_dct, field_dct = defaultdict(list), {}
@@ -56,7 +52,8 @@ class AnnotatorTabulator(pn.viewable.Viewer):
             self.annotator.delete_annotation(index)
 
         def new_style(row):
-            color = "darkgray" if row.name in self.changed else "inherit"
+            changed = [e["id"] for e in self.annotator.annotation_table._edits]
+            color = "darkgray" if row.name in changed else "inherit"
             return [f"color: {color}"] * len(row)
 
         self.tabulator = pn.widgets.Tabulator(
@@ -68,6 +65,13 @@ class AnnotatorTabulator(pn.viewable.Viewer):
         self.tabulator.on_edit(on_edit)
         self.tabulator.on_click(on_click)
         self.tabulator.style.apply(new_style, axis=1)
+
+        def on_commit(event):
+            self.tabulator.param.trigger("value")
+            # So it is still reactive, as triggering the value overwrites the table
+            self.tabulator.value = pn.bind(inner, self.annotator)
+
+        self.annotator.on_commit(on_commit)
 
     @param.depends("tabulator.selection", watch=True)
     def _select_table_to_plot(self):
@@ -97,7 +101,6 @@ class AnnotatorTabulator(pn.viewable.Viewer):
             self._updating = False
 
     def clear(self):
-        self.changed = []
         self.tabulator.selection = []
         self.tabulator.param.trigger("value")
 
