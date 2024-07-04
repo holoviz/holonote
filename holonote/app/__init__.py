@@ -1,4 +1,4 @@
 from .panel import PanelWidgets
-from .tabulator import AnnotatorTabulator
+from .tabulator import AnnotatorTable
 
-__all__ = ("PanelWidgets", "AnnotatorTabulator")
+__all__ = ("PanelWidgets", "AnnotatorTable")

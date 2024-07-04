@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import panel as pn
 
-from holonote.app import AnnotatorTabulator, PanelWidgets
+from holonote.app import AnnotatorTable, PanelWidgets
 
 
 def test_panel_app(annotator_range1d):
@@ -23,7 +23,7 @@ def test_as_popup(annotator_range1d):
 
 
 def test_tabulator(annotator_range1d):
-    t = AnnotatorTabulator(annotator_range1d)
+    t = AnnotatorTable(annotator_range1d)
     assert isinstance(t.tabulator, pn.widgets.Tabulator)
 
     annotator_range1d.set_regions(TIME=(np.datetime64("2022-06-06"), np.datetime64("2022-06-08")))

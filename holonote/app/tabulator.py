@@ -10,7 +10,7 @@ pn.extension(
 )
 
 
-class AnnotatorTabulator(pn.viewable.Viewer):
+class AnnotatorTable(pn.viewable.Viewer):
     annotator = param.Parameter(allow_refs=False)
     tabulator = param.Parameter(allow_refs=False)
     dataframe = param.DataFrame()
