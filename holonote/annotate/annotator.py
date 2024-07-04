@@ -59,6 +59,10 @@ class AnnotatorInterface(param.Parameterized):
         doc="Event that is triggered when an annotation is created, updated, or deleted"
     )
 
+    commit_event = param.Event(
+        doc="Event that is triggered when an annotation is committed",
+    )
+
     def __init__(self, spec, **params):
         if "connector" not in params:
             params["connector"] = self.connector_class()
@@ -277,6 +281,8 @@ class AnnotatorInterface(param.Parameterized):
     def commit(self, return_commits=False):
         # self.annotation_table.initialize_table(self.connector)  # Only if not in params
         commits = self.annotation_table.commits(self.connector)
+        if commits:
+            self.param.trigger("commit_event")
         if return_commits:
             return commits
 
@@ -292,6 +298,18 @@ class AnnotatorInterface(param.Parameterized):
             function to be called when an annotation event is triggered
         """
         param.bind(callback, self.param.event, watch=True)
+
+    def on_commit(self, callback) -> None:
+        """Register a callback to be called when an annotation commit is triggered.
+
+        This is a wrapper around param.bind with watch=True.
+
+        Parameters
+        ----------
+        callback : function
+            function to be called when an commit is triggered
+        """
+        param.bind(callback, self.param.commit_event, watch=True)
 
 
 class Annotator(AnnotatorInterface):
