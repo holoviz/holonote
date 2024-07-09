@@ -2,55 +2,79 @@ name: jupyterlite
 on:
   push:
     tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
-      - 'v[0-9]+.[0-9]+.[0-9]+a[0-9]+'
-      - 'v[0-9]+.[0-9]+.[0-9]+b[0-9]+'
-      - 'v[0-9]+.[0-9]+.[0-9]+rc[0-9]+'
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+a[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+b[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+rc[0-9]+"
   workflow_dispatch:
     inputs:
       target:
-        description: 'Site to build and deploy'
+        description: "Site to build and deploy"
         type: choice
         options:
-        - dev
-        - main
-        - dryrun
+          - dev
+          - main
+          - dryrun
         required: true
         default: dryrun
   schedule:
-    - cron: '0 19 * * SUN'
+    - cron: "0 19 * * SUN"
 
-env:
-  PYTHON_VERSION: "3.10"
-  NODE_VERSION: "18"
+defaults:
+  run:
+    shell: bash -el {0}
 
 jobs:
-  build_juypterlite:
-    name: Jupyterlite
-    runs-on: 'ubuntu-latest'
-    timeout-minutes: 120
-    defaults:
-      run:
-        shell: bash -l {0}
+  pixi_lock:
+    name: Pixi lock
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Fetch unshallow
-        run: git fetch --prune --tags --unshallow -f
-      - uses: actions/setup-python@v4
+      - uses: holoviz-dev/holoviz_tasks/pixi_lock@pixi
+
+  lite_build:
+    name: Build Jupyterlite
+    needs: [pixi_lock]
+    runs-on: "ubuntu-latest"
+    timeout-minutes: 180
+    outputs:
+      tag: ${{ steps.vars.outputs.tag }}
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: holoviz-dev/holoviz_tasks/pixi_install@pixi
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      - uses: actions/setup-node@v4
+          environments: lite
+      - name: Build
+        run: pixi run -e lite lite-build
+      - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          name: lite
+          if-no-files-found: error
+          path: jupyterlite/
       - name: Set output
         id: vars
         run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
-      - name: Install hatch
-        run: pipx install hatch
-      - name: build jupyterlite
-        run: hatch -v run lite:build
-      - name: Deploy dev
-        uses: peaceiris/actions-gh-pages@v3
+
+  lite_publish:
+    name: Publish Jupyterlite
+    runs-on: "ubuntu-latest"
+    needs: [lite_build]
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: lite
+          path: jupyterlite/
+      - name: Set output
+        id: vars
+        run: echo "tag=${{ needs.lite_build.outputs.tag }}" >> $GITHUB_OUTPUT
+      - name: upload dev
+        uses: peaceiris/actions-gh-pages@v4
         if: |
           (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'dev') ||
           (github.event_name == 'push' && (contains(steps.vars.outputs.tag, 'a') || contains(steps.vars.outputs.tag, 'b') || contains(steps.vars.outputs.tag, 'rc')))
@@ -59,11 +83,11 @@ jobs:
           external_repository: holoviz-dev/holonote-jupyterlite
           publish_dir: ./jupyterlite
           force_orphan: true
-      # - name: Deploy main
+      # - name: upload main
       #   if: |
       #     (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'main') ||
       #     (github.event_name == 'push' && !(contains(steps.vars.outputs.tag, 'a') || contains(steps.vars.outputs.tag, 'b') || contains(steps.vars.outputs.tag, 'rc')))
-      #   uses: peaceiris/actions-gh-pages@v3
+      #   uses: peaceiris/actions-gh-pages@v4
       #   with:
       #     github_token: ${{ secrets.GITHUB_TOKEN }}
       #     publish_dir: ./jupyterlite

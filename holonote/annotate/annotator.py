@@ -59,6 +59,10 @@ class AnnotatorInterface(param.Parameterized):
         doc="Event that is triggered when an annotation is created, updated, or deleted"
     )
 
+    commit_event = param.Event(
+        doc="Event that is triggered when an annotation is committed",
+    )
+
     def __init__(self, spec, **params):
         if "connector" not in params:
             params["connector"] = self.connector_class()
@@ -277,6 +281,8 @@ class AnnotatorInterface(param.Parameterized):
     def commit(self, return_commits=False):
         # self.annotation_table.initialize_table(self.connector)  # Only if not in params
         commits = self.annotation_table.commits(self.connector)
+        if commits:
+            self.param.trigger("commit_event")
         if return_commits:
             return commits
 
@@ -292,6 +298,18 @@ class AnnotatorInterface(param.Parameterized):
             function to be called when an annotation event is triggered
         """
         param.bind(callback, self.param.event, watch=True)
+
+    def on_commit(self, callback) -> None:
+        """Register a callback to be called when an annotation commit is triggered.
+
+        This is a wrapper around param.bind with watch=True.
+
+        Parameters
+        ----------
+        callback : function
+            function to be called when an commit is triggered
+        """
+        param.bind(callback, self.param.commit_event, watch=True)
 
 
 class Annotator(AnnotatorInterface):
@@ -328,17 +346,21 @@ class Annotator(AnnotatorInterface):
         return AnnotationDisplay._infer_kdim_dtypes(element)
 
     def _create_annotation_element(self, element_key: tuple[str, ...]) -> AnnotationDisplay:
+        # Invert axis if first kdim is None, ensuring overlaying annotations align with underlying elements
+        invert_axis = element_key[0] is None
         for key in element_key:
-            if key not in self.spec:
+            if key is not None and key not in self.spec:
                 msg = f"Dimension {key!r} not in spec"
                 raise ValueError(msg)
-        return AnnotationDisplay(self, kdims=list(element_key))
+        return AnnotationDisplay(
+            self, kdims=[e for e in element_key if e is not None], invert_axis=invert_axis
+        )
 
     def get_element(self, *kdims: str | hv.Dimension) -> hv.DynamicMap:
         return self.get_display(*kdims).element
 
     def get_display(self, *kdims: str | hv.Dimension) -> AnnotationDisplay:
-        element_key = tuple(map(str, kdims))
+        element_key = tuple(str(x) if x is not None else None for x in kdims)
         if element_key not in self._displays:
             self._displays[element_key] = self._create_annotation_element(element_key)
         return self._displays[element_key]
@@ -351,8 +373,8 @@ class Annotator(AnnotatorInterface):
         kdims = other.kdims
         if not kdims or kdims == ["Element"]:
             kdims = next(k for el in other.values() if (k := el.kdims))
-        kdims = [kdim for kdim in kdims if kdim.name in self.spec]
-        if kdims:
+        kdims = [kdim if kdim.name in self.spec else None for kdim in kdims]
+        if any(kdims):
             return kdims
         else:
             msg = "No valid kdims found in element"

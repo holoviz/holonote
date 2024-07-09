@@ -288,17 +288,22 @@ def test_update_region(multiple_annotators, conn_sqlite_uuid) -> None:
 class TestEvent:
     @pytest.fixture(autouse=True)
     def _setup_count(self, multiple_annotators):
-        self.count = {"create": 0, "update": 0, "delete": 0}
+        self.count = {"create": 0, "update": 0, "delete": 0, "commit": 0}
 
         def count(event) -> None:
             self.count[event.type] += 1
 
-        multiple_annotators.on_event(count)
+        def commit_count(event) -> None:
+            self.count["commit"] += 1
 
-    def check(self, create=0, update=0, delete=0):
+        multiple_annotators.on_event(count)
+        multiple_annotators.on_commit(commit_count)
+
+    def check(self, create=0, update=0, delete=0, commit=0):
         assert self.count["create"] == create
         assert self.count["update"] == update
         assert self.count["delete"] == delete
+        assert self.count["commit"] == commit
 
     def test_create(self, multiple_annotators):
         annotator = multiple_annotators
@@ -307,6 +312,9 @@ class TestEvent:
         annotator.add_annotation(description="test")
         self.check(create=1, update=0, delete=0)
         annotator.commit()
+        self.check(create=1, update=0, delete=0, commit=1)
+        annotator.commit()  # empty, no change
+        self.check(create=1, update=0, delete=0, commit=1)
 
     def test_update_fields(self, multiple_annotators):
         annotator = multiple_annotators
