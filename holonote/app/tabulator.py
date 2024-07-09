@@ -38,8 +38,12 @@ class AnnotatorTable(pn.viewable.Viewer):
                 else:
                     field_dct[k] = v
 
-            self.annotator.annotation_table.update_annotation_region(spec_dct, row.name)
-            self.annotator.update_annotation_fields(row.name, **field_dct)
+            if "[" in event.column:
+                self.annotator.set_regions(**spec_dct)
+                self.annotator.update_annotation_region(row.name)
+                self.annotator.clear_regions()
+            else:
+                self.annotator.update_annotation_fields(row.name, **field_dct)
             self.annotator.refresh(clear=True)
 
             # So it is still reactive, as editing overwrites the table
