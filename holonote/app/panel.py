@@ -55,6 +55,7 @@ class PanelWidgets(Viewer):
             self._fields_values = {k: field_values.get(k, "") for k in self.annotator.fields}
         self._fields_widgets = self._create_fields_widgets(self._fields_values)
         self._create_visible_widget()
+        self.annotator.on_event(self._update_visible_widget)
 
         self._set_standard_callbacks()
 
@@ -83,40 +84,93 @@ class PanelWidgets(Viewer):
         if self.annotator.groupby is None:
             self.visible_widget = None
             return
+
         style = self.annotator.style
+        self.colormap = {}
         if style.color is None and style._colormap is None:
             data = sorted(self.annotator.df[self.annotator.groupby].unique())
-            colormap = dict(zip(data, _default_color))
+            self.colormap = dict(zip(data, _default_color))
         else:
-            colormap = style._colormap
-        if isinstance(colormap, dict):
-            stylesheet = """
-            option:after {
-              content: "";
-              width: 10px;
-              height: 10px;
-              position: absolute;
-              border-radius: 50%;
-              left: calc(100% - var(--design-unit, 4) * 2px - 3px);
-              border: 1px solid black;
-              opacity: 0.5;
-            }"""
-            for i, color in enumerate(colormap.values()):
-                stylesheet += f"""
-            option:nth-child({i + 1}):after {{
-                background-color: {color};
-            }}"""
-        else:
-            stylesheet = ""
+            self.colormap = style._colormap or {}
 
-        options = list(colormap)
+        all_options = set(self.annotator.df[self.annotator.groupby].unique())
+        for option in all_options:
+            if option not in self.colormap:
+                self.colormap[option] = (
+                    style.color or _default_color[len(self.colormap) % len(_default_color)]
+                )
+        self._update_stylesheet()
+
+        options = sorted(self.colormap.keys())
         self.visible_widget = pn.widgets.MultiSelect(
             name="Visible",
             options=options,
             value=self.annotator.visible or options,
-            stylesheets=[stylesheet],
+            stylesheets=[self.stylesheet],
         )
         self.annotator.visible = self.visible_widget
+
+    def _update_stylesheet(self):
+        self.stylesheet = """
+        option:after {
+          content: "";
+          width: 8px;
+          height: 8px;
+          position: absolute;
+          border-radius: 50%;
+          left: 1px;
+          border: 1px solid black;
+          opacity: 0.5;
+        }"""
+        for _, (option, color) in enumerate(sorted(self.colormap.items())):
+            self.stylesheet += f"""
+        option[value="{option}"]:after {{
+            background-color: {color};
+        }}"""
+
+    def _get_unique_color(self):
+        used_colors = set(self.colormap.values())
+        for color in _default_color:
+            if color not in used_colors:
+                return color
+        # If all default colors are used, cycle through again
+        return _default_color[len(self.colormap) % len(_default_color)]
+
+    def _update_visible_widget(self, event):
+        if event.type == "create":
+            new_option = event.fields[self.annotator.groupby]
+            old_options = list(self.visible_widget.options)
+            old_values = list(self.visible_widget.value)
+            if new_option not in old_options:
+                self.visible_widget.options = sorted([*old_options, new_option])
+                self.visible_widget.value = [*old_values, new_option]
+            if new_option not in self.colormap:
+                self.colormap[new_option] = self._get_unique_color()
+                self._update_stylesheet()
+                self.visible_widget.stylesheets = [self.stylesheet]
+            return
+
+        if event.type == "delete":
+            new_options = sorted(self.annotator.df[self.annotator.groupby].unique())
+            self.visible_widget.options = new_options
+            return
+
+        if event.type == "update" and event.fields is not None:
+            new_option = event.fields[self.annotator.groupby]
+            old_options = list(self.visible_widget.options)
+            new_options = sorted(self.annotator.df[self.annotator.groupby].unique())
+            old_values = list(self.visible_widget.value)
+            self.visible_widget.options = new_options
+            # Make new vals visible, else inherit visible state
+            if new_option not in old_options:
+                self.visible_widget.value = [*old_values, new_option]
+            if new_option not in self.colormap:
+                self.colormap[new_option] = self._get_unique_color()
+                self._update_stylesheet()
+                self.visible_widget.stylesheets = [self.stylesheet]
+
+        if event.type == "update" and event.region is not None:
+            return
 
     def _add_button_description(self):
         from bokeh.models import Tooltip
