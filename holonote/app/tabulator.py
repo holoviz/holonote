@@ -14,11 +14,13 @@ class AnnotatorTable(pn.viewable.Viewer):
     annotator = param.Parameter(allow_refs=False)
     tabulator = param.Parameter(allow_refs=False)
     dataframe = param.DataFrame()
+    tabulator_kwargs = param.Dict(
+        default={}, doc="""Configurations for the HoloViz Panel Tabulator widget""", precedence=-1
+    )
 
     _updating = False
 
     def __init__(self, annotator, **params):
-        self.tabulator_kwargs = params.pop("tabulator_kwargs", {})
         super().__init__(annotator=annotator, **params)
         annotator.snapshot()
         self._create_tabulator()
