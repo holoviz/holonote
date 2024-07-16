@@ -18,6 +18,7 @@ class AnnotatorTable(pn.viewable.Viewer):
     _updating = False
 
     def __init__(self, annotator, **params):
+        self.tabulator_kwargs = params.pop("tabulator_kwargs", {})
         super().__init__(annotator=annotator, **params)
         annotator.snapshot()
         self._create_tabulator()
@@ -61,6 +62,7 @@ class AnnotatorTable(pn.viewable.Viewer):
             buttons={"delete": '<i class="fa fa-trash"></i>'},
             show_index=False,
             selectable=True,
+            **self.tabulator_kwargs,
         )
         self.tabulator.on_edit(on_edit)
         self.tabulator.on_click(on_click)
