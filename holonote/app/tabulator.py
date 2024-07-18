@@ -14,9 +14,7 @@ class AnnotatorTable(pn.viewable.Viewer):
     annotator = param.Parameter(allow_refs=False)
     tabulator = param.Parameter(allow_refs=False)
     dataframe = param.DataFrame()
-    tabulator_kwargs = param.Dict(
-        default={}, doc="""Configurations for the HoloViz Panel Tabulator widget""", precedence=-1
-    )
+    tabulator_kwargs = param.Dict(default={}, doc="kwargs to pass to tabulator", allow_refs=True)
 
     _updating = False
 
@@ -64,7 +62,7 @@ class AnnotatorTable(pn.viewable.Viewer):
             buttons={"delete": '<i class="fa fa-trash"></i>'},
             show_index=False,
             selectable=True,
-            **self.tabulator_kwargs,
+            refs=self.param.tabulator_kwargs,
         )
         self.tabulator.on_edit(on_edit)
         self.tabulator.on_click(on_click)
