@@ -87,20 +87,22 @@ class PanelWidgets(Viewer):
 
         style = self.annotator.style
         self.colormap = {}
-        if style.color is None and style._colormap is None:
-            data = sorted(self.annotator.df[self.annotator.groupby].unique())
-            self.colormap = dict(zip(data, _default_color))
-        else:
-            self.colormap = style._colormap or {}
+        all_options = sorted(set(self.annotator.df[self.annotator.groupby].unique()))
+        if all_options:
+            if style.color is None:
+                self.colormap = dict(zip(all_options, _default_color))
+            elif isinstance(style.color, str):
+                self.colormap = dict(zip(all_options, [style.color] * len(all_options)))
+            else:
+                self.colormap = self.annotator.style.color.ops[0]["kwargs"]["categories"]
+                # assign default to any unspecified options
+                for option in all_options:
+                    if option not in self.colormap:
+                        self.colormap[option] = self.annotator.style.color.ops[0]["kwargs"][
+                            "default"
+                        ]
 
-        all_options = set(self.annotator.df[self.annotator.groupby].unique())
-        for option in all_options:
-            if option not in self.colormap:
-                self.colormap[option] = (
-                    style.color or _default_color[len(self.colormap) % len(_default_color)]
-                )
         self._update_stylesheet()
-
         options = sorted(self.colormap.keys())
         self.visible_widget = pn.widgets.MultiSelect(
             name="Visible",
@@ -128,44 +130,57 @@ class PanelWidgets(Viewer):
             background-color: {color};
         }}"""
 
-    def _get_unique_color(self):
-        used_colors = set(self.colormap.values())
-        for color in _default_color:
-            if color not in used_colors:
-                return color
-        # If all default colors are used, cycle through again
-        return _default_color[len(self.colormap) % len(_default_color)]
-
     def _update_visible_widget(self, event):
+        style = self.annotator.style
+        old_options = list(self.visible_widget.options)
+        old_values = list(self.visible_widget.value)
+
         if event.type == "create":
             new_option = event.fields[self.annotator.groupby]
-            old_options = list(self.visible_widget.options)
-            old_values = list(self.visible_widget.value)
             if new_option not in old_options:
                 self.visible_widget.options = sorted([*old_options, new_option])
                 self.visible_widget.value = [*old_values, new_option]
             if new_option not in self.colormap:
-                self.colormap[new_option] = self._get_unique_color()
+                if style.color is None:
+                    # For now, we need to update the colormap so that
+                    # the new sorted order of the keys matches the order of the default_colors
+                    new_options = sorted(self.annotator.df[self.annotator.groupby].unique())
+                    self.colormap = dict(zip(new_options, _default_color))
+                elif isinstance(style.color, str):
+                    self.colormap[new_option] = style.color
+                else:
+                    self.colormap[new_option] = style.color.ops[0]["kwargs"]["default"]
                 self._update_stylesheet()
                 self.visible_widget.stylesheets = [self.stylesheet]
             return
 
         if event.type == "delete":
             new_options = sorted(self.annotator.df[self.annotator.groupby].unique())
-            self.visible_widget.options = new_options
+            # if color was not user-specified, remake colormap in case an anno type was dropped
+            if style.color is None:
+                self.colormap = dict(zip(new_options, _default_color))
+            self.visible_widget.options = list(new_options)
+            self._update_stylesheet()
+            self.visible_widget.stylesheets = [self.stylesheet]
             return
 
         if event.type == "update" and event.fields is not None:
             new_option = event.fields[self.annotator.groupby]
-            old_options = list(self.visible_widget.options)
             new_options = sorted(self.annotator.df[self.annotator.groupby].unique())
-            old_values = list(self.visible_widget.value)
             self.visible_widget.options = new_options
             # Make new vals visible, else inherit visible state
             if new_option not in old_options:
                 self.visible_widget.value = [*old_values, new_option]
             if new_option not in self.colormap:
-                self.colormap[new_option] = self._get_unique_color()
+                if style.color is None:
+                    # if the color was not user-specified, remake colormap for new anno type
+                    self.colormap = dict(zip(new_options, _default_color))
+                elif isinstance(style.color, str):
+                    self.colormap[new_option] = style.color
+                else:
+                    # if it's a new annot type but color dim had been specified by the user, it would already
+                    # be in the colormap, so otherwise set the new anno type to the default color
+                    self.colormap[new_option] = style.color.ops[0]["kwargs"]["default"]
                 self._update_stylesheet()
                 self.visible_widget.stylesheets = [self.stylesheet]
 
