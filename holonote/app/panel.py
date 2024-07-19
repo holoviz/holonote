@@ -138,8 +138,9 @@ class PanelWidgets(Viewer):
         if event.type == "create":
             new_option = event.fields[self.annotator.groupby]
             if new_option not in old_options:
-                self.visible_widget.options = sorted([*old_options, new_option])
-                self.visible_widget.value = [*old_values, new_option]
+                self.visible_widget.param.update(
+                    options=sorted([*old_options, new_option]), value=[*old_values, new_option]
+                )
             if new_option not in self.colormap:
                 if style.color is None:
                     # For now, we need to update the colormap so that
