@@ -148,6 +148,7 @@ def cat_annotator(conn_sqlite_uuid) -> Annotator:
         groupby="category",
     )
     # Add data to annotator
+    # Ensure that 'C' only has a single data entry
     data = {
         "category": ["A", "B", "A", "C", "B"],
         "start_number": [1, 6, 11, 16, 21],
@@ -155,6 +156,20 @@ def cat_annotator(conn_sqlite_uuid) -> Annotator:
         "description": list("ABCDE"),
     }
     annotator.define_annotations(pd.DataFrame(data), x=("start_number", "end_number"))
+    # Setup display
+    annotator.get_display("x")
+    return annotator
+
+
+@pytest.fixture()
+def cat_annotator_no_data(conn_sqlite_uuid) -> Annotator:
+    # Initialize annotator
+    annotator = Annotator(
+        {"x": float},
+        fields=["description", "category"],
+        connector=conn_sqlite_uuid,
+        groupby="category",
+    )
     # Setup display
     annotator.get_display("x")
     return annotator
