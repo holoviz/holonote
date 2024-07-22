@@ -88,21 +88,20 @@ class PanelWidgets(Viewer):
 
         style = self.annotator.style
         self.colormap = {}
-        all_options = sorted(set(self.annotator.df[self.annotator.groupby].unique()))
+        options = sorted(set(self.annotator.df[self.annotator.groupby].unique()))
         # if all_options:
         if style.color is None:
-            self.colormap = dict(zip(all_options, _default_color))
+            self.colormap = dict(zip(options, _default_color))
         elif isinstance(style.color, str):
-            self.colormap = dict(zip(all_options, [style.color] * len(all_options)))
+            self.colormap = dict(zip(options, [style.color] * len(options)))
         elif isinstance(style.color, hv.dim):
             self.colormap = self.annotator.style.color.ops[0]["kwargs"]["categories"]
             # assign default to any options whose color is unspecified by the user
-            for option in all_options:
+            for option in options:
                 if option not in self.colormap:
                     self.colormap[option] = self.annotator.style.color.ops[0]["kwargs"]["default"]
 
         self._update_stylesheet()
-        options = sorted(self.colormap.keys())
         self.visible_widget = pn.widgets.MultiSelect(
             name="Visible",
             options=options,
