@@ -4,6 +4,7 @@ import contextlib
 import datetime as dt
 from typing import TYPE_CHECKING, Any
 
+import holoviews as hv
 import panel as pn
 import param
 from packaging.version import Version
@@ -88,19 +89,17 @@ class PanelWidgets(Viewer):
         style = self.annotator.style
         self.colormap = {}
         all_options = sorted(set(self.annotator.df[self.annotator.groupby].unique()))
-        if all_options:
-            if style.color is None:
-                self.colormap = dict(zip(all_options, _default_color))
-            elif isinstance(style.color, str):
-                self.colormap = dict(zip(all_options, [style.color] * len(all_options)))
-            else:
-                self.colormap = self.annotator.style.color.ops[0]["kwargs"]["categories"]
-                # assign default to any unspecified options
-                for option in all_options:
-                    if option not in self.colormap:
-                        self.colormap[option] = self.annotator.style.color.ops[0]["kwargs"][
-                            "default"
-                        ]
+        # if all_options:
+        if style.color is None:
+            self.colormap = dict(zip(all_options, _default_color))
+        elif isinstance(style.color, str):
+            self.colormap = dict(zip(all_options, [style.color] * len(all_options)))
+        elif isinstance(style.color, hv.dim):
+            self.colormap = self.annotator.style.color.ops[0]["kwargs"]["categories"]
+            # assign default to any options whose color is unspecified by the user
+            for option in all_options:
+                if option not in self.colormap:
+                    self.colormap[option] = self.annotator.style.color.ops[0]["kwargs"]["default"]
 
         self._update_stylesheet()
         options = sorted(self.colormap.keys())
@@ -149,7 +148,7 @@ class PanelWidgets(Viewer):
                     self.colormap = dict(zip(new_options, _default_color))
                 elif isinstance(style.color, str):
                     self.colormap[new_option] = style.color
-                else:
+                elif isinstance(style.color, hv.dim):
                     self.colormap[new_option] = style.color.ops[0]["kwargs"]["default"]
                 self._update_stylesheet()
                 self.visible_widget.stylesheets = [self.stylesheet]
@@ -178,7 +177,7 @@ class PanelWidgets(Viewer):
                     self.colormap = dict(zip(new_options, _default_color))
                 elif isinstance(style.color, str):
                     self.colormap[new_option] = style.color
-                else:
+                elif isinstance(style.color, hv.dim):
                     # if it's a new annot type but color dim had been specified by the user, it would already
                     # be in the colormap, so otherwise set the new anno type to the default color
                     self.colormap[new_option] = style.color.ops[0]["kwargs"]["default"]
