@@ -263,71 +263,70 @@ def test_style_selection_color(cat_annotator):
     sel_data = get_selected_indicator_data(cat_annotator)
     assert sel_data.sum() == 0
 
+    # Select the first value
+    index = cat_annotator.df.index[0]
+    cat_annotator.select_by_index(index)
+    compare_style(cat_annotator)
+    sel_data = get_selected_indicator_data(cat_annotator)
+    assert sel_data[index]
+    assert sel_data.sum() == 1
 
-#     # Select the first value
-#     index = cat_annotator.df.index[0]
-#     cat_annotator.select_by_index(index)
-#     compare_style(cat_annotator)
-#     sel_data = get_selected_indicator_data(cat_annotator)
-#     assert sel_data[index]
-#     assert sel_data.sum() == 1
-
-#     # remove it again
-#     cat_annotator.select_by_index()
-#     compare_style(cat_annotator)
-#     sel_data = get_selected_indicator_data(cat_annotator)
-#     assert sel_data.sum() == 0
-
-
-# def test_style_error_color_dim_and_selection(cat_annotator):
-#     style = cat_annotator.style
-#     style.color = hv.dim("category").categorize(
-#         categories={"B": "red", "A": "blue", "C": "green"}, default="grey"
-#     )
-#     style.selection_color = "blue"
-#     msg = "'Style.color' cannot be a `hv.dim` / `None` when 'Style.selection_color' is not None"
-#     with pytest.raises(ValueError, match=msg):
-#         compare_style(cat_annotator)
+    # remove it again
+    cat_annotator.select_by_index()
+    compare_style(cat_annotator)
+    sel_data = get_selected_indicator_data(cat_annotator)
+    assert sel_data.sum() == 0
 
 
-# def test_style_opts(cat_annotator):
-#     cat_annotator.style.opts = {"line_width": 2}
-#     compare_style(cat_annotator)
-
-#     indicator = next(get_indicator(cat_annotator, hv.VSpans))
-#     assert indicator.opts["line_width"] == 2
-
-#     editor = get_editor(cat_annotator, hv.VSpan)
-#     assert "line_width" not in editor.opts.get().kwargs
-
-#     cat_annotator.style.edit_opts = {"line_width": 3}
-#     cat_annotator.set_regions(x=(0, 1))  # To update plot
-#     editor = get_editor(cat_annotator, hv.VSpan)
-#     assert editor.opts["line_width"] == 3
+def test_style_error_color_dim_and_selection(cat_annotator):
+    style = cat_annotator.style
+    style.color = hv.dim("category").categorize(
+        categories={"B": "red", "A": "blue", "C": "green"}, default="grey"
+    )
+    style.selection_color = "blue"
+    msg = "'Style.color' cannot be a `hv.dim` / `None` when 'Style.selection_color' is not None"
+    with pytest.raises(ValueError, match=msg):
+        compare_style(cat_annotator)
 
 
-# @pytest.mark.parametrize("opts", [{"alpha": 0.5}, {"color": "red"}], ids=["alpha", "color"])
-# def test_style_opts_warn(cat_annotator, opts):
-#     msg = "Color and alpha opts should be set directly on the style object"
-#     with pytest.raises(UserWarning, match=msg):
-#         cat_annotator.style.opts = opts
+def test_style_opts(cat_annotator):
+    cat_annotator.style.opts = {"line_width": 2}
+    compare_style(cat_annotator)
+
+    indicator = next(get_indicator(cat_annotator, hv.VSpans))
+    assert indicator.opts["line_width"] == 2
+
+    editor = get_editor(cat_annotator, hv.VSpan)
+    assert "line_width" not in editor.opts.get().kwargs
+
+    cat_annotator.style.edit_opts = {"line_width": 3}
+    cat_annotator.set_regions(x=(0, 1))  # To update plot
+    editor = get_editor(cat_annotator, hv.VSpan)
+    assert editor.opts["line_width"] == 3
 
 
-# def test_style_reset(cat_annotator) -> None:
-#     style = cat_annotator.style
-#     style.color = "blue"
-#     compare_style(cat_annotator)
-
-#     style.reset()
-#     assert style.color == Style.color
-#     compare_style(cat_annotator)
+@pytest.mark.parametrize("opts", [{"alpha": 0.5}, {"color": "red"}], ids=["alpha", "color"])
+def test_style_opts_warn(cat_annotator, opts):
+    msg = "Color and alpha opts should be set directly on the style object"
+    with pytest.raises(UserWarning, match=msg):
+        cat_annotator.style.opts = opts
 
 
-# def test_groupby_color_change(cat_annotator) -> None:
-#     cat_annotator.groupby = "category"
-#     cat_annotator.visible = ["A", "B", "C"]
+def test_style_reset(cat_annotator) -> None:
+    style = cat_annotator.style
+    style.color = "blue"
+    compare_style(cat_annotator)
 
-#     indicators = hv.render(cat_annotator.get_display("x").static_indicators()).renderers
-#     color_cycle = cat_annotator.style._colormap.values()
-#     for indicator, expected_color in zip(indicators, color_cycle):
-#         assert indicator.glyph.fill_color == expected_color
+    style.reset()
+    assert style.color == Style.color
+    compare_style(cat_annotator)
+
+
+def test_groupby_color_change(cat_annotator) -> None:
+    cat_annotator.groupby = "category"
+    cat_annotator.visible = ["A", "B", "C"]
+
+    indicators = hv.render(cat_annotator.get_display("x").static_indicators()).renderers
+    color_cycle = cat_annotator.style._colormap.values()
+    for indicator, expected_color in zip(indicators, color_cycle):
+        assert indicator.glyph.fill_color == expected_color
