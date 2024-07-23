@@ -42,16 +42,33 @@ def get_selected_indicator_data(annotator) -> pd.Series:
     return df["__selected__"]
 
 
-def test_color_undefined_resorting_nodatainit(cat_annotator_no_data):
+def test_color_dim_defined_no_data(cat_annotator_no_data):
+    # testing colormap when color is defined by user's dim and there's no data at annotator instantiation
+    annotator = cat_annotator_no_data
+    color_dim = hv.dim("category").categorize(
+        categories={"A": "purple", "B": "orange", "C": "green"}, default="grey"
+    )
+    annotator.style.color = color_dim
+    panel_widgets = PanelWidgets(annotator)
+
+    visible_options = panel_widgets.visible_widget.options
+    colormap = panel_widgets.colormap
+
+    assert (
+        "A" not in visible_options
+    ), "Color defined type 'A' should not yet be in visible options"
+    assert colormap["A"] == "purple", f"Expected color 'purple' for 'A', but got {colormap['A']}"
+
+
+def test_color_undefined_resorting_no_data(cat_annotator_no_data):
+    # Testing the impact on the colormap that sorting imposes when a new annotation type is added or removed
     annotator = cat_annotator_no_data
     panel_widgets = PanelWidgets(annotator)
 
     # Add a new annotation type 'A'
-
     annotator.set_regions(x=(0, 1))
     annotator.add_annotation(category="A")
     annotator.commit()
-
     compare_style(cat_annotator_no_data)
     visible_options = panel_widgets.visible_widget.options
     colormap = panel_widgets.colormap
@@ -62,11 +79,9 @@ def test_color_undefined_resorting_nodatainit(cat_annotator_no_data):
     ), f"Expected default color for 'A', but got {colormap['A']}"
 
     # Add a new annotation type 'C'
-
     annotator.set_regions(x=(0, 1))
     annotator.add_annotation(category="C")
     annotator.commit()
-
     compare_style(annotator)
     visible_options = panel_widgets.visible_widget.options
     colormap = panel_widgets.colormap
@@ -95,7 +110,6 @@ def test_color_undefined_resorting_nodatainit(cat_annotator_no_data):
     ), f"Expected default color for 'C', but got {colormap['C']}"
 
     # Remove the annotation type 'B', which again resorts the order of the options and assigned colormap
-
     b_index = annotator.df[annotator.df["category"] == "B"].index[0]
     annotator.delete_annotation(b_index)
     annotator.commit()
@@ -115,8 +129,18 @@ def test_color_undefined_resorting_nodatainit(cat_annotator_no_data):
     ), f"Expected default color for 'C', but got {colormap['C']}"
 
 
-def test_color_dim_defined(cat_annotator):
-    annotator = cat_annotator
+def test_colormap_persistence(cat_annotator_no_data):
+    # Testing persistence of colormap after removing and then remaking the last annotation of a type
+    annotator = cat_annotator_no_data
+    # defining data here in the test to impose single entry for 'C'
+    data = {
+        "category": ["A", "B", "A", "C", "B"],
+        "start_number": [1, 6, 11, 16, 21],
+        "end_number": [5, 10, 15, 20, 25],
+        "description": list("ABCDE"),
+    }
+    annotator.define_annotations(pd.DataFrame(data), x=("start_number", "end_number"))
+
     color_dim = hv.dim("category").categorize(
         categories={"A": "purple", "B": "orange", "C": "green"}, default="grey"
     )
@@ -124,20 +148,6 @@ def test_color_dim_defined(cat_annotator):
     panel_widgets = PanelWidgets(annotator)
 
     compare_style(annotator)
-
-    # Add a new annotation type 'D'
-    annotator.set_regions(x=(3, 4))
-    annotator.add_annotation(category="D")
-    annotator.commit()
-
-    compare_style(annotator)
-    visible_options = panel_widgets.visible_widget.options
-    colormap = panel_widgets.colormap
-
-    assert "D" in visible_options, "New annotation type 'D' should be in visible options"
-    assert (
-        colormap["D"] == "grey"
-    ), f"Expected default color 'grey' for 'D', but got {colormap['D']}"
 
     # Delete annotation type 'C', which only has a single data entry
     c_index = annotator.df[annotator.df["category"] == "C"].index[0]
@@ -162,6 +172,40 @@ def test_color_dim_defined(cat_annotator):
     colormap = panel_widgets.colormap
 
     assert colormap["C"] == "green", f"Expected color 'green' for 'C', but got {colormap['C']}"
+
+
+def test_default_color_assignment(cat_annotator_no_data):
+    annotator = cat_annotator_no_data
+    # defining data here in the test to impose no entry for 'D'
+    data = {
+        "category": ["A", "B", "A", "C", "B"],
+        "start_number": [1, 6, 11, 16, 21],
+        "end_number": [5, 10, 15, 20, 25],
+        "description": list("ABCDE"),
+    }
+    annotator.define_annotations(pd.DataFrame(data), x=("start_number", "end_number"))
+
+    color_dim = hv.dim("category").categorize(
+        categories={"A": "purple", "B": "orange", "C": "green"}, default="grey"
+    )
+    annotator.style.color = color_dim
+    panel_widgets = PanelWidgets(annotator)
+
+    compare_style(annotator)
+
+    # Add a new annotation type 'D'
+    annotator.set_regions(x=(3, 4))
+    annotator.add_annotation(category="D")
+    annotator.commit()
+
+    compare_style(annotator)
+    visible_options = panel_widgets.visible_widget.options
+    colormap = panel_widgets.colormap
+
+    assert "D" in visible_options, "New annotation type 'D' should be in visible options"
+    assert (
+        colormap["D"] == "grey"
+    ), f"Expected default color 'grey' for 'D', but got {colormap['D']}"
 
 
 def test_style_accessor(cat_annotator) -> None:

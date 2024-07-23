@@ -148,7 +148,6 @@ def cat_annotator(conn_sqlite_uuid) -> Annotator:
         groupby="category",
     )
     # Add data to annotator
-    # Ensure that 'C' only has a single data entry
     data = {
         "category": ["A", "B", "A", "C", "B"],
         "start_number": [1, 6, 11, 16, 21],
