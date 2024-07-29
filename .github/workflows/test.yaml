@@ -170,7 +170,7 @@ jobs:
         with:
           environments: ${{ matrix.environment }}
       - name: Run benchmarks
-        uses: CodSpeedHQ/action@v2
+        uses: CodSpeedHQ/action@v3
         if: needs.setup.outputs.code_change == 'true'
         with:
           token: ${{ secrets.CODSPEED_TOKEN }}
