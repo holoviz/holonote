@@ -2,11 +2,7 @@
 
 set -euxo pipefail
 
-PACKAGE="holonote"
-
 python -m build -w .
-VERSION=$(python -c "import $PACKAGE; print($PACKAGE._version.__version__)")
-export VERSION
 
 # Update lockfiles
 cd "$(dirname "${BASH_SOURCE[0]}")"
