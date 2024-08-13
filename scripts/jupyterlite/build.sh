@@ -2,14 +2,9 @@
 
 set -euxo pipefail
 
-PACKAGE="holonote"
-
-python -m build -w .
-VERSION=$(python -c "import $PACKAGE; print($PACKAGE._version.__version__)")
-export VERSION
+python -m build -w ../..
 
 # Update lockfiles
-cd "$(dirname "${BASH_SOURCE[0]}")"
 rm -rf node_modules
 npm install .
 node update_lock.js

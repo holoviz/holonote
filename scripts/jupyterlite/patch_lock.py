@@ -1,7 +1,9 @@
 import hashlib
 import json
-import os
+import os.path
 from glob import glob
+
+from packaging.utils import parse_wheel_filename
 
 
 def calculate_sha256(file_path):
@@ -26,21 +28,22 @@ with open(path) as f:
 
 for p in data["packages"].values():
     if not p["file_name"].startswith("http"):
-        p["file_name"] = os.path.join(url, p["file_name"])
+        p["file_name"] = f'{url}/{p["file_name"]}'
 
 
-# Special handling of holonote
-whl_file = glob("../../dist/*.whl")[0]
-hn = data["packages"]["holonote"]
-hn["version"] = os.environ["VERSION"]
-hn["file_name"] = os.path.basename(whl_file)
-hn["sha256"] = calculate_sha256(whl_file)
-hn["imports"] = ["holonote"]  # Not completely sure why this is empty
+whl_files = glob("../../dist/*.whl")
+for whl_file in whl_files:
+    name, version, *_ = parse_wheel_filename(os.path.basename(whl_file))
+
+    package = data["packages"][name]
+    package["version"] = str(version)
+    package["file_name"] = os.path.basename(whl_file)
+    package["sha256"] = calculate_sha256(whl_file)
+    package["imports"] = [name]
 
 # To avoid importing it in the notebooks, we can't add it to pandas directly
 # as fastparquet depends on it. So we add it to hvplot instead.
 data["packages"]["hvplot"]["depends"].extend(["fastparquet"])
-
 data["packages"]["holoviews"]["depends"].extend(["pyparsing"])
 
 
