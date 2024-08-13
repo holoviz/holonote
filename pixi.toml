@@ -126,7 +126,7 @@ nodejs = "*"
 python-build = "*"
 
 [feature.lite.tasks]
-lite-build = "bash scripts/jupyterlite/build.sh"
+lite-build = { cmd = "bash build.sh", cwd = "scripts/jupyterlite" }
 # Service worker only work on 127.0.0.1
 # https://jupyterlite.readthedocs.io/en/latest/howto/configure/advanced/service-worker.html#limitations
 lite-server = "python -m http.server --directory ./jupyterlite --bind 127.0.0.1"

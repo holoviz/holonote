@@ -2,10 +2,9 @@
 
 set -euxo pipefail
 
-python -m build -w .
+python -m build -w ../..
 
 # Update lockfiles
-cd "$(dirname "${BASH_SOURCE[0]}")"
 rm -rf node_modules
 npm install .
 node update_lock.js
