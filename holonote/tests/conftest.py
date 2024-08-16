@@ -45,7 +45,7 @@ def pytest_collection_modifyitems(config, items):
     items[:] = selected
 
 
-@pytest.fixture()
+@pytest.fixture
 def conn_sqlite_uuid(tmp_path) -> Iterator[SQLiteDB]:
     conn = SQLiteDB(filename=str(tmp_path / "test.db"), primary_key=UUIDHexStringKey())
     yield conn
@@ -55,7 +55,7 @@ def conn_sqlite_uuid(tmp_path) -> Iterator[SQLiteDB]:
         conn.con.close()
 
 
-@pytest.fixture()
+@pytest.fixture
 def annotator_range1d(conn_sqlite_uuid) -> Annotator:
     anno = Annotator(
         {"TIME": np.datetime64},
@@ -65,7 +65,7 @@ def annotator_range1d(conn_sqlite_uuid) -> Annotator:
     return anno
 
 
-@pytest.fixture()
+@pytest.fixture
 def annotator_point1d(conn_sqlite_uuid) -> Annotator:
     anno = Annotator(
         {"TIME": (np.datetime64, "point")},
@@ -75,7 +75,7 @@ def annotator_point1d(conn_sqlite_uuid) -> Annotator:
     return anno
 
 
-@pytest.fixture()
+@pytest.fixture
 def annotator_range2d(conn_sqlite_uuid) -> Annotator:
     anno = Annotator(
         {"x": float, "y": float},
@@ -85,7 +85,7 @@ def annotator_range2d(conn_sqlite_uuid) -> Annotator:
     return anno
 
 
-@pytest.fixture()
+@pytest.fixture
 def annotator_point2d(conn_sqlite_uuid) -> Annotator:
     anno = Annotator(
         {"x": (float, "point"), "y": (float, "point")},
@@ -95,7 +95,7 @@ def annotator_point2d(conn_sqlite_uuid) -> Annotator:
     return anno
 
 
-@pytest.fixture()
+@pytest.fixture
 def multiple_region_annotator(conn_sqlite_uuid) -> Annotator:
     return Annotator(
         {"TIME": np.datetime64},
@@ -105,7 +105,7 @@ def multiple_region_annotator(conn_sqlite_uuid) -> Annotator:
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def multiple_annotators(conn_sqlite_uuid) -> Annotator:
     return Annotator(
         {"TIME": np.datetime64, "x": float, "y": float},
@@ -114,7 +114,7 @@ def multiple_annotators(conn_sqlite_uuid) -> Annotator:
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def multiple_fields_annotator(conn_sqlite_uuid) -> Annotator:
     conn_sqlite_uuid.fields = ["field1", "field2"]
     anno = Annotator(
@@ -125,20 +125,20 @@ def multiple_fields_annotator(conn_sqlite_uuid) -> Annotator:
     return anno
 
 
-@pytest.fixture()
+@pytest.fixture
 def element_range1d() -> hv.Curve:
     time = pd.date_range("2020-01-01", "2020-01-10", freq="D").to_numpy()
     return hv.Curve(time, kdims=["TIME"])
 
 
-@pytest.fixture()
+@pytest.fixture
 def element_range2d() -> hv.Image:
     x = np.arange(10)
     xy = x[:, np.newaxis] * x
     return hv.Image(xy, kdims=["x", "y"])
 
 
-@pytest.fixture()
+@pytest.fixture
 def cat_annotator(conn_sqlite_uuid) -> Annotator:
     # Initialize annotator
     annotator = Annotator(
