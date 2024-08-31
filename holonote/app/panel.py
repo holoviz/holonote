@@ -112,16 +112,24 @@ class PanelWidgets(Viewer):
 
     def _update_stylesheet(self):
         self.stylesheet = """
+        option {
+        position: relative;
+        padding-left: 20px;
+        }
+
         option:after {
-          content: "";
-          width: 8px;
-          height: 8px;
-          position: absolute;
-          border-radius: 50%;
-          left: 1px;
-          border: 1px solid black;
-          opacity: 0.5;
-        }"""
+        content: "";
+        width: 8px;
+        height: 8px;
+        position: absolute;
+        border-radius: 50%;
+        left: 5px;
+        top: 50%; /* Align vertically */
+        transform: translateY(-50%); /* Align vertically */
+        border: 1px solid black;
+        opacity: 0.60;
+        }
+        """
         for _, (option, color) in enumerate(sorted(self.colormap.items())):
             self.stylesheet += f"""
         option[value="{option}"]:after {{
