@@ -160,7 +160,7 @@ def cat_annotator(conn_sqlite_uuid) -> Annotator:
     return annotator
 
 
-@pytest.fixture()
+@pytest.fixture
 def cat_annotator_no_data(conn_sqlite_uuid) -> Annotator:
     # Initialize annotator
     annotator = Annotator(
