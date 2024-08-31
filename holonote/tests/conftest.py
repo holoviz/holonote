@@ -158,3 +158,17 @@ def cat_annotator(conn_sqlite_uuid) -> Annotator:
     # Setup display
     annotator.get_display("x")
     return annotator
+
+
+@pytest.fixture
+def cat_annotator_no_data(conn_sqlite_uuid) -> Annotator:
+    # Initialize annotator
+    annotator = Annotator(
+        {"x": float},
+        fields=["description", "category"],
+        connector=conn_sqlite_uuid,
+        groupby="category",
+    )
+    # Setup display
+    annotator.get_display("x")
+    return annotator
