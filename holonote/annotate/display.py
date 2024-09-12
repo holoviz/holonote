@@ -537,8 +537,12 @@ class AnnotationDisplay(param.Parameterized):
             msg = f"{self.region_format} not implemented"
             raise NotImplementedError(msg)
 
-        if len(indicator.data) == 0 or not self.annotator.visible:
-            return hv.NdOverlay({0: self._make_empty_element()}).opts(show_legend=False)
+        if len(indicator.data) == 0 or (
+            self.annotator.groupby
+            and self.annotator.visible is not None
+            and not len(self.annotator.visible)
+        ):
+            return hv.NdOverlay({0: self._make_empty_element()})  # .opts(show_legend=False)
 
         if self.annotator.groupby and self.annotator.visible:
             indicator = indicator.get(self.annotator.visible)
