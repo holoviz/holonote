@@ -48,6 +48,8 @@ filterwarnings = [
     "ignore:datetime.datetime.utcfromtimestamp():DeprecationWarning:dateutil.tz.tz", # https://github.com/dateutil/dateutil/pull/1285
     # 2024-01
     "ignore:\\s+Pyarrow will become a required dependency of pandas", # Will fix itself
+    # 2024-09
+    "ignore:The (non_)?interactive_bk attribute was deprecated in Matplotlib 3.9", # OK - Only happening in debug mode
 ]
 
 [tool.ruff]
