@@ -251,6 +251,14 @@ def test_groupby_visible(cat_annotator):
         next(iter_indicator)
 
 
+def test_groupby_visible_empty(cat_annotator):
+    cat_annotator.groupby = "category"
+    cat_annotator.visible = []
+    iter_indicator = get_indicator(cat_annotator, hv.Curve)
+    indicator = next(iter_indicator)
+    assert indicator.data.shape == (0, 2)
+
+
 def test_groupby_with_overlay_from_empty_annotator(annotator_range2d, capsys):
     # Test for https://github.com/holoviz/holonote/issues/119
     annotator = annotator_range2d
