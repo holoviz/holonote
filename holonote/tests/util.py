@@ -26,7 +26,10 @@ def get_editor_data(annotator, element_type, kdims=None):
 
 def get_indicator(annotator, element_type, kdims=None):
     si = _get_display(annotator, kdims).indicators().last
-    yield from si.data.values()
+    if element_type:
+        yield from (s for s in si.data.values() if isinstance(s, element_type))
+    else:
+        yield from si.data.values()
 
 
 def get_indicator_data(annotator, element_type, kdims=None):

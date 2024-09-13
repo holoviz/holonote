@@ -37,7 +37,7 @@ def test_set_regions_range1d(annotator_range1d) -> None:
     expected = [None, None]
     assert output == expected
 
-    output = next(get_indicator_data(annotator, hv.Rectangles))
+    output = next(get_indicator_data(annotator, hv.VSpans))
     output1 = output.iloc[0][["start[TIME]", "end[TIME]"]].tolist()
     expected1 = [-0.25, 0.25]
     assert output1 == expected1
@@ -115,7 +115,7 @@ def test_set_regions_multiple(multiple_annotators):
     expected = [None, None]
     assert output == expected
 
-    output = next(get_indicator_data(annotator, hv.Rectangles, "TIME"))
+    output = next(get_indicator_data(annotator, hv.VSpans, "TIME"))
     output1 = output.iloc[0][["start[TIME]", "end[TIME]"]].tolist()
     expected1 = [-0.25, 0.25]
     assert output1 == expected1
