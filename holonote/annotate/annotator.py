@@ -321,7 +321,7 @@ class Annotator(AnnotatorInterface):
 
     groupby = param.Selector(default=None, doc="Groupby dimension", allow_refs=True)
     visible = param.ListSelector(
-        default=[], doc="Visible dimensions, needs groupby enabled", allow_refs=True
+        default=None, doc="Visible dimensions, needs groupby enabled", allow_refs=True
     )
     style = param.ClassSelector(default=Style(), class_=Style, doc="Style parameters")
 

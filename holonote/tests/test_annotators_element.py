@@ -37,7 +37,7 @@ def test_set_regions_range1d(annotator_range1d) -> None:
     expected = [None, None]
     assert output == expected
 
-    output = next(get_indicator_data(annotator, hv.Rectangles))
+    output = next(get_indicator_data(annotator, hv.VSpans))
     output1 = output.iloc[0][["start[TIME]", "end[TIME]"]].tolist()
     expected1 = [-0.25, 0.25]
     assert output1 == expected1
@@ -115,7 +115,7 @@ def test_set_regions_multiple(multiple_annotators):
     expected = [None, None]
     assert output == expected
 
-    output = next(get_indicator_data(annotator, hv.Rectangles, "TIME"))
+    output = next(get_indicator_data(annotator, hv.VSpans, "TIME"))
     output1 = output.iloc[0][["start[TIME]", "end[TIME]"]].tolist()
     expected1 = [-0.25, 0.25]
     assert output1 == expected1
@@ -249,6 +249,14 @@ def test_groupby_visible(cat_annotator):
 
     with pytest.raises(StopIteration):
         next(iter_indicator)
+
+
+def test_groupby_visible_empty(cat_annotator):
+    cat_annotator.groupby = "category"
+    cat_annotator.visible = []
+    iter_indicator = get_indicator(cat_annotator, hv.Curve)
+    indicator = next(iter_indicator)
+    assert indicator.data.shape == (0, 2)
 
 
 def test_groupby_with_overlay_from_empty_annotator(annotator_range2d, capsys):

@@ -38,7 +38,7 @@ def compare_style(cat_annotator):
 
 
 def get_selected_indicator_data(annotator) -> pd.Series:
-    df = pd.concat([i.data for i in get_indicator(annotator, hv.VLines)])
+    df = pd.concat([i.data for i in get_indicator(annotator, None)])
     return df["__selected__"]
 
 
