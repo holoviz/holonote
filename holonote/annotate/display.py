@@ -542,7 +542,9 @@ class AnnotationDisplay(param.Parameterized):
             and self.annotator.visible is not None
             and not len(self.annotator.visible)
         ):
-            return hv.NdOverlay({0: self._make_empty_element()})  # .opts(show_legend=False)
+            el = self._make_empty_element()
+            el_opts = getattr(hv.opts, type(el).__name__)(**_default_opts)
+            return hv.NdOverlay({0: el}).opts(el_opts)
 
         if self.annotator.groupby and self.annotator.visible:
             indicator = indicator.get(self.annotator.visible)
