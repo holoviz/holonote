@@ -14,7 +14,7 @@ test-39 = ["py39", "test-core", "test", "test-unit-task", "example", "test-examp
 test-310 = ["py310", "test-core", "test", "test-unit-task", "example", "test-example"]
 test-311 = ["py311", "test-core", "test", "test-unit-task", "example", "test-example"]
 test-312 = ["py312", "test-core", "test", "test-unit-task", "example", "test-example"]
-test-core = ["py312", "test-core", "test-unit-task"]
+test-core = ["py313", "test-core", "test-unit-task"]
 test-benchmark = ["py312", "test-benchmark", "test"]
 docs = ["py311", "example", "doc"]
 build = ["py311", "build"]
@@ -38,8 +38,14 @@ python = "3.11.*"
 [feature.py312.dependencies]
 python = "3.12.*"
 
+[feature.py313]
+channels = ["pyviz/label/dev", "conda-forge/label/python_rc", "conda-forge"]
+
+[feature.py313.dependencies]
+python = "3.13.*"
+
 [feature.example.dependencies]
-dask = "*"
+dask-core = "*"
 datashader = "*"
 hvplot = "*"
 scipy = "*"
