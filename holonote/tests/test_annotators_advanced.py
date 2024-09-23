@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from contextlib import suppress
+
 import holoviews as hv
 import numpy as np
 import pandas as pd
@@ -182,6 +184,11 @@ def test_reconnect(method, tmp_path):
     pd.testing.assert_frame_equal(a1_df, a2_df)
     pd.testing.assert_frame_equal(a1_region, a2_region)
     pd.testing.assert_frame_equal(a1_field, a2_field)
+
+    with suppress(Exception):
+        conn1.close()
+    with suppress(Exception):
+        conn2.close()
 
 
 def test_define_annotations_multiple_without_without_all_fields(conn_sqlite_uuid) -> None:
