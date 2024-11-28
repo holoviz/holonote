@@ -1,34 +1,40 @@
-{% set data = load_file_data('../../../pyproject.toml', from_recipe_dir=True) %}
-
+{% set pyproject = load_file_data('../../../pyproject.toml', from_recipe_dir=True) %}
+{% set project = pyproject['project'] %}
 
 package:
-  name: holonote
+  name: {{ project["name"] }}
   version: {{ VERSION }}
 
 source:
-  url: ../../../dist/holonote-{{ VERSION }}-py3-none-any.whl
+  url: ../../../dist/{{ project["name"] }}-{{ VERSION }}.tar.gz
 
 build:
   noarch: python
   script:
-     - {{ PYTHON }} -m pip install -vv holonote-{{ VERSION }}-py3-none-any.whl
+     - {{ PYTHON }} -m pip install -vv .
 
 requirements:
   host:
-    - python {{ data['project']['requires-python']}}
+    - python {{ project['requires-python'] }}
+    {% for dep in pyproject['build-system']['requires'] %}
+    - {{ dep }}
+    {% endfor %}
 
   run:
-    - python {{ data['project']['requires-python']}}
-
-    {% for dep in data['project']['dependencies'] %}
+    - python {{ project['requires-python'] }}
+    {% for dep in project['dependencies'] %}
     - {{ dep.lower() }}
     {% endfor %}
 
 test:
   imports:
     - holonote
+  commands:
+    - pip check
+  requires:
+    - pip
 
 about:
   license: BSD-3-Clause
-  summary: {{ data['project']['description'] }}
-  description: {{ data['project']['readme'] }}
+  summary: {{ project['description'] }}
+  description: {{ project['readme'] }}
