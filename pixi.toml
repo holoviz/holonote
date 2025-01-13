@@ -101,7 +101,7 @@ _docs-refmanual = 'python ./doc/generate_modules.py holonote -d ./doc/reference_
 _docs-generate = 'nbsite build --what=html --output=builtdocs --org holoviz --project-name holonote'
 
 [feature.doc.tasks.docs-build]
-depends_on = ['_docs-generate-rst', '_docs-no-header-tutorial', '_docs-refmanual', '_docs-generate']
+depends-on = ['_docs-generate-rst', '_docs-no-header-tutorial', '_docs-refmanual', '_docs-generate']
 
 # =============================================
 # ================== BUILD ====================
