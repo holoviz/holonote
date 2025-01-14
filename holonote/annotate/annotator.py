@@ -89,7 +89,7 @@ class AnnotatorInterface(param.Parameterized):
             else f"{name}={val!r}"
             for name, val in self.param.values().items()
         ]
-        return f'{self.__class__.__name__}({", ".join(settings)})'
+        return f"{self.__class__.__name__}({', '.join(settings)})"
 
     @property
     def all_fields(self) -> list:
