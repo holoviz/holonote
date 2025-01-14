@@ -155,14 +155,14 @@ def test_single_shared_axis_hspan(annotator_range2d):
     right_display_data = get_display_data_from_plot(right_plot, hv.HSpans, ["y"])
 
     expected_left = [-0.15, -0.25, 0.15, 0.25]
-    assert (
-        left_display_data == expected_left
-    ), f"Expected {expected_left}, but got {left_display_data}"
+    assert left_display_data == expected_left, (
+        f"Expected {expected_left}, but got {left_display_data}"
+    )
 
     expected_right = [-0.25, 0.25]
-    assert (
-        right_display_data == expected_right
-    ), f"Expected {expected_right}, but got {right_display_data}"
+    assert right_display_data == expected_right, (
+        f"Expected {expected_right}, but got {right_display_data}"
+    )
 
 
 def test_single_shared_axis_vspan(annotator_range2d):
@@ -184,14 +184,14 @@ def test_single_shared_axis_vspan(annotator_range2d):
     right_display_data = get_display_data_from_plot(right_plot, hv.VSpans, ["y"])
 
     expected_left = [-0.15, -0.25, 0.15, 0.25]
-    assert (
-        left_display_data == expected_left
-    ), f"Expected {expected_left}, but got {left_display_data}"
+    assert left_display_data == expected_left, (
+        f"Expected {expected_left}, but got {left_display_data}"
+    )
 
     expected_right = [-0.25, 0.25]
-    assert (
-        right_display_data == expected_right
-    ), f"Expected {expected_right}, but got {right_display_data}"
+    assert right_display_data == expected_right, (
+        f"Expected {expected_right}, but got {right_display_data}"
+    )
 
 
 def test_editable_enabled(annotator_range1d):
