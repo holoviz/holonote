@@ -14,6 +14,7 @@ test-39 = ["py39", "test-core", "test", "test-unit-task", "example", "test-examp
 test-310 = ["py310", "test-core", "test", "test-unit-task", "example", "test-example"]
 test-311 = ["py311", "test-core", "test", "test-unit-task", "example", "test-example"]
 test-312 = ["py312", "test-core", "test", "test-unit-task", "example", "test-example"]
+test-313 = ["py313", "test-core", "test", "test-unit-task", "example", "test-example"]
 test-core = ["py313", "test-core", "test-unit-task"]
 test-benchmark = ["py312", "test-benchmark", "test"]
 docs = ["py311", "example", "doc"]
