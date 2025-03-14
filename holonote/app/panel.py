@@ -51,7 +51,7 @@ class PanelWidgets(Viewer):
             self._add_button_description()
 
         if field_values is None:
-            self._fields_values = {k: "" for k in self.annotator.fields}
+            self._fields_values = dict.fromkeys(self.annotator.fields, "")
         else:
             self._fields_values = {k: field_values.get(k, "") for k in self.annotator.fields}
         self._fields_widgets = self._create_fields_widgets(self._fields_values)

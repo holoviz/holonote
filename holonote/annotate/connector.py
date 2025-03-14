@@ -341,7 +341,7 @@ class Connector(param.Parameterized):
             raise Exception(msg)
 
     def _create_column_schema(self, spec: SpecDict, fields: list[str]) -> None:
-        field_dtypes = {col: str for col in fields}  # FIXME - generalize
+        field_dtypes = dict.fromkeys(fields, str)  # FIXME - generalize
         all_region_types = [{v["region"] for v in spec.values()}]
         all_kdim_dtypes = [{k: v["type"] for k, v in spec.items()}]
         schema = self.generate_schema(
