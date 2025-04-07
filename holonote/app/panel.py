@@ -44,9 +44,9 @@ class PanelWidgets(Viewer):
         self._widget_mode_group = pn.widgets.RadioButtonGroup(
             name="Mode", options=["+", "-", "✏"], width=90
         )
-        self._widget_apply_button = pn.widgets.Button(name="✓", width=20)
-        self._widget_revert_button = pn.widgets.Button(name="↺", width=20)
-        self._widget_commit_button = pn.widgets.Button(name="▲", width=20)
+        self._widget_apply_button = pn.widgets.ButtonIcon(icon="check", width=20)
+        self._widget_revert_button = pn.widgets.ButtonIcon(icon="refresh", width=20)
+        self._widget_commit_button = pn.widgets.ButtonIcon(icon="device-floppy", width=20)
         if PN13:
             self._add_button_description()
 
@@ -231,10 +231,9 @@ class PanelWidgets(Viewer):
     @property
     def tool_widgets(self):
         return pn.Row(
-            self._widget_apply_button,
-            pn.Spacer(width=10),
             self._widget_mode_group,
             pn.Spacer(width=10),
+            self._widget_apply_button,
             self._widget_revert_button,
             self._widget_commit_button,
         )
